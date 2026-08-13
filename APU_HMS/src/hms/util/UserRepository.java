@@ -6,6 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 // contains functions for communicating with users.txt
+//authenticate(username, password)
+//loadAll
+//nextUserId
+//save(newUser)
+//update(updated user)
+//usernameExists(username)
 public final class UserRepository {
 
     private static final String FILE_NAME = "users.txt";
@@ -66,7 +72,7 @@ public final class UserRepository {
         List<String> lines = FileManager.readLines(FILE_NAME);
         List<String> newLines = new ArrayList<>();
         for (String line : lines) {
-            String existingId = line.split("\\|", -1)[0];
+            String existingId = line.split("\\,", -1)[0];
             if (existingId.equals(updatedUser.getUserId())) {
                 newLines.add(updatedUser.toFileLine()); 
             } else {

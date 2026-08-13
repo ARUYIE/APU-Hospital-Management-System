@@ -1,7 +1,6 @@
 package hms.gui;
 
-import hms.role.Role;
-import hms.role.AdminStaff;
+import hms.role.*;
 
 import hms.role.User;
 import hms.util.UserRepository;
@@ -141,16 +140,16 @@ public class RegisterFrame extends JFrame {
         String userId = UserRepository.nextUserId();
         User newUser;
         switch (role) {
-//            case DOCTOR:
-//                newUser = new Doctor(userId, username, password, fullName, email, phone, specialty);
-//                break;
-//            case PATIENT:
-//                String gender = (String) genderBox.getSelectedItem();
-//                newUser = new Patient(userId, username, password, fullName, email, phone, dob, gender);
-//                break;
-//            case MEDICAL_MANAGER:
-//                newUser = new MedicalManager(userId, username, password, fullName, email, phone);
-//                break;
+            case DOCTOR:
+                newUser = new Doctor(userId, username, password, fullName, email, phone, specialty);
+                break;
+            case PATIENT:
+                String gender = (String) genderBox.getSelectedItem();
+                newUser = new Patient(userId, username, password, fullName, email, phone, dob, gender);
+                break;
+            case MEDICAL_MANAGER:
+                newUser = new MedicalManager(userId, username, password, fullName, email, phone);
+                break;
             case ADMIN_STAFF:
             default:
                 newUser = new AdminStaff(userId, username, password, fullName, email, phone);

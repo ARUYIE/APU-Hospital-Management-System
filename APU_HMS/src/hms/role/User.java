@@ -27,7 +27,7 @@ public abstract class User {
 
 
     public String toFileLine() {
-        return String.join("，",
+        return String.join(",",
                 userId, getRole().name(), username, password, fullName, email, phone);
     }
 

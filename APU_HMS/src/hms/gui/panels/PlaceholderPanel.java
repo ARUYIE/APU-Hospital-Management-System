@@ -11,7 +11,7 @@ public class PlaceholderPanel extends JPanel {
     public PlaceholderPanel(String featureName) {
         setLayout(new GridBagLayout());
         JLabel label = new JLabel("<html><center>" + featureName
-                + "<br><br><i>(Not implemented yet - see WardPanel for a worked example)</i></center></html>");
+                + "<br><br><i>Oh? Its empty...</i></center></html>");
         label.setFont(label.getFont().deriveFont(15f));
         label.setHorizontalAlignment(SwingConstants.CENTER);
         add(label);

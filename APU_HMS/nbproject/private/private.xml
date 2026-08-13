@@ -8,6 +8,18 @@
             <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/util/FileManager.java</file>
             <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/util/UserRepository.java</file>
             <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/util/IDGenerator.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/gui/panels/PlaceholderPanel.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/gui/RegisterFrame.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/gui/LoginFrame.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/role/AdminStaff.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/role/Role.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/gui/DashboardFrame.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/role/User.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/gui/panels/ManageUserPanel.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/role/MedicalManager.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/role/Patient.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/role/Doctor.java</file>
+            <file>file:/C:/Users/tanru/Downloads/APU-Hospital-Management-System/APU_HMS/src/hms/gui/panels/Profile.java</file>
         </group>
     </open-files>
 </project-private>

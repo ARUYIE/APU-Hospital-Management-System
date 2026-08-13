@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // reads and writes the user's info into txt file
+//readLines(file name)
 public final class FileManager {
 
     public static final String DATA_DIR = "data";
