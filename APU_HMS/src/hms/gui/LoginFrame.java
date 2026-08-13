@@ -9,11 +9,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 
-/**
- * Login screen shown when the application starts.
- * Validates input before ever touching the file-based user store, to avoid
- * logical errors like authenticating against a blank username.
- */
+//Login screen shown when the application starts.
+
 public class LoginFrame extends JFrame {
 
     private final JTextField usernameField = new JTextField(18);
@@ -66,7 +63,7 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
         root.add(buttonPanel, gbc);
 
-        // Pressing Enter in the password field triggers login, common usability touch.
+        // Pressing Enter in the password field triggers login
         passwordField.addActionListener(this::handleLogin);
 
         setContentPane(root);

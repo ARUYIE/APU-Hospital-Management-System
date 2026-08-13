@@ -6,17 +6,6 @@ import hms.util.Session;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Main window shown after a successful login. The menu on the left is built
- * from user.getMenuOptions() - since that method is overridden differently by
- * each User subclass (polymorphism), this single class automatically shows
- * the right features for whichever of the 4 roles logged in, with no
- * if/else chain needed here.
- * <p>
- * Teammates: each menu item currently opens a placeholder panel from
- * hms.gui.panels. Replace the placeholder construction in showPanelFor()
- * with your real panel class as you build each feature out.
- */
 public class DashboardFrame extends JFrame {
 
     private final JPanel contentArea = new JPanel(new BorderLayout());
@@ -33,15 +22,13 @@ public class DashboardFrame extends JFrame {
         add(buildHeader(user), BorderLayout.NORTH);
         add(buildMenu(user), BorderLayout.WEST);
         add(contentArea, BorderLayout.CENTER);
-
-        showWelcomePanel(user);
     }
 
     private JComponent buildHeader(User user) {
         JPanel header = new JPanel(new BorderLayout());
         header.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
 
-        JLabel welcome = new JLabel("Welcome, " + user.getFullName()
+        JLabel welcome = new JLabel("Welcome Back, " + user.getFullName()
                 + "  (" + user.getRole().getDisplayName() + ")");
         welcome.setFont(welcome.getFont().deriveFont(Font.BOLD, 14f));
 
@@ -70,30 +57,29 @@ public class DashboardFrame extends JFrame {
                 showPanelFor(menuList.getSelectedValue());
             }
         });
-
+        
+        // shows profile panel on login
+        menuList.setSelectedValue("Profile", true);
+        
         JScrollPane scrollPane = new JScrollPane(menuList);
         scrollPane.setPreferredSize(new Dimension(260, 0));
         return scrollPane;
     }
 
-    private void showWelcomePanel(User user) {
-        JPanel panel = new JPanel(new GridBagLayout());
-        JLabel label = new JLabel("Select an item from the menu to get started.");
-        label.setFont(label.getFont().deriveFont(14f));
-        panel.add(label);
-        setContent(panel);
-    }
-
-    /**
-     * Routes a selected menu label to its feature panel.
-     * Currently every feature is a labeled placeholder - swap each case's
-     * panel for the real implementation as your team builds it out.
-     */
     private void showPanelFor(String menuLabel) {
-        // TODO teammates: add a case per feature as you build each panel,
-        // e.g. case "Manage Wards/Clinics": setContent(new hms.gui.panels.WardPanel()); break;
-        // See README.md for the recommended pattern: model -> repository -> panel.
-        setContent(new hms.gui.panels.PlaceholderPanel(menuLabel));
+        // TODO: add a case per feature like below as you build each panel,
+        switch (menuLabel) {
+            case"Profile":
+                setContent(new hms.gui.panels.Profile());
+                break;
+            case "Manage User":
+                setContent(new hms.gui.panels.ManageUserPanel());
+                break;
+                
+                
+            default:
+                setContent(new hms.gui.panels.PlaceholderPanel(menuLabel));
+        }
     }
 
     private void setContent(JComponent component) {

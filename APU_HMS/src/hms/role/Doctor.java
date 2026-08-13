@@ -1,10 +1,5 @@
 package hms.role;
 
-/**
- * Doctor: keys in medical assessment/lab results and provides clinical
- * feedback & prescriptions. Has an extra field (specialty) beyond the base User,
- * demonstrating how a subclass can extend the stored data.
- */
 public class Doctor extends User {
 
     private String specialty; // e.g. department/specialty name this doctor belongs to
@@ -15,8 +10,12 @@ public class Doctor extends User {
         this.specialty = specialty;
     }
 
-    public String getSpecialty() { return specialty; }
-    public void setSpecialty(String specialty) { this.specialty = specialty; }
+    public String getSpecialty() { 
+        return specialty; 
+    }
+    public void setSpecialty(String specialty) { 
+        this.specialty = specialty; 
+    }
 
     @Override
     public Role getRole() {
@@ -26,9 +25,10 @@ public class Doctor extends User {
     @Override
     public String[] getMenuOptions() {
         return new String[] {
-                "Key In Assessment & Lab Results",
-                "Provide Clinical Feedback & Prescriptions",
-                "View My Patients"
+            "Profile",
+            "Key In Assessment & Lab Results",
+            "Provide Clinical Feedback & Prescriptions",
+            "View My Patients"
         };
     }
 

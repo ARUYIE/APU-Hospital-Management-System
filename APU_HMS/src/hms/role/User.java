@@ -1,16 +1,6 @@
 package hms.role;
 
-/**
- * Abstract base class for every person who can log into the HMS.
- * <p>
- * OOP concepts demonstrated here:
- * - Abstraction: User cannot be instantiated directly; only its subclasses
- *   (AdminStaff, MedicalManager, Doctor, Patient) can be created.
- * - Encapsulation: all fields are private, accessed only via getters/setters.
- * - Inheritance: AdminStaff, MedicalManager, Doctor and Patient extend this class.
- * - Polymorphism: getRole() and getMenuOptions() are overridden differently by
- *   each subclass so the GUI can behave differently per user type.
- */
+
 public abstract class User {
 
     private String userId;
@@ -30,25 +20,14 @@ public abstract class User {
         this.phone = phone;
     }
 
-    // ---- Abstract methods every subclass must implement (polymorphism) ----
-
-    /** @return the Role enum identifying which of the 4 user types this is. */
     public abstract Role getRole();
 
-    /**
-     * @return the list of dashboard menu items this user type is allowed to see.
-     * Each subclass decides its own set of features.
-     */
+
     public abstract String[] getMenuOptions();
 
-    // ---- Serialization: text-file storage (pipe-delimited, no DB allowed) ----
 
-    /**
-     * Converts this user into a single pipe-delimited line for storage in users.txt.
-     * Subclasses append their own extra fields by overriding and calling super.
-     */
     public String toFileLine() {
-        return String.join("|",
+        return String.join("，",
                 userId, getRole().name(), username, password, fullName, email, phone);
     }
 

@@ -1,9 +1,5 @@
 package hms.role;
 
-/**
- * Patient: books appointments and views their own assessment results,
- * feedback, prescriptions and bills.
- */
 public class Patient extends User {
 
     private String dateOfBirth; // stored as plain text, e.g. "2001-05-14"
@@ -17,8 +13,22 @@ public class Patient extends User {
         this.gender = gender;
     }
 
-    public String getDateOfBirth() { return dateOfBirth; }
-    public String getGender() { return gender; }
+    //getter
+    public String getDateOfBirth() { 
+        return dateOfBirth; 
+    }
+    public String getGender() { 
+        return gender; 
+    }
+    
+    //setter
+    public void setDateOfBirth(String dateOfBirth) { 
+        this.dateOfBirth = dateOfBirth; 
+    }
+    public void setGender(String gender) { 
+        this.gender = gender; 
+    }
+
 
     @Override
     public Role getRole() {
@@ -28,9 +38,10 @@ public class Patient extends User {
     @Override
     public String[] getMenuOptions() {
         return new String[] {
-                "Book / View Appointments",
-                "View My Assessment Results",
-                "View My Bills"
+            "Profile",
+            "Book / View Appointments",
+            "View My Assessment Results",
+            "View My Bills"
         };
     }
 

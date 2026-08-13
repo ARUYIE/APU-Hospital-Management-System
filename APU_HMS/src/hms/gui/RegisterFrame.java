@@ -1,10 +1,8 @@
 package hms.gui;
 
-import hms.role.Patient;
-import hms.role.Doctor;
 import hms.role.Role;
 import hms.role.AdminStaff;
-import hms.role.MedicalManager;
+
 import hms.role.User;
 import hms.util.UserRepository;
 import hms.util.Validator;
@@ -12,11 +10,7 @@ import hms.util.Validator;
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Registration form. The role dropdown determines which User subclass gets
- * created (polymorphism in action) and which extra fields are shown -
- * Doctors get a "Specialty" field, Patients get "Date of Birth"/"Gender".
- */
+
 public class RegisterFrame extends JFrame {
 
     private final JTextField fullNameField = new JTextField(18);
@@ -147,16 +141,16 @@ public class RegisterFrame extends JFrame {
         String userId = UserRepository.nextUserId();
         User newUser;
         switch (role) {
-            case DOCTOR:
-                newUser = new Doctor(userId, username, password, fullName, email, phone, specialty);
-                break;
-            case PATIENT:
-                String gender = (String) genderBox.getSelectedItem();
-                newUser = new Patient(userId, username, password, fullName, email, phone, dob, gender);
-                break;
-            case MEDICAL_MANAGER:
-                newUser = new MedicalManager(userId, username, password, fullName, email, phone);
-                break;
+//            case DOCTOR:
+//                newUser = new Doctor(userId, username, password, fullName, email, phone, specialty);
+//                break;
+//            case PATIENT:
+//                String gender = (String) genderBox.getSelectedItem();
+//                newUser = new Patient(userId, username, password, fullName, email, phone, dob, gender);
+//                break;
+//            case MEDICAL_MANAGER:
+//                newUser = new MedicalManager(userId, username, password, fullName, email, phone);
+//                break;
             case ADMIN_STAFF:
             default:
                 newUser = new AdminStaff(userId, username, password, fullName, email, phone);

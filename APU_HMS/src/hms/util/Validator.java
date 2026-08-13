@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 public final class Validator {
 
-    // put to false to enable validator
+    // put to false to enable this validator file
     private static final boolean TEST_MODE = true;
 
     private static final Pattern EMAIL_PATTERN =

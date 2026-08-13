@@ -2,10 +2,7 @@ package hms.util;
 
 import hms.role.User;
 
-/**
- * Holds the currently logged-in user for the lifetime of the running application.
- * Simple static holder - fine for a single-user desktop Swing app like this one.
- */
+// gets and retain info on current user
 public final class Session {
 
     private static User currentUser;

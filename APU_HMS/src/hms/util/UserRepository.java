@@ -1,26 +1,18 @@
 package hms.util;
+import hms.role.*;
 
-import hms.role.Patient;
-import hms.role.Doctor;
-import hms.role.Role;
-import hms.role.AdminStaff;
-import hms.role.MedicalManager;
-import hms.role.User;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Reads/writes User objects (and its subclasses) to data/users.txt.
- * Centralizing this here means the GUI never has to know the file format.
- */
+// contains functions for communicating with users.txt
 public final class UserRepository {
 
     private static final String FILE_NAME = "users.txt";
 
     private UserRepository() { }
 
-    /** Parses every line in users.txt back into the correct User subclass. */
+    // Parses every line in users.txt back into the correct User subclass. 
     public static List<User> loadAll() {
         List<User> users = new ArrayList<>();
         for (String line : FileManager.readLines(FILE_NAME)) {
@@ -32,12 +24,10 @@ public final class UserRepository {
         return users;
     }
 
-    /**
-     * Common fields (from User.toFileLine()) are:
-     * userId | ROLE | username | password | fullName | email | phone [ | extra fields... ]
-     */
+
+    // userId , ROLE , username , password , fullName , email , phone , extra fields... 
     private static User parseLine(String line) {
-        String[] p = line.split("\\|", -1);
+        String[] p = line.split("\\,", -1);
         if (p.length < 7) {
             System.err.println("Skipping malformed user line: " + line);
             return null;
@@ -72,6 +62,20 @@ public final class UserRepository {
         FileManager.appendLine(FILE_NAME, user.toFileLine());
     }
 
+    public static void update(User updatedUser) {
+        List<String> lines = FileManager.readLines(FILE_NAME);
+        List<String> newLines = new ArrayList<>();
+        for (String line : lines) {
+            String existingId = line.split("\\|", -1)[0];
+            if (existingId.equals(updatedUser.getUserId())) {
+                newLines.add(updatedUser.toFileLine()); 
+            } else {
+                newLines.add(line); // keep untouched
+            }
+        }
+        FileManager.writeAllLines(FILE_NAME, newLines);
+    }
+ 
     public static boolean usernameExists(String username) {
         for (User u : loadAll()) {
             if (u.getUsername().equalsIgnoreCase(username)) {
@@ -81,7 +85,7 @@ public final class UserRepository {
         return false;
     }
 
-    /** @return the matching User if username+password are correct, otherwise null. */
+    // return the matching User if username+password are correct, otherwise null. 
     public static User authenticate(String username, String password) {
         for (User u : loadAll()) {
             if (u.getUsername().equalsIgnoreCase(username) && u.checkPassword(password)) {

@@ -1,8 +1,5 @@
 package hms.role;
 
-/**
- * Administrative Staff: manage wards/clinics, departments, and user registration.
- */
 public class AdminStaff extends User {
 
     public AdminStaff(String userId, String username, String password,
@@ -18,10 +15,11 @@ public class AdminStaff extends User {
     @Override
     public String[] getMenuOptions() {
         return new String[] {
-                "Manage Wards/Clinics",
-                "Manage Departments/Specialties",
-                "Register New User",
-                "View Analytical Reports"
+            "Profile",
+            "Manage Wards/Clinics",
+            "Manage Departments/Specialties",
+            "Manage User",
+            "View Analytical Reports"
         };
     }
 }

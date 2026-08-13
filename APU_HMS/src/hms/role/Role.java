@@ -19,11 +19,7 @@ public enum Role {
         return displayName;
     }
 
-    /**
-     * Parses a Role from a stored string (used when reading users.txt).
-     * Throws IllegalArgumentException if the value is not a valid role,
-     * which callers should treat as a data-validation error.
-     */
+    // reads user.txt
     public static Role fromString(String value) {
         return Role.valueOf(value.trim().toUpperCase());
     }
