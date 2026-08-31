@@ -13,22 +13,62 @@ public final class FileManager {
 
     private FileManager() { }
 
+    private static final String PROJECT_FOLDER_NAME = "APU_HMS";
+
     // makes it so netbeans and vsc can both find the file path for data folder
     private static Path projectRoot() {
         String userDir = System.getProperty("user.dir");
-        Path current = Paths.get(userDir);
+        Path start = Paths.get(userDir).toAbsolutePath();
 
-        Path candidate = current;
-        if (Files.isDirectory(candidate.resolve("src"))) {
-            return candidate;
+        Path found = findAncestorWithSrc(start);
+        if (found != null) {
+            return found;
         }
 
-        Path parent = current.getParent();
-        if (parent != null && Files.isDirectory(parent.resolve("src"))) {
-            return parent;
+        try {
+            Path classLocation = Paths.get(
+                    FileManager.class.getProtectionDomain().getCodeSource().getLocation().toURI()
+            ).toAbsolutePath();
+            found = findAncestorWithSrc(classLocation);
+            if (found != null) {
+                return found;
+            }
+        } catch (Exception e) {
+            System.err.println("Could not resolve project root from class location: " + e.getMessage());
         }
 
-        return current;
+        Path byName = findAncestorNamed(start, PROJECT_FOLDER_NAME);
+        if (byName != null) {
+            return byName;
+        }
+
+        // 4) Give up gracefully - just use cwd, same as before.
+        System.err.println("Could not locate project root (folder containing 'src'); "
+                + "using current directory instead: " + start);
+        return start;
+    }
+
+    private static Path findAncestorWithSrc(Path from) {
+        Path candidate = from;
+        while (candidate != null) {
+            if (Files.isDirectory(candidate.resolve("src"))) {
+                return candidate;
+            }
+            candidate = candidate.getParent();
+        }
+        return null;
+    }
+
+    private static Path findAncestorNamed(Path from, String folderName) {
+        Path candidate = from;
+        while (candidate != null) {
+            Path nameElement = candidate.getFileName();
+            if (nameElement != null && nameElement.toString().equalsIgnoreCase(folderName)) {
+                return candidate;
+            }
+            candidate = candidate.getParent();
+        }
+        return null;
     }
 
     // Makes sure the data/ directory exists before any read/write happens. 
