@@ -13,10 +13,7 @@ public final class FileManager {
 
     private FileManager() { }
 
-    /**
-     * Resolves storage paths relative to the project directory so IDE launch
-     * location differences do not affect read/write behavior.
-     */
+    // makes it so netbeans and vsc can both find the file path for data folder
     private static Path projectRoot() {
         String userDir = System.getProperty("user.dir");
         Path current = Paths.get(userDir);
@@ -34,7 +31,7 @@ public final class FileManager {
         return current;
     }
 
-    /** Makes sure the data/ directory exists before any read/write happens. */
+    // Makes sure the data/ directory exists before any read/write happens. 
     private static void ensureDataDir() {
         try {
             Files.createDirectories(projectRoot().resolve(DATA_DIR));
@@ -48,7 +45,7 @@ public final class FileManager {
         return projectRoot().resolve(DATA_DIR).resolve(fileName);
     }
 
-    /** Reads every non-blank line of a data file. Returns an empty list if the file doesn't exist. */
+    //Reads every non-blank line of a data file. Returns an empty list if the file doesn't exist. 
     public static List<String> readLines(String fileName) {
         Path path = pathFor(fileName);
         List<String> lines = new ArrayList<>();
@@ -68,7 +65,7 @@ public final class FileManager {
         return lines;
     }
 
-    /** Appends a single line to the given data file (creating it if necessary). */
+    // Appends a single line to the given data file (creating it if necessary). 
     public static void appendLine(String fileName, String line) {
         Path path = pathFor(fileName);
         try (BufferedWriter writer = Files.newBufferedWriter(
@@ -80,7 +77,7 @@ public final class FileManager {
         }
     }
 
-    /** Overwrites the whole data file with the given lines (used for updates/deletes). */
+    // Overwrites the whole data file with the given lines (used for updates/deletes). 
     public static void writeAllLines(String fileName, List<String> lines) {
         Path path = pathFor(fileName);
         try (BufferedWriter writer = Files.newBufferedWriter(
