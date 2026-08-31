@@ -13,10 +13,31 @@ public final class FileManager {
 
     private FileManager() { }
 
+    /**
+     * Resolves storage paths relative to the project directory so IDE launch
+     * location differences do not affect read/write behavior.
+     */
+    private static Path projectRoot() {
+        String userDir = System.getProperty("user.dir");
+        Path current = Paths.get(userDir);
+
+        Path candidate = current;
+        if (Files.isDirectory(candidate.resolve("src"))) {
+            return candidate;
+        }
+
+        Path parent = current.getParent();
+        if (parent != null && Files.isDirectory(parent.resolve("src"))) {
+            return parent;
+        }
+
+        return current;
+    }
+
     /** Makes sure the data/ directory exists before any read/write happens. */
     private static void ensureDataDir() {
         try {
-            Files.createDirectories(Paths.get(DATA_DIR));
+            Files.createDirectories(projectRoot().resolve(DATA_DIR));
         } catch (IOException e) {
             System.err.println("Could not create data directory: " + e.getMessage());
         }
@@ -24,7 +45,7 @@ public final class FileManager {
 
     private static Path pathFor(String fileName) {
         ensureDataDir();
-        return Paths.get(DATA_DIR, fileName);
+        return projectRoot().resolve(DATA_DIR).resolve(fileName);
     }
 
     /** Reads every non-blank line of a data file. Returns an empty list if the file doesn't exist. */
