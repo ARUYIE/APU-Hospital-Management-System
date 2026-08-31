@@ -79,21 +79,14 @@ public final class Tables {
         addEditableRow(form, gbc, row++, "Phone:", phoneField);
         addEditableRow(form, gbc, row++, "New Password (leave blank to keep current):", passwordField);
 
-        // role-specific editable fields 
+        // role-specific fields 
         if (targetUser instanceof Doctor) {
             Doctor doctor = (Doctor) targetUser;
-            specialtyField = new JTextField(20);
-            specialtyField.setText(doctor.getSpecialty());
-            addEditableRow(form, gbc, row++, "Specialty:", specialtyField);
+            addReadOnlyRow(form, gbc, row++, "Specialty:", doctor.getSpecialty());
         } else if (targetUser instanceof Patient) {
             Patient patient = (Patient) targetUser;
-            dobField = new JTextField(20);
-            dobField.setText(patient.getDateOfBirth());
-            addEditableRow(form, gbc, row++, "Date of Birth (YYYY-MM-DD):", dobField);
-
-            genderBox = new JComboBox<>(new String[]{"Male", "Female", "Other"});
-            genderBox.setSelectedItem(patient.getGender());
-            addEditableRow(form, gbc, row++, "Gender:", genderBox);
+            addReadOnlyRow(form, gbc, row++, "Date of Birth (YYYY-MM-DD):", patient.getDateOfBirth());
+            addReadOnlyRow(form, gbc, row++, "Gender:", patient.getGender());
         }
 
         return form;
