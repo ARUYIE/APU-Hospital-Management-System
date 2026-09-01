@@ -1,0 +1,6 @@
+DEPT_ID|DEPT_NAME|DESCRIPTION|HEAD_MANAGER_ID
+D001|CARDIOLOGY|Heart and Cardiovascular Diseases|U002
+D002|NEUROLOGY|Nervous System Disorders|U006
+D003|GENERAL_SURGERY|General Surgical Procedures|
+
+

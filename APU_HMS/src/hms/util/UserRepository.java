@@ -31,9 +31,9 @@ public final class UserRepository {
     }
 
 
-    // userId , ROLE , username , password , fullName , email , phone , extra fields... 
+    // userId | ROLE | username | password | fullName | email | phone | extra fields... 
     private static User parseLine(String line) {
-        String[] p = line.split("\\,", -1);
+        String[] p = line.split("\\|", -1);
         if (p.length < 7) {
             System.err.println("Skipping malformed user line: " + line);
             return null;
@@ -72,7 +72,7 @@ public final class UserRepository {
         List<String> lines = FileManager.readLines(FILE_NAME);
         List<String> newLines = new ArrayList<>();
         for (String line : lines) {
-            String existingId = line.split("\\,", -1)[0];
+            String existingId = line.split("\\|", -1)[0];
             if (existingId.equals(updatedUser.getUserId())) {
                 newLines.add(updatedUser.toFileLine()); 
             } else {
