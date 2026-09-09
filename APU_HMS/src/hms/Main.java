@@ -1,6 +1,7 @@
 package hms;
 
 import hms.gui.LoginFrame;
+import hms.util.AssetManager;
 
 import javax.swing.*;
 

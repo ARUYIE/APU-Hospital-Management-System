@@ -20,7 +20,7 @@ public class LoginFrame extends JFrame {
         super("APU Medical Centre - Hospital Management System - Login");
         buildUI();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(420, 260);
+        setSize(1280, 720);
         setLocationRelativeTo(null);
         setResizable(false);
     }

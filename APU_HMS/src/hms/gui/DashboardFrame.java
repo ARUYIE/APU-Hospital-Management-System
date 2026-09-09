@@ -15,7 +15,7 @@ public class DashboardFrame extends JFrame {
         User user = Session.getCurrentUser();
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(900, 600);
+        setSize(1280, 720);
         setLocationRelativeTo(null);
 
         setLayout(new BorderLayout());
@@ -67,15 +67,32 @@ public class DashboardFrame extends JFrame {
     }
 
     private void showPanelFor(String menuLabel) {
-        // TODO: add a case per feature like below as you build each panel,
         switch (menuLabel) {
-            case"Profile":
+            case "Profile":
                 setContent(new hms.gui.panels.Profile());
+                break;
+            case "Appointment":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Appointments", "bookings.txt"));
+                break;
+            case "Manage Wards/Clinics":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Wards and Clinics", "hospital_assets.txt"));
+                break;
+            case "Manage Departments/Specialties":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Departments and Specialties", "department.txt"));
                 break;
             case "Manage User":
                 setContent(new hms.gui.panels.ManageUserPanel());
                 break;
-                
+            case "Manage Assets":
+                setContent(new hms.gui.panels.ManageAssetsPanel());
+                break;
+            case "Manage Insurances":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Insurance Networks", "insurance_networks.txt"));
+                break;
                 
             default:
                 setContent(new hms.gui.panels.PlaceholderPanel(menuLabel));

@@ -2,8 +2,9 @@ package hms.gui.panels;
 
 import hms.role.Role;
 import hms.role.User;
-import hms.util.Tables;
+import hms.util.FileManager;
 import hms.util.UserRepository;
+import hms.util.Validator;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -26,17 +27,16 @@ public class ManageUserPanel extends JPanel {
 
     private final JTable userTable = new JTable(tableModel);
     private final JComboBox<String> roleFilterBox = new JComboBox<>();
-
-    // Parallel to the table's rows: filteredUsers.get(modelRow) is the User
-    // object behind that row, so "Edit Selected" can find the real object
-    // (not just its displayed text) once a row is picked.
     private List<User> filteredUsers = new ArrayList<>();
+    private String headerLine;
+    private boolean headerPresent;
+    private boolean initialized;
 
     public ManageUserPanel() {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        userTable.setAutoCreateRowSorter(true); // click any column header (incl. Role) to sort
+        userTable.setAutoCreateRowSorter(true);
         userTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         add(buildTopBar(), BorderLayout.NORTH);
@@ -99,30 +99,117 @@ public class ManageUserPanel extends JPanel {
             return;
         }
 
-        int modelRow = userTable.convertRowIndexToModel(viewRow); // sorting can reorder view rows
+        int modelRow = userTable.convertRowIndexToModel(viewRow);
         User selectedUser = filteredUsers.get(modelRow);
 
         Window owner = SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(owner, "Edit User", Dialog.ModalityType.APPLICATION_MODAL);
 
-       
-        Tables tables = new Tables(selectedUser, dialog);
-        tables.setOnSaved(this::refreshTable);
+        JTextField fullNameField = new JTextField(selectedUser.getFullName(), 20);
+        JTextField emailField = new JTextField(selectedUser.getEmail(), 20);
+        JTextField phoneField = new JTextField(selectedUser.getPhone(), 20);
+        JPasswordField passwordField = new JPasswordField(20);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        int row = 0;
+
+        addReadOnlyRow(form, gbc, row++, "User ID:", selectedUser.getUserId());
+        addReadOnlyRow(form, gbc, row++, "Username:", selectedUser.getUsername());
+        addReadOnlyRow(form, gbc, row++, "Role:", selectedUser.getRole().getDisplayName());
+        addEditableRow(form, gbc, row++, "Full Name:", fullNameField);
+        addEditableRow(form, gbc, row++, "Email:", emailField);
+        addEditableRow(form, gbc, row++, "Phone:", phoneField);
+        addEditableRow(form, gbc, row++, "New Password (leave blank to keep current):", passwordField);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
         root.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        root.add(tables.buildTitle("Edit User"), BorderLayout.NORTH);
-        root.add(tables.buildForm(), BorderLayout.CENTER);
-        root.add(tables.buildSaveButton("Save Changes", "Cancel"), BorderLayout.SOUTH);
-        dialog.setContentPane(root);
+        root.add(buildTitle("Edit User"), BorderLayout.NORTH);
+        root.add(form, BorderLayout.CENTER);
 
+        JButton saveButton = new JButton("Save Changes");
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> dialog.dispose());
+        saveButton.addActionListener(e -> {
+            String fullName = fullNameField.getText().trim();
+            String email = emailField.getText().trim();
+            String phone = phoneField.getText().trim();
+            String newPassword = new String(passwordField.getPassword());
+
+            StringBuilder errors = new StringBuilder();
+            if (!Validator.isNonEmpty(fullName)) errors.append("- Full name is required.\n");
+            if (!Validator.isValidEmail(email)) errors.append("- A valid email is required.\n");
+            if (!Validator.isValidPhone(phone)) errors.append("- A valid phone number is required.\n");
+            if (!newPassword.isEmpty() && !Validator.isValidPassword(newPassword)) {
+                errors.append("- New password must be at least 6 characters.\n");
+            }
+
+            if (errors.length() > 0) {
+                JOptionPane.showMessageDialog(dialog, errors.toString(), "Please fix the following", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            selectedUser.setFullName(fullName);
+            selectedUser.setEmail(email);
+            selectedUser.setPhone(phone);
+            if (!newPassword.isEmpty()) {
+                selectedUser.setPassword(newPassword);
+            }
+
+            UserRepository.update(selectedUser);
+            passwordField.setText("");
+            JOptionPane.showMessageDialog(dialog, "User updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            refreshTable();
+            dialog.dispose();
+        });
+
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        footer.add(saveButton);
+        footer.add(cancelButton);
+        root.add(footer, BorderLayout.SOUTH);
+
+        dialog.setContentPane(root);
         dialog.pack();
         dialog.setLocationRelativeTo(owner);
         dialog.setResizable(false);
         dialog.setVisible(true);
     }
 
+    private JComponent buildTitle(String header) {
+        JLabel title = new JLabel(header);
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+        return title;
+    }
+
+
+    private static void addReadOnlyRow(JPanel panel, GridBagConstraints gbc, int row, String label, String value) {
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
+        panel.add(new JLabel(label), gbc);
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setFont(valueLabel.getFont().deriveFont(Font.PLAIN));
+        gbc.gridx = 1;
+        panel.add(valueLabel, gbc);
+    }
+
+    private static void addEditableRow(JPanel panel, GridBagConstraints gbc, int row, String label, JComponent field) {
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
+        panel.add(new JLabel(label), gbc);
+        gbc.gridx = 1;
+        panel.add(field, gbc);
+    }
+
     private void refreshTable() {
+        List<String> rawLines = FileManager.readLines("users.txt");
+        if (!initialized) {
+            headerPresent = !rawLines.isEmpty() && isHeaderLine(rawLines.get(0));
+            initialized = true;
+        }
+        if (headerPresent && !rawLines.isEmpty()) {
+            headerLine = rawLines.remove(0);
+        }
+
         String selectedFilter = (String) roleFilterBox.getSelectedItem();
 
         filteredUsers = new ArrayList<>();
@@ -142,5 +229,13 @@ public class ManageUserPanel extends JPanel {
                     u.getRole().getDisplayName(), u.getEmail(), u.getPhone()
             });
         }
+    }
+
+    private boolean isHeaderLine(String line) {
+        if (line == null) {
+            return false;
+        }
+        String upper = line.trim().toUpperCase();
+        return upper.startsWith("ID") && upper.contains("ROLE") && upper.contains("EMAIL");
     }
 }

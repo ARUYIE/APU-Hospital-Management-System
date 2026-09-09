@@ -4,6 +4,7 @@ import hms.role.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 // contains functions for communicating with users.txt
 //authenticate(username, password)
@@ -22,12 +23,23 @@ public final class UserRepository {
     public static List<User> loadAll() {
         List<User> users = new ArrayList<>();
         for (String line : FileManager.readLines(FILE_NAME)) {
+            if (isHeaderLine(line)) {
+                continue;
+            }
             User user = parseLine(line);
             if (user != null) {
                 users.add(user);
             }
         }
         return users;
+    }
+
+    private static boolean isHeaderLine(String line) {
+        if (line == null) {
+            return false;
+        }
+        String upper = line.trim().toUpperCase(Locale.ROOT);
+        return upper.startsWith("ID") && upper.contains("ROLE") && upper.contains("EMAIL");
     }
 
 

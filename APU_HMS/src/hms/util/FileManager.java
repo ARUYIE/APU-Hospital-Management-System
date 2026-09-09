@@ -20,7 +20,7 @@ public final class FileManager {
         String userDir = System.getProperty("user.dir");
         Path start = Paths.get(userDir).toAbsolutePath();
 
-        Path found = findAncestorWithSrc(start);
+        Path found = findProjectRoot(start);
         if (found != null) {
             return found;
         }
@@ -29,7 +29,7 @@ public final class FileManager {
             Path classLocation = Paths.get(
                     FileManager.class.getProtectionDomain().getCodeSource().getLocation().toURI()
             ).toAbsolutePath();
-            found = findAncestorWithSrc(classLocation);
+            found = findProjectRoot(classLocation);
             if (found != null) {
                 return found;
             }
@@ -42,19 +42,35 @@ public final class FileManager {
             return byName;
         }
 
-        // 4) Give up gracefully - just use cwd, same as before.
+        Path childProject = findChildProjectDir(start);
+        if (childProject != null) {
+            return childProject;
+        }
+
         System.err.println("Could not locate project root (folder containing 'src'); "
                 + "using current directory instead: " + start);
         return start;
     }
 
-    private static Path findAncestorWithSrc(Path from) {
+    private static Path findProjectRoot(Path from) {
         Path candidate = from;
         while (candidate != null) {
             if (Files.isDirectory(candidate.resolve("src"))) {
                 return candidate;
             }
+            Path projectDir = candidate.resolve(PROJECT_FOLDER_NAME);
+            if (Files.isDirectory(projectDir) && Files.isDirectory(projectDir.resolve("src"))) {
+                return projectDir;
+            }
             candidate = candidate.getParent();
+        }
+        return null;
+    }
+
+    private static Path findChildProjectDir(Path from) {
+        Path projectDir = from.resolve(PROJECT_FOLDER_NAME);
+        if (Files.isDirectory(projectDir) && Files.isDirectory(projectDir.resolve("src"))) {
+            return projectDir;
         }
         return null;
     }

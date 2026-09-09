@@ -28,7 +28,13 @@ public abstract class User {
 
     public String toFileLine() {
         return String.join("|",
-                userId, getRole().name(), username, password, fullName, email, phone);
+                userId, 
+                getRole().name(), 
+                username, 
+                password, 
+                fullName, 
+                email, 
+                phone);
     }
 
     // ---- Encapsulated accessors ----
