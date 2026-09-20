@@ -13,12 +13,13 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 public class ManageUserPanel extends JPanel {
 
     private final DefaultTableModel tableModel =
-            new DefaultTableModel(new String[]{"ID", "Name", "Username", "Role", "Email", "Phone"}, 0) {
+            new DefaultTableModel(new String[]{"ID", "Name", "Username", "Role", "Email", "Phone", "Medical Manager"}, 0) {
                 @Override
                 public boolean isCellEditable(int row, int column) {
                     return false; // read-only, editing happens through the Edit Selected dialog
@@ -32,25 +33,25 @@ public class ManageUserPanel extends JPanel {
     private boolean headerPresent;
     private boolean initialized;
 
-    public ManageUserPanel() {
+    public ManageUserPanel(String title) {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         userTable.setAutoCreateRowSorter(true);
         userTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        add(buildTopBar(), BorderLayout.NORTH);
+        add(buildTopBar(title), BorderLayout.NORTH);
         add(new JScrollPane(userTable), BorderLayout.CENTER);
 
         populateRoleFilterOptions();
         refreshTable();
     }
 
-    private JComponent buildTopBar() {
+    private JComponent buildTopBar(String title) {
         JPanel topBar = new JPanel(new BorderLayout());
 
-        JLabel title = new JLabel("All Registered Users");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
+        JLabel heading = new JLabel(title);
+        heading.setFont(heading.getFont().deriveFont(Font.BOLD, 16f));
 
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         controls.add(new JLabel("Filter by Role:"));
@@ -60,13 +61,89 @@ public class ManageUserPanel extends JPanel {
         editButton.addActionListener(e -> openEditDialog());
         controls.add(editButton);
 
+        JButton assignButton = new JButton("Assign Medical Manager");
+        assignButton.addActionListener(e -> openAssignmentDialog());
+        controls.add(assignButton);
+
         JButton registerButton = new JButton("+ Register New User");
         registerButton.addActionListener(e -> openRegisterFrame());
         controls.add(registerButton);
 
-        topBar.add(title, BorderLayout.WEST);
+        topBar.add(heading, BorderLayout.WEST);
         topBar.add(controls, BorderLayout.EAST);
         return topBar;
+    }
+
+    private void openAssignmentDialog() {
+        List<User> doctors = usersWithRole(Role.DOCTOR);
+        List<User> managers = usersWithRole(Role.MEDICAL_MANAGER);
+        if (doctors.isEmpty() || managers.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "At least one doctor and one medical manager are required.",
+                    "Cannot Assign Manager", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JComboBox<User> doctorCombo = new JComboBox<>(doctors.toArray(new User[0]));
+        JComboBox<User> managerCombo = new JComboBox<>(managers.toArray(new User[0]));
+        Map<String, String> assignments = hms.util.DoctorManagerAssignmentRepository.loadAll();
+
+        doctorCombo.addActionListener(e -> {
+            User selectedDoctor = (User) doctorCombo.getSelectedItem();
+            String managerId = selectedDoctor == null ? null : assignments.get(selectedDoctor.getUserId());
+            selectUserById(managerCombo, managerId);
+        });
+        selectUserById(managerCombo, assignments.get(doctors.get(0).getUserId()));
+
+        JPanel form = new JPanel(new GridLayout(2, 2, 8, 8));
+        form.add(new JLabel("Doctor:"));
+        form.add(doctorCombo);
+        form.add(new JLabel("Medical Manager:"));
+        form.add(managerCombo);
+
+        int choice = JOptionPane.showConfirmDialog(this, form,
+                "Assign Medical Manager", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        User doctor = (User) doctorCombo.getSelectedItem();
+        User manager = (User) managerCombo.getSelectedItem();
+        if (doctor == null || manager == null) {
+            return;
+        }
+
+        hms.util.DoctorManagerAssignmentRepository.assign(
+                doctor.getUserId(), manager.getUserId());
+        refreshTable();
+        JOptionPane.showMessageDialog(this,
+                "Medical manager assigned successfully.",
+                "Assignment Saved", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private List<User> usersWithRole(Role role) {
+        List<User> matchingUsers = new ArrayList<>();
+        for (User user : UserRepository.loadAll()) {
+            if (user.getRole() == role) {
+                matchingUsers.add(user);
+            }
+        }
+        return matchingUsers;
+    }
+
+    private void selectUserById(JComboBox<User> comboBox, String userId) {
+        if (userId == null) {
+            comboBox.setSelectedIndex(0);
+            return;
+        }
+        for (int index = 0; index < comboBox.getItemCount(); index++) {
+            if (userId.equals(comboBox.getItemAt(index).getUserId())) {
+                comboBox.setSelectedIndex(index);
+                return;
+            }
+        }
+        comboBox.setSelectedIndex(0);
     }
 
     private void populateRoleFilterOptions() {
@@ -126,7 +203,7 @@ public class ManageUserPanel extends JPanel {
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
         root.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        root.add(buildTitle("Edit User"), BorderLayout.NORTH);
+        root.add(buildheading("Edit User"), BorderLayout.NORTH);
         root.add(form, BorderLayout.CENTER);
 
         JButton saveButton = new JButton("Save Changes");
@@ -177,10 +254,10 @@ public class ManageUserPanel extends JPanel {
         dialog.setVisible(true);
     }
 
-    private JComponent buildTitle(String header) {
-        JLabel title = new JLabel(header);
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
-        return title;
+    private JComponent buildheading(String header) {
+        JLabel heading = new JLabel(header);
+        heading.setFont(heading.getFont().deriveFont(Font.BOLD, 16f));
+        return heading;
     }
 
 
@@ -223,10 +300,20 @@ public class ManageUserPanel extends JPanel {
         }
 
         tableModel.setRowCount(0);
+        Map<String, String> assignments = hms.util.DoctorManagerAssignmentRepository.loadAll();
+        Map<String, User> usersById = new java.util.HashMap<>();
+        for (User user : UserRepository.loadAll()) {
+            usersById.put(user.getUserId(), user);
+        }
         for (User u : filteredUsers) {
+            User manager = usersById.get(assignments.get(u.getUserId()));
+            String managerName = u.getRole() == Role.DOCTOR && manager != null
+                ? manager.getFullName()
+                : "-";
             tableModel.addRow(new Object[]{
                     u.getUserId(), u.getFullName(), u.getUsername(),
-                    u.getRole().getDisplayName(), u.getEmail(), u.getPhone()
+                    u.getRole().getDisplayName(), u.getEmail(), u.getPhone(),
+                managerName
             });
         }
     }

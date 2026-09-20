@@ -16,12 +16,12 @@ public class AdminStaff extends User {
     public String[] getMenuOptions() {
         return new String[] {
             "Profile",
-            "Appointment",
-            "Manage Wards/Clinics",
-            "Manage Departments/Specialties",
-            "Manage User",
-            "Manage Assets",
-            "Manage Insurances"
+            "Appointments",
+            "Users",
+            "Wards/Clinics",
+            "Departments/Specialties",
+            "Consultation Rates",            
+            "Insurances"
         };
     }
 }

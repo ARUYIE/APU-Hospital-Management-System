@@ -43,7 +43,7 @@ public class ManageAssetsPanel extends JPanel {
         add(filterPanel, BorderLayout.NORTH);
         
         // Center panel with table
-        String[] columnNames = {"Asset ID", "Type", "Name", "Location", "Capacity", "Status", "Department"};
+        String[] columnNames = {"Asset ID", "Type", "Name", "Location", "Status"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -95,9 +95,7 @@ public class ManageAssetsPanel extends JPanel {
                     asset.getAssetType().getDisplayName(),
                     asset.getName(),
                     asset.getLocation(),
-                    asset.getCapacity(),
-                    asset.getStatus(),
-                    asset.getDepartment()
+                    asset.getStatus()
             });
         }
         
@@ -114,16 +112,14 @@ public class ManageAssetsPanel extends JPanel {
         for (Asset asset : assets) {
             boolean typeMatch = selectedType == null || asset.getAssetType() == selectedType;
             boolean statusMatch = "ALL".equals(selectedStatus) || asset.getStatus().equals(selectedStatus);
-            
+
             if (typeMatch && statusMatch) {
                 tableModel.addRow(new Object[]{
                         asset.getAssetId(),
                         asset.getAssetType().getDisplayName(),
                         asset.getName(),
                         asset.getLocation(),
-                        asset.getCapacity(),
-                        asset.getStatus(),
-                        asset.getDepartment()
+                        asset.getStatus()
                 });
             }
         }
@@ -137,29 +133,21 @@ public class ManageAssetsPanel extends JPanel {
         dialog.setModal(true);
         
         JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(8, 2, 10, 10));
+        panel.setLayout(new GridLayout(6, 2, 10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
+
         panel.add(new JLabel("Asset Type:"));
         JComboBox<AssetType> typeCombo = new JComboBox<>(AssetType.values());
         panel.add(typeCombo);
-        
+
         panel.add(new JLabel("Name:"));
         JTextField nameField = new JTextField();
         panel.add(nameField);
-        
+
         panel.add(new JLabel("Location:"));
         JTextField locationField = new JTextField();
         panel.add(locationField);
-        
-        panel.add(new JLabel("Capacity:"));
-        JSpinner capacitySpinner = new JSpinner();
-        panel.add(capacitySpinner);
-        
-        panel.add(new JLabel("Department:"));
-        JComboBox<String> departmentField = createDepartmentComboBox(null);
-        panel.add(departmentField);
-        
+
         panel.add(new JLabel("Description:"));
         JTextArea descriptionArea = new JTextArea(3, 20);
         panel.add(new JScrollPane(descriptionArea));
@@ -171,8 +159,8 @@ public class ManageAssetsPanel extends JPanel {
                         (AssetType) typeCombo.getSelectedItem(),
                         nameField.getText(),
                         locationField.getText(),
-                        (Integer) capacitySpinner.getValue(),
-                        (String) departmentField.getSelectedItem(),
+                        0,
+                        "",
                         descriptionArea.getText()
                 );
                 JOptionPane.showMessageDialog(dialog, "Asset created successfully!");
@@ -210,35 +198,26 @@ public class ManageAssetsPanel extends JPanel {
             dialog.setModal(true);
             
             JPanel panel = new JPanel();
-            panel.setLayout(new GridLayout(8, 2, 10, 10));
-            
+            panel.setLayout(new GridLayout(6, 2, 10, 10));
+
             panel.add(new JLabel("Asset Type:"));
             JComboBox<AssetType> typeCombo = new JComboBox<>(AssetType.values());
             typeCombo.setSelectedItem(asset.getAssetType());
             panel.add(typeCombo);
-            
+
             panel.add(new JLabel("Name:"));
             JTextField nameField = new JTextField(asset.getName());
             panel.add(nameField);
-            
+
             panel.add(new JLabel("Location:"));
             JTextField locationField = new JTextField(asset.getLocation());
             panel.add(locationField);
-            
-            panel.add(new JLabel("Capacity:"));
-            JSpinner capacitySpinner = new JSpinner();
-            capacitySpinner.setValue(asset.getCapacity());
-            panel.add(capacitySpinner);
-            
-            panel.add(new JLabel("Department:"));
-            JComboBox<String> departmentField = createDepartmentComboBox(asset.getDepartment());
-            panel.add(departmentField);
-            
+
             panel.add(new JLabel("Status:"));
             JComboBox<String> statusCombo = new JComboBox<>(new String[]{"AVAILABLE", "OCCUPIED", "MAINTENANCE", "OUT_OF_SERVICE"});
             statusCombo.setSelectedItem(asset.getStatus());
             panel.add(statusCombo);
-            
+
             panel.add(new JLabel("Description:"));
             JTextArea descriptionArea = new JTextArea(asset.getDescription(), 3, 20);
             panel.add(new JScrollPane(descriptionArea));
@@ -248,8 +227,6 @@ public class ManageAssetsPanel extends JPanel {
                 try {
                     asset.setName(nameField.getText());
                     asset.setLocation(locationField.getText());
-                    asset.setCapacity((Integer) capacitySpinner.getValue());
-                    asset.setDepartment((String) departmentField.getSelectedItem());
                     asset.setStatus((String) statusCombo.getSelectedItem());
                     asset.setDescription(descriptionArea.getText());
                     

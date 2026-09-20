@@ -71,27 +71,29 @@ public class DashboardFrame extends JFrame {
             case "Profile":
                 setContent(new hms.gui.panels.Profile());
                 break;
-            case "Appointment":
+            case "Appointments":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Appointments", "bookings.txt"));
+                        "Manage Appointments", "bookings.txt"));
                 break;
-            case "Manage Wards/Clinics":
+            case "Users":
+                setContent(new hms.gui.panels.ManageUserPanel(
+                    "View, Edit And Register Users"));
+                break;                
+            case "Wards/Clinics":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Wards and Clinics", "hospital_assets.txt"));
+                        "Manage Wards and Clinics", "hospital_assets.txt"));
                 break;
-            case "Manage Departments/Specialties":
+            case "Departments/Specialties":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Departments and Specialties", "department.txt"));
+                        "Manage Departments and Specialties", "department.txt"));
                 break;
-            case "Manage User":
-                setContent(new hms.gui.panels.ManageUserPanel());
-                break;
-            case "Manage Assets":
-                setContent(new hms.gui.panels.ManageAssetsPanel());
-                break;
-            case "Manage Insurances":
+            case "Consultation Rates":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Insurance Networks", "insurance_networks.txt"));
+                    "Configure Consultation Rates", "consultation_rates.txt"));
+                break;
+            case "Insurances":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Manage Insurance Networks", "insurance_networks.txt"));
                 break;
                 
             default:

@@ -12,14 +12,14 @@ public class Asset {
     private AssetType assetType;
     private String name;
     private String location;
-    private int capacity; // for rooms/wards - number of beds/slots
+    private int capacity; // legacy field retained for compatibility, no longer persisted
     private String status; // AVAILABLE, OCCUPIED, MAINTENANCE, OUT_OF_SERVICE
-    private String department;
+    private String department; // legacy field retained for compatibility, no longer persisted
     private String description;
     private LocalDateTime createdDate;
     
     // Constructor for new assets
-    public Asset(String assetId, AssetType assetType, String name, String location, 
+    public Asset(String assetId, AssetType assetType, String name, String location,
                  int capacity, String department, String description) {
         this.assetId = assetId;
         this.assetType = assetType;
@@ -31,9 +31,14 @@ public class Asset {
         this.description = description;
         this.createdDate = LocalDateTime.now();
     }
+
+    public Asset(String assetId, AssetType assetType, String name, String location, String description) {
+        this(assetId, assetType, name, location, 0, "", description);
+        this.status = "AVAILABLE";
+    }
     
     // Constructor for loading from file
-    public Asset(String assetId, String assetTypeStr, String name, String location, 
+    public Asset(String assetId, String assetTypeStr, String name, String location,
                  int capacity, String status, String department, String description, String createdDateStr) {
         this.assetId = assetId;
         this.assetType = AssetType.fromString(assetTypeStr);
@@ -43,7 +48,7 @@ public class Asset {
         this.status = status;
         this.department = department;
         this.description = description;
-        
+
         DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
         try {
             this.createdDate = LocalDateTime.parse(createdDateStr, formatter);
@@ -51,20 +56,21 @@ public class Asset {
             this.createdDate = LocalDateTime.now();
         }
     }
+
+    public Asset(String assetId, String assetTypeStr, String name, String location,
+                 String status, String description) {
+        this(assetId, assetTypeStr, name, location, 0, status, "", description, LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+    }
     
     // Convert to file format (pipe-separated)
     public String toFileLine() {
-        DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
         return String.join("|",
                 assetId,
                 assetType.name(),
                 name,
                 location,
-                String.valueOf(capacity),
                 status,
-                department,
-                description,
-                createdDate.format(formatter)
+                description
         );
     }
     

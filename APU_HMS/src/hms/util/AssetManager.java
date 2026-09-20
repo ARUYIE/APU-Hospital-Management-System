@@ -2,6 +2,7 @@ package hms.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -18,12 +19,15 @@ public class AssetManager {
     public static String createAsset(AssetType type, String name, String location,
                                     int capacity, String department, String description) {
         String assetId = IDGenerator.next("ASSET", ASSETS_FILE);
-        Asset asset = new Asset(assetId, type, name, location, capacity, department, description);
-        
+        Asset asset = new Asset(assetId, type, name, location, description);
+        asset.setStatus("AVAILABLE");
+        asset.setCapacity(capacity);
+        asset.setDepartment(department);
+
         List<String> lines = FileManager.readLines(ASSETS_FILE);
         lines.add(asset.toFileLine());
         FileManager.writeAllLines(ASSETS_FILE, lines);
-        
+
         return assetId;
     }
     
@@ -38,7 +42,8 @@ public class AssetManager {
     public static List<Asset> getAllAssets() {
         List<String> lines = FileManager.readLines(ASSETS_FILE);
         return lines.stream()
-                .map(line -> parseAsset(line))
+                .map(AssetManager::parseAsset)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
     
@@ -142,21 +147,51 @@ public class AssetManager {
      * Parse a line from the assets file into an Asset object
      */
     private static Asset parseAsset(String line) {
-        String[] parts = line.split("\\|", -1);
-        if (parts.length < 9) {
-            throw new IllegalArgumentException("Invalid asset line format: " + line);
+        if (line == null || line.trim().isEmpty()) {
+            return null;
         }
-        
-        return new Asset(
-                parts[0],  // assetId
-                parts[1],  // assetType
-                parts[2],  // name
-                parts[3],  // location
-                Integer.parseInt(parts[4]),  // capacity
-                parts[5],  // status
-                parts[6],  // department
-                parts[7],  // description
-                parts[8]   // createdDate
-        );
+
+        String[] parts = line.split("\\|", -1);
+        if (parts.length == 0 || "ASSET_ID".equalsIgnoreCase(parts[0])) {
+            return null;
+        }
+
+        if (parts.length >= 9) {
+            return new Asset(
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                    parts[3],
+                    Integer.parseInt(parts[4]),
+                    parts[5],
+                    parts[6],
+                    parts[7],
+                    parts[8]
+            );
+        }
+
+        if (parts.length >= 7) {
+            return new Asset(
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                    parts[3],
+                    parts[4],
+                    parts[6].isEmpty() ? parts[5] : parts[5] + " | Department: " + parts[6]
+            );
+        }
+
+        if (parts.length >= 6) {
+            return new Asset(
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                    parts[3],
+                    parts[4],
+                    parts[5]
+            );
+        }
+
+        return null;
     }
 }
