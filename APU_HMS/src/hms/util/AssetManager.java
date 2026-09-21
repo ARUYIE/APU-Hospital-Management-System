@@ -71,6 +71,18 @@ public class AssetManager {
                 .collect(Collectors.toList());
     }
 
+    private static String getHeaderLine() {
+        List<String> lines = FileManager.readLines(ASSETS_FILE);
+        if (!lines.isEmpty()) {
+            String firstLine = lines.get(0);
+            String[] parts = firstLine.split("\\|", -1);
+            if (parts.length > 0 && ("ASSET_ID".equalsIgnoreCase(parts[0]) || "ASSETID".equalsIgnoreCase(parts[0]))) {
+                return firstLine;
+            }
+        }
+        return "ASSET_ID|ROOM_TYPE|ROOM_NAME|LOCATION|STATUS|RESERVED_BY";
+    }
+
     public static boolean updateAsset(Asset asset) {
         List<Asset> assets = getAllAssets();
         boolean found = false;
@@ -84,9 +96,11 @@ public class AssetManager {
         }
         
         if (found) {
-            List<String> lines = assets.stream()
+            List<String> lines = new ArrayList<>();
+            lines.add(getHeaderLine());
+            lines.addAll(assets.stream()
                     .map(Asset::toFileLine)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
             FileManager.writeAllLines(ASSETS_FILE, lines);
         }
         
@@ -110,9 +124,11 @@ public class AssetManager {
         boolean removed = assets.removeIf(a -> a.getAssetId().equals(assetId));
         
         if (removed) {
-            List<String> lines = assets.stream()
+            List<String> lines = new ArrayList<>();
+            lines.add(getHeaderLine());
+            lines.addAll(assets.stream()
                     .map(Asset::toFileLine)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
             FileManager.writeAllLines(ASSETS_FILE, lines);
         }
         
@@ -152,7 +168,7 @@ public class AssetManager {
         }
 
         String[] parts = line.split("\\|", -1);
-        if (parts.length == 0 || "ASSET_ID".equalsIgnoreCase(parts[0])) {
+        if (parts.length == 0 || "ASSET_ID".equalsIgnoreCase(parts[0]) || "ASSETID".equalsIgnoreCase(parts[0])) {
             return null;
         }
 

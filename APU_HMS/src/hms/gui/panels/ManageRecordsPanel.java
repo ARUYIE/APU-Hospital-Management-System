@@ -12,13 +12,14 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-// for department,appontment, insurance
+// for wards, department,appontment, consultation rate, insurance
 public class ManageRecordsPanel extends JPanel {
 
     private final String fileName;
     private final boolean departmentTable;
     private final boolean appointmentTable;
     private final JComboBox<String> doctorSearchBox = new JComboBox<>();
+    private final JTextField assetSearchField = new JTextField(14);
     private final boolean assetTable;
     private final boolean shiftTime;
     private final boolean insuranceTable;
@@ -44,7 +45,7 @@ public class ManageRecordsPanel extends JPanel {
                 : appointmentTable
                 ? new String[]{"APPOINTMENT_ID", "PATIENT_NAME", "DOCTOR_NAME", "DATE", "TIME", "STATUS", "NOTES"}
                 : assetTable
-                ? new String[]{"ASSET_ID", "ROOM_TYPE", "ROOM_NAME", "LOCATION", "STATUS", "NOTES"}
+                ? new String[]{"ASSET_ID", "ROOM_TYPE", "ROOM_NAME", "LOCATION", "STATUS", "RESERVED_BY"}
                 : insuranceTable
                 ? new String[]{"INSURANCE_ID", "PROVIDER_NAME", "COVERAGE_RATE", "COVERAGE_PERCENTAGE", "STATUS", "CONTACT_INFO", "EFFECTIVE_DATE"}
                 : consultationRateTable
@@ -83,13 +84,21 @@ public class ManageRecordsPanel extends JPanel {
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         if (assetTable) {
+            actions.add(new JLabel("Search Wards/Clinics:"));
+            assetSearchField.setToolTipText("Search by name, type, location, or status");
+            assetSearchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+                public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshTable(); }
+                public void removeUpdate(javax.swing.event.DocumentEvent e) { refreshTable(); }
+                public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshTable(); }
+            });
+            actions.add(assetSearchField);
             actions.add(reserveButton);
             actions.add(finishButton);
         } else if(appointmentTable){
             actions.add(new JLabel("Search Doctor:"));
             populateDoctorSearchBox();
             actions.add(doctorSearchBox);
-        }
+        } 
         actions.add(refreshButton);
         actions.add(addButton);
         actions.add(editButton);
@@ -114,11 +123,11 @@ public class ManageRecordsPanel extends JPanel {
             return null;
         }
         int modelRow = recordsTable.convertRowIndexToModel(viewRow);
-        if (modelRow < 0 || modelRow >= records.size()) {
+        if (modelRow < 0 || modelRow >= tableModel.getRowCount()) {
             return null;
         }
-        String[] parts = splitRecord(records.get(modelRow));
-        return (parts.length > 0) ? parts[0].trim() : null;
+        Object val = tableModel.getValueAt(modelRow, 0);
+        return val != null ? val.toString().trim() : null;
     }
 
     private void reserveSelectedAsset() {
@@ -172,11 +181,7 @@ public class ManageRecordsPanel extends JPanel {
         }
 
         asset.setStatus("OCCUPIED");
-        if (asset.getDescription() == null || asset.getDescription().trim().isEmpty()) {
-            asset.setDescription("Reserved by: " + departmentName.trim());
-        } else if (!asset.getDescription().contains(departmentName.trim())) {
-            asset.setDescription(asset.getDescription() + " | Reserved by: " + departmentName.trim());
-        }
+        asset.setDescription(departmentName.trim());
 
         if (hms.util.AssetManager.updateAsset(asset)) {
             JOptionPane.showMessageDialog(this, "Ward/clinic reserved successfully.");
@@ -219,6 +224,8 @@ public class ManageRecordsPanel extends JPanel {
         }
 
         asset.setStatus("AVAILABLE");
+        asset.setDescription("");
+
         if (hms.util.AssetManager.updateAsset(asset)) {
             JOptionPane.showMessageDialog(this, "Ward/clinic marked as finished.");
             refreshTable();
@@ -333,9 +340,12 @@ public class ManageRecordsPanel extends JPanel {
         List<User> headManagers = managers.stream()
             .filter(user -> user.getRole() == Role.MEDICAL_MANAGER)
             .toList();
-        String selectedManagerId = selectedManager >= 0
-            ? headManagers.get(managerCombo.getSelectedIndex()).getUserId()
-            : existingManagerId;
+        
+        String selectedManagerId = existingManagerId;
+        if (managerCombo.getSelectedIndex() >= 0) {
+            selectedManagerId = headManagers.get(managerCombo.getSelectedIndex()).getUserId();
+        }
+
         return String.join("|", idField.getText().trim(), nameField.getText().trim(),
                 descriptionField.getText().trim(), selectedManagerId);
     }
@@ -406,6 +416,7 @@ public class ManageRecordsPanel extends JPanel {
     }
 
 
+
     private String editAssetRecord(String record) {
         String[] parts = splitRecord(record);
         if (parts.length < 6) {
@@ -417,7 +428,7 @@ public class ManageRecordsPanel extends JPanel {
         String roomName = parts[2].trim();
         String location = parts[3].trim();
         String status = parts[4].trim();
-        String notes = parts.length > 5 ? parts[5].trim() : "";
+        String reservedby = parts.length > 5 ? parts[5].trim() : "";
 
         JTextField assetIdField = new JTextField(assetId);
         setUneditable(assetIdField);
@@ -425,7 +436,7 @@ public class ManageRecordsPanel extends JPanel {
         JTextField roomNameField = new JTextField(roomName);
         JTextField locationField = new JTextField(location);
         JTextField statusField = new JTextField(status);
-        JTextField notesField = new JTextField(notes);
+        JTextField reservedByField = new JTextField(reservedby);
 
         JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
         form.add(new JLabel("ASSET_ID:"));
@@ -438,8 +449,8 @@ public class ManageRecordsPanel extends JPanel {
         form.add(locationField);
         form.add(new JLabel("STATUS:"));
         form.add(statusField);
-        form.add(new JLabel("NOTES:"));
-        form.add(notesField);
+        form.add(new JLabel("RESERVED BY:"));
+        form.add(reservedByField);
 
         int choice = JOptionPane.showConfirmDialog(this, form,
                 "Edit Asset", JOptionPane.OK_CANCEL_OPTION,
@@ -454,7 +465,7 @@ public class ManageRecordsPanel extends JPanel {
                 roomNameField.getText().trim(),
                 locationField.getText().trim(),
                 statusField.getText().trim(),
-                notesField.getText().trim());
+                reservedByField.getText().trim());
     }
     private String editInsuranceRecord(String record) {
         String[] parts = splitRecord(record);
@@ -526,6 +537,7 @@ public class ManageRecordsPanel extends JPanel {
         }
 
         JTextField specialtyField = new JTextField(parts[0].trim());
+        setUneditable(specialtyField);
         JTextField baseRateField = new JTextField(parts[1].trim());
         JTextField minRateField = new JTextField(parts[2].trim());
         JTextField maxRateField = new JTextField(parts[3].trim());
