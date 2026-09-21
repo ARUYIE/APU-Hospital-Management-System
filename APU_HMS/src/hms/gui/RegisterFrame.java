@@ -10,7 +10,7 @@ import javax.swing.*;
 import java.awt.*;
 
 
-public class RegisterFrame extends JFrame {
+public class RegisterFrame extends JDialog {
 
     private final JTextField fullNameField = new JTextField(18);
     private final JTextField usernameField = new JTextField(18);
@@ -27,11 +27,11 @@ public class RegisterFrame extends JFrame {
     private final JPanel extraFieldsPanel = new JPanel(new CardLayout());
 
     public RegisterFrame() {
-        super("Register New Account");
+        super((Frame) null, "Register New Account", true);
         buildUI();
         setSize(460, 480);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
     }
 
     private void buildUI() {

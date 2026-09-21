@@ -92,6 +92,7 @@ public class AssetAllocation {
                now.isAfter(allocationStart) && now.isBefore(allocationEnd);
     }
     
+
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(allocationEnd);
     }
