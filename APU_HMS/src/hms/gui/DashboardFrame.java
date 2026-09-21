@@ -49,8 +49,21 @@ public class DashboardFrame extends JFrame {
         String[] options = user.getMenuOptions();
         JList<String> menuList = new JList<>(options);
         menuList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        menuList.setFixedCellHeight(36);
-        menuList.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        menuList.setFont(menuList.getFont().deriveFont(Font.BOLD, 16f));
+        menuList.setFixedCellHeight(48);
+        menuList.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        menuList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                int index, boolean isSelected, boolean cellHasFocus) {
+            JLabel label = (JLabel) super.getListCellRendererComponent(
+                list, value, index, isSelected, cellHasFocus);
+            label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.GRAY),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+            return label;
+            }
+        });
 
         menuList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && menuList.getSelectedValue() != null) {
@@ -62,7 +75,8 @@ public class DashboardFrame extends JFrame {
         menuList.setSelectedValue("Profile", true);
         
         JScrollPane scrollPane = new JScrollPane(menuList);
-        scrollPane.setPreferredSize(new Dimension(260, 0));
+        scrollPane.setPreferredSize(new Dimension(320, 0));
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
         return scrollPane;
     }
 

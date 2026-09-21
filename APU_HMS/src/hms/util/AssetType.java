@@ -18,6 +18,7 @@ public enum AssetType {
         this.displayName = displayName;
     }
 
+
     public String getDisplayName() {
         return displayName;
     }
