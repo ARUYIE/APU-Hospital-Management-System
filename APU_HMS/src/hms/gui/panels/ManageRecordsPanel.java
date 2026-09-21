@@ -7,10 +7,12 @@ import hms.util.ManageRecordsHelper;
 import hms.util.UserRepository;
 import hms.role.Role;
 import hms.role.User;
+import hms.util.ReportData;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,11 +38,12 @@ public class ManageRecordsPanel extends JPanel {
     private String headerLine;
     private boolean headerPresent;
     private boolean initialized;
-
-    private final MedicalManagerHandler medicalManagerHandler;
     
+    private final ReportData reportData;
+
     public ManageRecordsPanel(String title, String fileName) {
         this.fileName = fileName;
+        reportData = new ReportData();
         
         // Tan Rui En - Admin
         assetTable = "hospital_assets.txt".equalsIgnoreCase(fileName);
@@ -68,7 +71,7 @@ public class ManageRecordsPanel extends JPanel {
                 : rosterTable
                 ? new String[]{"ROSTER_ID", "DOCTOR_ID", "DOCTOR_NAME", "DEPARTMENT", "DATE", "SHIFT", "STATUS"}
                 : reportTable
-                ? new String[]{"REPORT_PERIOD", "TOTAL_PATIENTS", "APPOINTMENTS", "COMPLETED_APPOINTMENTS", "CANCELLED_APPOINTMENTS", "ACTIVE_DOCTORS", "DEPARTMENTS_ACTIVE"}
+                ? new String[]{"REPORT_PERIOD", "TOTAL_PATIENTS", "APPOINTMENTS", "COMPLETED_APPOINTMENTS", "CANCELLED_APPOINTMENTS", "TOTAL_REVENUE"}
                 : new String[]{"#", "Record"}, 0) {
                     
         @Override
@@ -119,7 +122,9 @@ public class ManageRecordsPanel extends JPanel {
             actions.add(new JLabel("Search Doctor:"));
             populateDoctorSearchBox();
             actions.add(doctorSearchBox);
-        } 
+        } else if(reportTable){
+            populateReportTable();
+        }
         actions.add(refreshButton);
         actions.add(addButton);
         actions.add(editButton);
@@ -1017,7 +1022,7 @@ public class ManageRecordsPanel extends JPanel {
         return ManageRecordsHelper.hasIllegalChars(values);
     }
     
-        private void addRosterRecord(String line) {
+    private void addRosterRecord(String line) {
         String[] parts = splitRecord(line);
         if (parts.length < 4) {
             return;
@@ -1093,5 +1098,41 @@ public class ManageRecordsPanel extends JPanel {
         writeRecords(updatedLines, "The insurance record could not be updated.");
         return updatedRecord;
     }
-}
+    
+    private void populateReportTable() {
+        String currentPeriod = java.time.YearMonth.now().toString();
 
+        List<String> reportRecords = FileManager.readLines(fileName);
+
+        boolean currentMonthExists = false;
+
+        for (String record : reportRecords) {
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts = splitRecord(record);
+
+            if (parts.length >= 6
+                    && currentPeriod.equals(parts[0].trim())) {
+                currentMonthExists = true;
+                break;
+            }
+        }
+
+        if (!currentMonthExists) {
+            String newRecord = String.join("|",
+                    currentPeriod,
+                    String.valueOf(reportData.getTotalPatients()),
+                    String.valueOf(reportData.getAppointments()),
+                    String.valueOf(reportData.getCompleted()),
+                    String.valueOf(reportData.getCancelled()),
+                    String.valueOf(reportData.getTotalRevenue())
+            );
+
+            FileManager.appendLine(fileName, newRecord);
+        }
+
+        refreshTable();
+    }
+}

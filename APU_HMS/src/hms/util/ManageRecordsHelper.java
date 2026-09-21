@@ -16,6 +16,8 @@ public final class ManageRecordsHelper {
     private final boolean assetTable;
     private final boolean insuranceTable;
     private final boolean consultationRateTable;
+    private final boolean rosterTable;
+    private final boolean reportTable;
     private final DefaultTableModel tableModel;
     private final JComboBox<String> doctorSearchBox;
     private final List<String> records = new ArrayList<>();
@@ -33,6 +35,8 @@ public final class ManageRecordsHelper {
         assetTable = "hospital_assets.txt".equalsIgnoreCase(fileName);
         insuranceTable = "insurance_networks.txt".equalsIgnoreCase(fileName);
         consultationRateTable = "consultation_rates.txt".equalsIgnoreCase(fileName);
+        rosterTable = "roster.txt".equalsIgnoreCase(fileName);
+        reportTable = "report.txt".equalsIgnoreCase(fileName);
     }
 
     public List<String> getRecords() {
@@ -180,31 +184,88 @@ public final class ManageRecordsHelper {
 
     private void addTableRow(String line) {
         String[] parts = splitRecord(line);
+
         if (departmentTable && parts.length >= 4) {
-            tableModel.addRow(new Object[]{parts[0].trim(), parts[1].trim(),
-                    findName(parts[3].trim()), parts[2].trim()});
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                findName(parts[3].trim()),
+                parts[2].trim()
+            });
+
         } else if (appointmentTable && parts.length >= 7) {
             String doctorName = findName(parts[2].trim());
             String selectedDoctor = (String) doctorSearchBox.getSelectedItem();
-            if (selectedDoctor != null && !selectedDoctor.equals("All Doctors")
-                    && !selectedDoctor.equals("Doctor Name") && !doctorName.equals(selectedDoctor)) {
+
+            if (selectedDoctor != null
+                    && !selectedDoctor.equals("All Doctors")
+                    && !selectedDoctor.equals("Doctor Name")
+                    && !doctorName.equals(selectedDoctor)) {
                 return;
             }
-            tableModel.addRow(new Object[]{parts[0].trim(), findName(parts[1].trim()), doctorName,
-                    parts[3].trim(), parts[4].trim(), parts[5].trim(), parts[6].trim()});
+
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                findName(parts[1].trim()),
+                doctorName,
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim()
+            });
+
         } else if (assetTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                    parts[3].trim(), parts[4].trim(), parts[5].trim()});
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim()
+            });
+
         } else if (insuranceTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                    parts[3].trim(), parts[4].trim(), parts[5].trim(),
-                    parts.length > 6 ? parts[6].trim() : ""});
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts.length > 6 ? parts[6].trim() : ""
+            });
+
         } else if (consultationRateTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                    parts[3].trim(), parts[4].trim(), parts[5].trim()});
-        } else if (!departmentTable && !appointmentTable && !assetTable
-                && !insuranceTable && !consultationRateTable) {
-            tableModel.addRow(new Object[]{tableModel.getRowCount() + 1, line});
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim()
+            });
+
+        } else if (reportTable && parts.length >= 6) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim()
+            });
+
+        } else if (!departmentTable
+                && !appointmentTable
+                && !assetTable
+                && !insuranceTable
+                && !consultationRateTable
+                && !reportTable) {
+
+            tableModel.addRow(new Object[]{
+                tableModel.getRowCount() + 1,
+                line
+            });
         }
     }
 

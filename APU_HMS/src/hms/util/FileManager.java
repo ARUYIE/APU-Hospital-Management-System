@@ -124,14 +124,38 @@ public final class FileManager {
     // Appends a single line to the given data file (creating it if necessary). 
     public static void appendLine(String fileName, String line) {
         Path path = pathFor(fileName);
-        try (BufferedWriter writer = Files.newBufferedWriter(
-                path, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
-            writer.write(line);
-            writer.newLine();
+
+        try {
+            boolean fileExists = Files.exists(path);
+
+            try (BufferedWriter writer = Files.newBufferedWriter(
+                    path,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND)) {
+
+                // Create the header when report.txt is created for the first time
+                if (!fileExists && "report.txt".equalsIgnoreCase(fileName)) {
+                    writer.write(
+                            "REPORT_PERIOD|"
+                            + "TOTAL_PATIENTS|"
+                            + "APPOINTMENTS|"
+                            + "COMPLETED|"
+                            + "CANCELLED|"
+                            + "TOTAL_REVENUE"
+                    );
+                    writer.newLine();
+                }
+
+                writer.write(line);
+                writer.newLine();
+            }
+
         } catch (IOException e) {
-            System.err.println("Error writing " + fileName + ": " + e.getMessage());
+            System.err.println(
+                    "Error writing " + fileName + ": " + e.getMessage()
+            );
         }
-    }
+    }   
 
     // Overwrites the whole data file with the given lines (used for updates/deletes). 
     public static void writeAllLines(String fileName, List<String> lines) {
