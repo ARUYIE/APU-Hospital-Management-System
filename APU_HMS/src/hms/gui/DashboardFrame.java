@@ -82,6 +82,7 @@ public class DashboardFrame extends JFrame {
 
     private void showPanelFor(String menuLabel) {
         switch (menuLabel) {
+            // Tan Rui En - Admin
             case "Profile":
                 setContent(new hms.gui.panels.Profile());
                 break;
@@ -97,10 +98,6 @@ public class DashboardFrame extends JFrame {
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                         "Manage Wards and Clinics", "hospital_assets.txt"));
                 break;
-            case "Departments/Specialties":
-                setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Manage Departments and Specialties", "department.txt"));
-                break;
             case "Consultation Rates":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                     "Configure Consultation Rates", "consultation_rates.txt"));
@@ -108,6 +105,20 @@ public class DashboardFrame extends JFrame {
             case "Insurances":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                         "Manage Insurance Networks", "insurance_networks.txt"));
+                break;
+                
+            // Wong Willard - Medical Manager
+            case "Clinical Departments":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "Manage Departments and Specialties", "department.txt"));
+                break;                
+            case "Doctor Operational Roster":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "Manager Doctor Operational Roster", "roster.txt"));
+                break;
+            case "View Analytical Reports":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "View Hospital Metrics and Revenue Summaries", "report.txt"));
                 break;
                 
             default:
