@@ -18,6 +18,7 @@ import java.util.List;
 public class ManageRecordsPanel extends JPanel {
 
     private final String fileName;
+    
     private final boolean departmentTable;
     private final boolean appointmentTable;
     private final JComboBox<String> doctorSearchBox = new JComboBox<>();
@@ -26,6 +27,8 @@ public class ManageRecordsPanel extends JPanel {
     private final boolean shiftTime;
     private final boolean insuranceTable;
     private final boolean consultationRateTable;
+    private final boolean rosterTable;
+    private final boolean reportTable;
     private final DefaultTableModel tableModel;
     private final JTable recordsTable;
     private final ManageRecordsHelper recordHelper;
@@ -34,14 +37,23 @@ public class ManageRecordsPanel extends JPanel {
     private boolean headerPresent;
     private boolean initialized;
 
+    private final MedicalManagerHandler medicalManagerHandler;
+    
     public ManageRecordsPanel(String title, String fileName) {
         this.fileName = fileName;
-        departmentTable = "department.txt".equalsIgnoreCase(fileName);
+        
+        // Tan Rui En - Admin
         assetTable = "hospital_assets.txt".equalsIgnoreCase(fileName);
         appointmentTable = "bookings.txt".equalsIgnoreCase(fileName);
         shiftTime = "shift_time.txt".equalsIgnoreCase(fileName);
         insuranceTable = "insurance_networks.txt".equalsIgnoreCase(fileName);
         consultationRateTable = "consultation_rates.txt".equalsIgnoreCase(fileName);
+        
+        // Wong Willard - Medical Manager
+        departmentTable = "department.txt".equalsIgnoreCase(fileName);
+        rosterTable = "roster.txt".equalsIgnoreCase(fileName);
+        reportTable = "report.txt".equalsIgnoreCase(fileName);
+        
         tableModel = new DefaultTableModel(
                 departmentTable
                 ? new String[]{"DEPTARTMENT_ID", "DEPTARTMENT_NAME", "HEAD_MANAGER_NAME", "DESCRIPTION"}
@@ -53,14 +65,19 @@ public class ManageRecordsPanel extends JPanel {
                 ? new String[]{"INSURANCE_ID", "PROVIDER_NAME", "COVERAGE_RATE", "COVERAGE_PERCENTAGE", "STATUS", "CONTACT_INFO", "EFFECTIVE_DATE"}
                 : consultationRateTable
                 ? new String[]{"SPECIALTY", "BASE_RATE", "MIN_RATE", "MAX_RATE", "CURRENCY", "EFFECTIVE_DATE"}
+                : rosterTable
+                ? new String[]{"ROSTER_ID", "DOCTOR_ID", "DOCTOR_NAME", "DEPARTMENT", "DATE", "SHIFT", "STATUS"}
+                : reportTable
+                ? new String[]{"REPORT_PERIOD", "TOTAL_PATIENTS", "APPOINTMENTS", "COMPLETED_APPOINTMENTS", "CANCELLED_APPOINTMENTS", "ACTIVE_DOCTORS", "DEPARTMENTS_ACTIVE"}
                 : new String[]{"#", "Record"}, 0) {
+                    
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
         recordsTable = new JTable(tableModel);
-    recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox);
+        recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -998,6 +1015,83 @@ public class ManageRecordsPanel extends JPanel {
 
     private boolean hasIllegalChars(String... values) {
         return ManageRecordsHelper.hasIllegalChars(values);
+    }
+    
+        private void addRosterRecord(String line) {
+        String[] parts = splitRecord(line);
+        if (parts.length < 4) {
+            return;
+        }
+
+        tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                findName(parts[3].trim()),
+                parts[2].trim()
+        });
+    }
+    
+    private String editRosterRecord(String record) {
+        String[] parts = splitRecord(record);
+        if (parts.length < 6) {
+            return null;
+        }
+
+        String rosterId = parts[0].trim();
+        String doctorId = parts[1].trim();
+        String doctorName = parts[2].trim();
+        String departmentName = parts[3].trim();
+        String date = parts[4].trim();
+        String shift = parts[5].trim();
+        String status = parts[6].trim();
+
+        JTextField rosterIdField = new JTextField(rosterId);
+        setUneditable(rosterIdField);
+        JTextField doctorIdField = new JTextField(doctorId);
+        setUneditable(doctorIdField);
+        JTextField doctorNameField = new JTextField(doctorName);
+        JTextField departmentNameField = new JTextField(departmentName);
+        JTextField dateField = new JTextField(date);
+        JTextField shiftField = new JTextField(shift);
+        JTextField statusField = new JTextField(status);
+
+        JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
+        form.add(new JLabel("ROSTER_ID:"));
+        form.add(rosterIdField);
+        form.add(new JLabel("DOCTOR_ID:"));
+        form.add(doctorIdField);
+        form.add(new JLabel("DOCTOR_NAME:"));
+        form.add(doctorNameField);
+        form.add(new JLabel("DEPARTMENT:"));
+        form.add(departmentNameField);
+        form.add(new JLabel("DATE:"));
+        form.add(dateField);
+        form.add(new JLabel("SHIFT:"));
+        form.add(shiftField);
+        form.add(new JLabel("STATUS:"));
+        form.add(statusField);
+
+        int choice = JOptionPane.showConfirmDialog(this, form,
+                "Edit Insurance", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        String updatedRecord = String.join("|",
+                rosterIdField.getText().trim(),
+                doctorIdField.getText().trim(),
+                doctorNameField.getText().trim(),
+                departmentNameField.getText().trim(),
+                dateField.getText().trim(),
+                shiftField.getText().trim(),
+                statusField.getText().trim());
+
+        List<String> updatedLines = new ArrayList<>(records);
+        int modelRow = recordsTable.convertRowIndexToModel(recordsTable.getSelectedRow());
+        updatedLines.set(modelRow, updatedRecord);
+        writeRecords(updatedLines, "The insurance record could not be updated.");
+        return updatedRecord;
     }
 }
 
