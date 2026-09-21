@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 C:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\DashboardFrame.java
 C:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\LoginFrame.java
 C:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\panels\ManageAssetsPanel.java
@@ -26,3 +27,33 @@ C:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Managem
 C:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\Session.java
 C:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\UserRepository.java
 C:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\Validator.java
+=======
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\DashboardFrame.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\LoginFrame.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\panels\ManageRecordsPanel.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\panels\ManageUserPanel.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\panels\PlaceholderPanel.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\panels\Profile.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\gui\RegisterFrame.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\Main.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\role\AdminStaff.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\role\Doctor.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\role\MedicalManager.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\role\Patient.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\role\Role.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\role\User.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\Asset.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\AssetAllocation.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\AssetAllocationManager.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\AssetManager.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\AssetType.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\BackgroundPatternUtil.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\DepartmentManager.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\DoctorManagerAssignmentRepository.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\FileManager.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\IDGenerator.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\ManageRecordsHelper.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\Session.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\UserRepository.java
+c:\Users\tanru\Downloads\APU-Hospital-Management-System\vsc\APU-Hospital-Management-System\APU_HMS\src\hms\util\Validator.java
+>>>>>>> main

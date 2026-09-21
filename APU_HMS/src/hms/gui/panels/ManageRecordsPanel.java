@@ -1,6 +1,7 @@
 package hms.gui.panels;
 
 import hms.util.Asset;
+import hms.util.AssetType;
 import hms.util.FileManager;
 import hms.util.IDGenerator;
 import hms.util.ManageRecordsHelper;
@@ -12,15 +13,19 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
-// for department,appontment, insurance
+// for wards, department,appontment, consultation rate, insurance
 public class ManageRecordsPanel extends JPanel {
 
     private final String fileName;
     private final boolean departmentTable;
     private final boolean appointmentTable;
     private final JComboBox<String> doctorSearchBox = new JComboBox<>();
+    private final JComboBox<String> assetSearchBox = new JComboBox<>(
+            new String[]{"All Room Types"});
     private final boolean assetTable;
     private final boolean shiftTime;
     private final boolean insuranceTable;
@@ -47,7 +52,7 @@ public class ManageRecordsPanel extends JPanel {
                 : appointmentTable
                 ? new String[]{"APPOINTMENT_ID", "PATIENT_NAME", "DOCTOR_NAME", "DATE", "TIME", "STATUS", "NOTES"}
                 : assetTable
-                ? new String[]{"ASSET_ID", "ROOM_TYPE", "ROOM_NAME", "LOCATION", "STATUS", "NOTES"}
+                ? new String[]{"ASSET_ID", "ROOM_TYPE", "ROOM_NAME", "LOCATION", "STATUS", "RESERVED_BY"}
                 : insuranceTable
                 ? new String[]{"INSURANCE_ID", "PROVIDER_NAME", "COVERAGE_RATE", "COVERAGE_PERCENTAGE", "STATUS", "CONTACT_INFO", "EFFECTIVE_DATE"}
                 : consultationRateTable
@@ -59,7 +64,7 @@ public class ManageRecordsPanel extends JPanel {
         }
     };
         recordsTable = new JTable(tableModel);
-    recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox);
+    recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox, assetSearchBox);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -87,17 +92,39 @@ public class ManageRecordsPanel extends JPanel {
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         if (assetTable) {
-            actions.add(reserveButton);
-            actions.add(finishButton);
+            assetSearchBox.setToolTipText("Filter by room type");
+            assetSearchBox.addActionListener(e -> refreshTable());
         } else if(appointmentTable){
             actions.add(new JLabel("Search Doctor:"));
             populateDoctorSearchBox();
             actions.add(doctorSearchBox);
-        }
+        } 
         actions.add(refreshButton);
         actions.add(addButton);
         actions.add(editButton);
         actions.add(deleteButton);
+
+        //has two rows since its a bit too long
+        if (assetTable) {
+            JPanel wardActions = new JPanel();
+            wardActions.setLayout(new BoxLayout(wardActions, BoxLayout.Y_AXIS));
+
+            JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            searchActions.add(new JLabel("Search Wards/Clinics:"));
+            searchActions.add(assetSearchBox);
+            searchActions.add(reserveButton);
+            searchActions.add(finishButton);
+
+            JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            recordActions.add(refreshButton);
+            recordActions.add(addButton);
+            recordActions.add(editButton);
+            recordActions.add(deleteButton);
+
+            wardActions.add(searchActions);
+            wardActions.add(recordActions);
+            actions = wardActions;
+        }
         
         
 
@@ -118,11 +145,11 @@ public class ManageRecordsPanel extends JPanel {
             return null;
         }
         int modelRow = recordsTable.convertRowIndexToModel(viewRow);
-        if (modelRow < 0 || modelRow >= records.size()) {
+        if (modelRow < 0 || modelRow >= tableModel.getRowCount()) {
             return null;
         }
-        String[] parts = splitRecord(records.get(modelRow));
-        return (parts.length > 0) ? parts[0].trim() : null;
+        Object val = tableModel.getValueAt(modelRow, 0);
+        return val != null ? val.toString().trim() : null;
     }
 
     private void reserveSelectedAsset() {
@@ -179,7 +206,7 @@ public class ManageRecordsPanel extends JPanel {
                                     "Edit record:", "Edit Record",
                                     JOptionPane.PLAIN_MESSAGE, null, null,
                                     records.get(modelRow));
-
+                                refreshTable();
         if (updatedRecord == null) {
             return;
         }
@@ -259,9 +286,12 @@ public class ManageRecordsPanel extends JPanel {
         List<User> headManagers = managers.stream()
             .filter(user -> user.getRole() == Role.MEDICAL_MANAGER)
             .toList();
-        String selectedManagerId = selectedManager >= 0
-            ? headManagers.get(managerCombo.getSelectedIndex()).getUserId()
-            : existingManagerId;
+        
+        String selectedManagerId = existingManagerId;
+        if (managerCombo.getSelectedIndex() >= 0) {
+            selectedManagerId = headManagers.get(managerCombo.getSelectedIndex()).getUserId();
+        }
+
         return String.join("|", idField.getText().trim(), nameField.getText().trim(),
                 descriptionField.getText().trim(), selectedManagerId);
     }
@@ -332,6 +362,7 @@ public class ManageRecordsPanel extends JPanel {
     }
 
 
+
     private String editAssetRecord(String record) {
         String[] parts = splitRecord(record);
         if (parts.length < 6) {
@@ -343,29 +374,30 @@ public class ManageRecordsPanel extends JPanel {
         String roomName = parts[2].trim();
         String location = parts[3].trim();
         String status = parts[4].trim();
-        String notes = parts.length > 5 ? parts[5].trim() : "";
+        String reservedby = parts.length > 5 ? parts[5].trim() : "";
 
         JTextField assetIdField = new JTextField(assetId);
         setUneditable(assetIdField);
-        JTextField roomTypeField = new JTextField(roomType);
+        JComboBox<String> roomTypeCombo = createAssetTypeCombo();
+        roomTypeCombo.setSelectedItem(normalizeAssetType(roomType));
         JTextField roomNameField = new JTextField(roomName);
         JTextField locationField = new JTextField(location);
         JTextField statusField = new JTextField(status);
-        JTextField notesField = new JTextField(notes);
+        JTextField reservedByField = new JTextField(reservedby);
 
         JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
         form.add(new JLabel("ASSET_ID:"));
         form.add(assetIdField);
         form.add(new JLabel("ROOM_TYPE:"));
-        form.add(roomTypeField);
+        form.add(roomTypeCombo);
         form.add(new JLabel("ROOM_NAME:"));
         form.add(roomNameField);
         form.add(new JLabel("LOCATION:"));
         form.add(locationField);
         form.add(new JLabel("STATUS:"));
         form.add(statusField);
-        form.add(new JLabel("NOTES:"));
-        form.add(notesField);
+        form.add(new JLabel("RESERVED BY:"));
+        form.add(reservedByField);
 
         int choice = JOptionPane.showConfirmDialog(this, form,
                 "Edit Asset", JOptionPane.OK_CANCEL_OPTION,
@@ -376,11 +408,11 @@ public class ManageRecordsPanel extends JPanel {
 
         return String.join("|",
                 assetIdField.getText().trim(),
-                roomTypeField.getText().trim(),
+            ((String) roomTypeCombo.getSelectedItem()).trim(),
                 roomNameField.getText().trim(),
                 locationField.getText().trim(),
                 statusField.getText().trim(),
-                notesField.getText().trim());
+                reservedByField.getText().trim());
     }
     private String editInsuranceRecord(String record) {
         String[] parts = splitRecord(record);
@@ -452,6 +484,7 @@ public class ManageRecordsPanel extends JPanel {
         }
 
         JTextField specialtyField = new JTextField(parts[0].trim());
+        setUneditable(specialtyField);
         JTextField baseRateField = new JTextField(parts[1].trim());
         JTextField minRateField = new JTextField(parts[2].trim());
         JTextField maxRateField = new JTextField(parts[3].trim());
@@ -491,6 +524,7 @@ public class ManageRecordsPanel extends JPanel {
                 minRateField.getText().trim(), maxRateField.getText().trim(),
                 currencyField.getText().trim(), effectiveDateField.getText().trim());
     }
+
 
     private boolean validRateFields(String baseRate, String minRate, String maxRate) {
         return ManageRecordsHelper.validRateFields(baseRate, minRate, maxRate);
@@ -802,14 +836,14 @@ public class ManageRecordsPanel extends JPanel {
     }
 
      private void addAssetRecord() {
-        JTextField roomTypeField = new JTextField();
+        JComboBox<String> roomTypeCombo = createAssetTypeCombo();
         JTextField roomNameField = new JTextField();
         JTextField locationField = new JTextField();
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{"AVAILABLE", "OCCUPIED"});
         JTextField reservedByField = new JTextField();
  
         JPanel form = new JPanel(new GridLayout(5, 2, 8, 8));
-        form.add(new JLabel("ROOM_TYPE:")); form.add(roomTypeField);
+        form.add(new JLabel("ROOM_TYPE:")); form.add(roomTypeCombo);
         form.add(new JLabel("ROOM_NAME:")); form.add(roomNameField);
         form.add(new JLabel("LOCATION:")); form.add(locationField);
         form.add(new JLabel("STATUS:")); form.add(statusCombo);
@@ -823,7 +857,7 @@ public class ManageRecordsPanel extends JPanel {
         }
  
         String assetId = IDGenerator.next("ASSET", fileName);
-        String roomType = roomTypeField.getText().trim();
+        String roomType = ((String) roomTypeCombo.getSelectedItem()).trim();
         String roomName = roomNameField.getText().trim();
         String location = locationField.getText().trim();
         String status = (String) statusCombo.getSelectedItem();
@@ -855,6 +889,18 @@ public class ManageRecordsPanel extends JPanel {
         FileManager.appendLine(fileName, String.join("|",
                 assetId, roomType, roomName, location, status, reservedBy));
         refreshTable();
+    }
+
+    private JComboBox<String> createAssetTypeCombo() {
+        JComboBox<String> roomTypeCombo = new JComboBox<>();
+        for (AssetType assetType : AssetType.values()) {
+            roomTypeCombo.addItem(assetType.name());
+        }
+        return roomTypeCombo;
+    }
+
+    private String normalizeAssetType(String value) {
+        return AssetType.fromString(value).name();
     }
  
     private void addAppointmentRecord() {

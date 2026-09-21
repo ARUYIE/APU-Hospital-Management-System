@@ -24,6 +24,19 @@ public enum AssetType {
     }
 
     public static AssetType fromString(String value) {
-        return AssetType.valueOf(value.trim().toUpperCase());
+        if (value == null) {
+            throw new IllegalArgumentException("Asset type cannot be null");
+        }
+
+        String trimmedValue = value.trim();
+        String normalizedValue = trimmedValue.toUpperCase().replace(' ', '_');
+        for (AssetType assetType : values()) {
+            if (assetType.name().equals(normalizedValue)
+                    || assetType.displayName.equalsIgnoreCase(trimmedValue)) {
+                return assetType;
+            }
+        }
+
+        throw new IllegalArgumentException("Unknown asset type: " + value);
     }
 }

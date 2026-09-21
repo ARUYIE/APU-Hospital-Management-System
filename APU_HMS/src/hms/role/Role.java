@@ -19,6 +19,10 @@ public enum Role {
         return displayName;
     }
 
+    @Override
+    public String toString() {
+        return displayName;
+    }
     // reads user.txt
     public static Role fromString(String value) {
         return Role.valueOf(value.trim().toUpperCase());

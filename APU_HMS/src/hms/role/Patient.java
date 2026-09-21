@@ -2,7 +2,7 @@ package hms.role;
 
 public class Patient extends User {
 
-    private String dateOfBirth; // stored as plain text, e.g. "2001-05-14"
+    private String dateOfBirth; //"2001-05-14"
     private String gender;
 
     public Patient(String userId, String username, String password,
