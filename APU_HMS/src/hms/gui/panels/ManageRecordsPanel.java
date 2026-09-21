@@ -1,6 +1,7 @@
 package hms.gui.panels;
 
 import hms.util.Asset;
+import hms.util.AssetType;
 import hms.util.FileManager;
 import hms.util.IDGenerator;
 import hms.util.ManageRecordsHelper;
@@ -12,7 +13,9 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 // for wards, department,appontment, consultation rate, insurance
 public class ManageRecordsPanel extends JPanel {
@@ -21,7 +24,8 @@ public class ManageRecordsPanel extends JPanel {
     private final boolean departmentTable;
     private final boolean appointmentTable;
     private final JComboBox<String> doctorSearchBox = new JComboBox<>();
-    private final JTextField assetSearchField = new JTextField(14);
+    private final JComboBox<String> assetSearchBox = new JComboBox<>(
+            new String[]{"All Room Types"});
     private final boolean assetTable;
     private final boolean shiftTime;
     private final boolean insuranceTable;
@@ -60,7 +64,7 @@ public class ManageRecordsPanel extends JPanel {
         }
     };
         recordsTable = new JTable(tableModel);
-    recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox);
+    recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox, assetSearchBox);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -88,16 +92,8 @@ public class ManageRecordsPanel extends JPanel {
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         if (assetTable) {
-            actions.add(new JLabel("Search Wards/Clinics:"));
-            assetSearchField.setToolTipText("Search by name, type, location, or status");
-            assetSearchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-                public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshTable(); }
-                public void removeUpdate(javax.swing.event.DocumentEvent e) { refreshTable(); }
-                public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshTable(); }
-            });
-            actions.add(assetSearchField);
-            actions.add(reserveButton);
-            actions.add(finishButton);
+            assetSearchBox.setToolTipText("Filter by room type");
+            assetSearchBox.addActionListener(e -> refreshTable());
         } else if(appointmentTable){
             actions.add(new JLabel("Search Doctor:"));
             populateDoctorSearchBox();
@@ -107,6 +103,28 @@ public class ManageRecordsPanel extends JPanel {
         actions.add(addButton);
         actions.add(editButton);
         actions.add(deleteButton);
+
+        //has two rows since its a bit too long
+        if (assetTable) {
+            JPanel wardActions = new JPanel();
+            wardActions.setLayout(new BoxLayout(wardActions, BoxLayout.Y_AXIS));
+
+            JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            searchActions.add(new JLabel("Search Wards/Clinics:"));
+            searchActions.add(assetSearchBox);
+            searchActions.add(reserveButton);
+            searchActions.add(finishButton);
+
+            JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            recordActions.add(refreshButton);
+            recordActions.add(addButton);
+            recordActions.add(editButton);
+            recordActions.add(deleteButton);
+
+            wardActions.add(searchActions);
+            wardActions.add(recordActions);
+            actions = wardActions;
+        }
         
         
 
@@ -188,7 +206,7 @@ public class ManageRecordsPanel extends JPanel {
                                     "Edit record:", "Edit Record",
                                     JOptionPane.PLAIN_MESSAGE, null, null,
                                     records.get(modelRow));
-
+                                refreshTable();
         if (updatedRecord == null) {
             return;
         }
@@ -360,7 +378,8 @@ public class ManageRecordsPanel extends JPanel {
 
         JTextField assetIdField = new JTextField(assetId);
         setUneditable(assetIdField);
-        JTextField roomTypeField = new JTextField(roomType);
+        JComboBox<String> roomTypeCombo = createAssetTypeCombo();
+        roomTypeCombo.setSelectedItem(normalizeAssetType(roomType));
         JTextField roomNameField = new JTextField(roomName);
         JTextField locationField = new JTextField(location);
         JTextField statusField = new JTextField(status);
@@ -370,7 +389,7 @@ public class ManageRecordsPanel extends JPanel {
         form.add(new JLabel("ASSET_ID:"));
         form.add(assetIdField);
         form.add(new JLabel("ROOM_TYPE:"));
-        form.add(roomTypeField);
+        form.add(roomTypeCombo);
         form.add(new JLabel("ROOM_NAME:"));
         form.add(roomNameField);
         form.add(new JLabel("LOCATION:"));
@@ -389,7 +408,7 @@ public class ManageRecordsPanel extends JPanel {
 
         return String.join("|",
                 assetIdField.getText().trim(),
-                roomTypeField.getText().trim(),
+            ((String) roomTypeCombo.getSelectedItem()).trim(),
                 roomNameField.getText().trim(),
                 locationField.getText().trim(),
                 statusField.getText().trim(),
@@ -505,6 +524,7 @@ public class ManageRecordsPanel extends JPanel {
                 minRateField.getText().trim(), maxRateField.getText().trim(),
                 currencyField.getText().trim(), effectiveDateField.getText().trim());
     }
+
 
     private boolean validRateFields(String baseRate, String minRate, String maxRate) {
         return ManageRecordsHelper.validRateFields(baseRate, minRate, maxRate);
@@ -816,14 +836,14 @@ public class ManageRecordsPanel extends JPanel {
     }
 
      private void addAssetRecord() {
-        JTextField roomTypeField = new JTextField();
+        JComboBox<String> roomTypeCombo = createAssetTypeCombo();
         JTextField roomNameField = new JTextField();
         JTextField locationField = new JTextField();
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{"AVAILABLE", "OCCUPIED"});
         JTextField reservedByField = new JTextField();
  
         JPanel form = new JPanel(new GridLayout(5, 2, 8, 8));
-        form.add(new JLabel("ROOM_TYPE:")); form.add(roomTypeField);
+        form.add(new JLabel("ROOM_TYPE:")); form.add(roomTypeCombo);
         form.add(new JLabel("ROOM_NAME:")); form.add(roomNameField);
         form.add(new JLabel("LOCATION:")); form.add(locationField);
         form.add(new JLabel("STATUS:")); form.add(statusCombo);
@@ -837,7 +857,7 @@ public class ManageRecordsPanel extends JPanel {
         }
  
         String assetId = IDGenerator.next("ASSET", fileName);
-        String roomType = roomTypeField.getText().trim();
+        String roomType = ((String) roomTypeCombo.getSelectedItem()).trim();
         String roomName = roomNameField.getText().trim();
         String location = locationField.getText().trim();
         String status = (String) statusCombo.getSelectedItem();
@@ -869,6 +889,18 @@ public class ManageRecordsPanel extends JPanel {
         FileManager.appendLine(fileName, String.join("|",
                 assetId, roomType, roomName, location, status, reservedBy));
         refreshTable();
+    }
+
+    private JComboBox<String> createAssetTypeCombo() {
+        JComboBox<String> roomTypeCombo = new JComboBox<>();
+        for (AssetType assetType : AssetType.values()) {
+            roomTypeCombo.addItem(assetType.name());
+        }
+        return roomTypeCombo;
+    }
+
+    private String normalizeAssetType(String value) {
+        return AssetType.fromString(value).name();
     }
  
     private void addAppointmentRecord() {
