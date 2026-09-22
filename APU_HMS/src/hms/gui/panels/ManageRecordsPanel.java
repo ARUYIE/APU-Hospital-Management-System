@@ -9,7 +9,6 @@ import hms.util.UserRepository;
 import hms.role.Role;
 import hms.role.User;
 import hms.util.ReportData;
-import hms.util.RosterData;
 import hms.util.ManagerMethods;
 
 import javax.swing.*;
@@ -124,8 +123,6 @@ public class ManageRecordsPanel extends JPanel {
             actions.add(doctorSearchBox);
         } else if(reportTable){
             managerMethods.populateReportTable(reportData);
-        } else if(rosterTable){
-            //Load roster
         }
         
         if (!reportTable){  // Only exclude report table because no need function button
@@ -235,7 +232,10 @@ public class ManageRecordsPanel extends JPanel {
         List<String> updatedLines = new ArrayList<>(records);
         updatedLines.set(modelRow, normalizedRecord);
 
-        writeRecords(updatedLines, "The record could not be updated.");
+        writeRecords(
+                updatedLines,
+                "The record could not be updated."
+        );
     }
 
     private String[] splitRecord(String record) {
@@ -652,7 +652,16 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
         if (rosterTable) {
-            managerMethods.addRosterRecord();
+            String newRecord = managerMethods.addRosterRecord();
+
+            if (newRecord == null) {
+                return;
+            }
+
+            List<String> updatedLines = new ArrayList<>(records);
+            updatedLines.add(newRecord);
+
+            writeRecords(updatedLines, "The roster could not be added.");
             return;
         }
         
