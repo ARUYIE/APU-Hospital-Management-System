@@ -19,7 +19,6 @@ public class AdminStaff extends User {
             "Appointments",
             "Users",
             "Wards/Clinics",
-            "Departments/Specialties",
             "Consultation Rates",            
             "Insurances"
         };

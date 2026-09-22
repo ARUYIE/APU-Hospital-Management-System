@@ -16,8 +16,8 @@ public class MedicalManager extends User {
     public String[] getMenuOptions() {
         return new String[] {
             "Profile",
-            "Design Assessment/Check-up Types",
-            "Medical Grading & Billing Rules",
+            "Clinical Departments",
+            "Doctor Operational Roster",
             "View Analytical Reports"
         };
     }
