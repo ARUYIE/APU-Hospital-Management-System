@@ -1,0 +1,155 @@
+package hms.util;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+
+/** Asset-specific record forms and persistence operations for record panels. */
+public final class RecordsHelperAsset {
+
+    private RecordsHelperAsset() {
+    }
+
+    public static String editAssetRecord(Component comp, String record) {
+        String[] parts = ManageRecordsHelper.splitRecord(record);
+        if (parts.length < 6) {
+            return null;
+        }
+
+        JTextField assetIdField = new JTextField(parts[0].trim());
+        setUneditable(assetIdField);
+        JComboBox<String> roomTypeCombo = createAssetTypeCombo();
+        roomTypeCombo.setSelectedItem(normalizeAssetType(parts[1].trim()));
+        JTextField roomNameField = new JTextField(parts[2].trim());
+        JTextField locationField = new JTextField(parts[3].trim());
+        JTextField statusField = new JTextField(parts[4].trim());
+        JTextField reservedByField = new JTextField(parts[5].trim());
+
+        JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
+        form.add(new JLabel("ASSET_ID:"));
+        form.add(assetIdField);
+        form.add(new JLabel("ROOM_TYPE:"));
+        form.add(roomTypeCombo);
+        form.add(new JLabel("ROOM_NAME:"));
+        form.add(roomNameField);
+        form.add(new JLabel("LOCATION:"));
+        form.add(locationField);
+        form.add(new JLabel("STATUS:"));
+        form.add(statusField);
+        form.add(new JLabel("RESERVED BY:"));
+        form.add(reservedByField);
+
+        int choice = JOptionPane.showConfirmDialog(comp, form,
+                "Edit Asset", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        return String.join("|",
+                assetIdField.getText().trim(),
+                ((String) roomTypeCombo.getSelectedItem()).trim(),
+                roomNameField.getText().trim(),
+                locationField.getText().trim(),
+                statusField.getText().trim(),
+                reservedByField.getText().trim());
+    }
+
+    public static void addAssetRecord(Component comp, String fileName, Runnable refreshAction) {
+        JComboBox<String> roomTypeCombo = createAssetTypeCombo();
+        JTextField roomNameField = new JTextField();
+        JTextField locationField = new JTextField();
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"AVAILABLE", "OCCUPIED"});
+        JTextField reservedByField = new JTextField();
+
+        JPanel form = new JPanel(new GridLayout(5, 2, 8, 8));
+        form.add(new JLabel("ROOM_TYPE:"));
+        form.add(roomTypeCombo);
+        form.add(new JLabel("ROOM_NAME:"));
+        form.add(roomNameField);
+        form.add(new JLabel("LOCATION:"));
+        form.add(locationField);
+        form.add(new JLabel("STATUS:"));
+        form.add(statusCombo);
+        form.add(new JLabel("RESERVED BY:"));
+        form.add(reservedByField);
+
+        int choice = JOptionPane.showConfirmDialog(comp, form,
+                "Add Ward / Clinic", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String assetId = IDGenerator.next("ASSET", fileName);
+        String roomType = ((String) roomTypeCombo.getSelectedItem()).trim();
+        String roomName = roomNameField.getText().trim();
+        String location = locationField.getText().trim();
+        String status = (String) statusCombo.getSelectedItem();
+        String reservedBy = reservedByField.getText().trim();
+
+        if (roomType.isEmpty() || roomName.isEmpty() || location.isEmpty()) {
+            showWarning(comp, "Asset ID, room type, room name, and location are required.");
+            return;
+        }
+        if (ManageRecordsHelper.hasIllegalChars(assetId, roomType, roomName, location, reservedBy)) {
+            showWarning(comp, "Fields cannot contain the '|' character or line breaks.");
+            return;
+        }
+
+        if ("AVAILABLE".equals(status)) {
+            reservedBy = "";
+        } else if (reservedBy.isEmpty()) {
+            showWarning(comp, "An occupied ward/clinic must have a 'Reserved By' value.");
+            return;
+        }
+
+        FileManager.appendLine(fileName, String.join("|",
+                assetId, roomType, roomName, location, status, reservedBy));
+        refreshAction.run();
+    }
+
+    public static void addAssetRow(DefaultTableModel tableModel,
+            String line, JComboBox<String> assetSearchBox) {
+        String[] parts = ManageRecordsHelper.splitRecord(line);
+        if (parts.length < 6) {
+            return;
+        }
+
+        String selectedAssetType = (String) assetSearchBox.getSelectedItem();
+        String roomType = parts[1].trim();
+        if (selectedAssetType != null && !"All Room Types".equals(selectedAssetType)
+                && !roomType.equals(selectedAssetType)) {
+            return;
+        }
+
+        tableModel.addRow(new Object[]{
+                parts[0].trim(), roomType, parts[2].trim(),
+                parts[3].trim(), parts[4].trim(), parts[5].trim()
+        });
+    }
+
+    public static JComboBox<String> createAssetTypeCombo() {
+        JComboBox<String> roomTypeCombo = new JComboBox<>();
+        for (AssetType assetType : AssetType.values()) {
+            roomTypeCombo.addItem(assetType.name());
+        }
+        return roomTypeCombo;
+    }
+
+
+    private static String normalizeAssetType(String value) {
+        return AssetType.fromString(value).name();
+    }
+
+
+    private static void showWarning(Component comp, String message) {
+        JOptionPane.showMessageDialog(comp, message,
+                "Invalid Asset", JOptionPane.WARNING_MESSAGE);
+    }
+    private static void setUneditable(JTextField field) {
+        field.setEditable(false);
+        field.setFocusable(false);
+        field.setBackground(Color.LIGHT_GRAY);
+    }
+}
