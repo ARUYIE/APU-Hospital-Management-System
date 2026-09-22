@@ -26,9 +26,9 @@ public class Doctor extends User {
     public String[] getMenuOptions() {
         return new String[] {
             "Profile",
-            "Key In Assessment & Lab Results",
-            "Provide Clinical Feedback & Prescriptions",
-            "View My Patients"
+            "Patient Vitals & Consultation Notes",
+            "Prescriptions",
+            "Lab & Imaging Requests"
         };
     }
 

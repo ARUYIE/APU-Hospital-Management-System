@@ -9,6 +9,7 @@ import hms.util.UserRepository;
 import hms.role.Role;
 import hms.role.User;
 import hms.util.ReportData;
+import hms.util.Session;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -35,6 +36,9 @@ public class ManageRecordsPanel extends JPanel {
     private final boolean consultationRateTable;
     private final boolean rosterTable;
     private final boolean reportTable;
+    private final boolean consultationTable;
+    private final boolean prescriptionTable;
+    private final boolean labRequestTable;
     private final DefaultTableModel tableModel;
     private final JTable recordsTable;
     private final ManageRecordsHelper recordHelper;
@@ -61,6 +65,11 @@ public class ManageRecordsPanel extends JPanel {
         rosterTable = "roster.txt".equalsIgnoreCase(fileName);
         reportTable = "report.txt".equalsIgnoreCase(fileName);
         
+        // Low Kai Lun - Doctor
+        consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
+        prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
+        labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
+        
         tableModel = new DefaultTableModel(
                 departmentTable
                 ? new String[]{"DEPTARTMENT_ID", "DEPTARTMENT_NAME", "HEAD_MANAGER_NAME", "DESCRIPTION"}
@@ -76,15 +85,21 @@ public class ManageRecordsPanel extends JPanel {
                 ? new String[]{"ROSTER_ID", "DOCTOR_ID", "DOCTOR_NAME", "DEPARTMENT", "DATE", "SHIFT", "STATUS"}
                 : reportTable
                 ? new String[]{"REPORT_PERIOD", "TOTAL_PATIENTS", "APPOINTMENTS", "COMPLETED_APPOINTMENTS", "CANCELLED_APPOINTMENTS", "TOTAL_REVENUE"}
+                : consultationTable
+                ? new String[]{"VITAL_SIGN_ID", "PATIENT_ID", "DOCTOR_ID", "CONSULTATION_ID", "BP", "HEART_RATE", "TEMPERATURE", "DATE"}
+                : prescriptionTable
+                ? new String[]{"PRESCRIPTION_ID", "PATIENT_ID", "DOCTOR_ID", "MEDICATION", "DOSAGE", "DURATION", "DATE_ISSUED", "STATUS"}
+                : labRequestTable       
+                ? new String[]{"REQUEST_ID", "PATIENT_ID", "DOCTOR_ID", "TEST_TYPE", "STATUS", "DATE_REQUESTED", "DATE_COMPLETED", "RESULT"}
                 : new String[]{"#", "Record"}, 0) {
-                    
+                   
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
         recordsTable = new JTable(tableModel);
-        recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox, assetSearchBox);
+        recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox, assetSearchBox, false, false, false);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -547,7 +562,7 @@ public class ManageRecordsPanel extends JPanel {
                 currencyField.getText().trim(), effectiveDateField.getText().trim());
     }
 
-
+    
     private boolean validRateFields(String baseRate, String minRate, String maxRate) {
         return ManageRecordsHelper.validRateFields(baseRate, minRate, maxRate);
     }
@@ -661,6 +676,10 @@ public class ManageRecordsPanel extends JPanel {
         }
         if (insuranceTable) {
             addInsuranceRecord();
+            return;
+        }
+        if (consultationTable) {
+            addVitalSignRecord();
             return;
         }
         if (departmentTable) {
@@ -1164,6 +1183,91 @@ public class ManageRecordsPanel extends JPanel {
 
             FileManager.appendLine(fileName, newRecord);
         }
+
+        refreshTable();
+    }
+        
+    private void addVitalSignRecord() {
+        JTextField patientIdField = new JTextField();
+        JTextField doctorIdField = new JTextField();
+        JTextField consultationIdField = new JTextField();
+        JTextField bpField = new JTextField();
+        JTextField heartRateField = new JTextField();
+        JTextField temperatureField = new JTextField();
+        JTextField dateField = new JTextField(java.time.LocalDate.now().toString());
+        JTextField timestampField = new JTextField(
+                java.time.LocalDateTime.now().toString()
+        );
+
+        JPanel form = new JPanel(new GridLayout(8, 2, 8, 8));
+
+        form.add(new JLabel("PATIENT_ID:"));
+        form.add(patientIdField);
+
+        form.add(new JLabel("DOCTOR_ID:"));
+        form.add(doctorIdField);
+
+        form.add(new JLabel("CONSULTATION_ID:"));
+        form.add(consultationIdField);
+
+        form.add(new JLabel("BP:"));
+        form.add(bpField);
+
+        form.add(new JLabel("HEART_RATE:"));
+        form.add(heartRateField);
+
+        form.add(new JLabel("TEMPERATURE:"));
+        form.add(temperatureField);
+
+        form.add(new JLabel("DATE:"));
+        form.add(dateField);
+
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                form,
+                "Add Vital Sign Record",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (choice != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        // Check required fields
+        if (patientIdField.getText().trim().isEmpty()
+                || doctorIdField.getText().trim().isEmpty()
+                || consultationIdField.getText().trim().isEmpty()
+                || bpField.getText().trim().isEmpty()
+                || heartRateField.getText().trim().isEmpty()
+                || temperatureField.getText().trim().isEmpty()
+                || dateField.getText().trim().isEmpty()
+                || timestampField.getText().trim().isEmpty()) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "All fields are required.",
+                    "Invalid Vital Sign Record",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // Add record to file
+        FileManager.appendLine(
+                fileName,
+                String.join("|",
+                        IDGenerator.next("VS", fileName),
+                        patientIdField.getText().trim(),
+                        doctorIdField.getText().trim(),
+                        consultationIdField.getText().trim(),
+                        bpField.getText().trim(),
+                        heartRateField.getText().trim(),
+                        temperatureField.getText().trim(),
+                        dateField.getText().trim(),
+                        timestampField.getText().trim()
+                )
+        );
 
         refreshTable();
     }
