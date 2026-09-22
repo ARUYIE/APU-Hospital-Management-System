@@ -133,17 +133,32 @@ public final class FileManager {
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND)) {
 
-                // Create the header when report.txt is created for the first time
-                if (!fileExists && "report.txt".equalsIgnoreCase(fileName)) {
-                    writer.write(
-                            "REPORT_PERIOD|"
-                            + "TOTAL_PATIENTS|"
-                            + "APPOINTMENTS|"
-                            + "COMPLETED|"
-                            + "CANCELLED|"
-                            + "TOTAL_REVENUE"
-                    );
-                    writer.newLine();
+                // Create headers when the file is created for the first time
+                if (!fileExists) {
+
+                    if ("report.txt".equalsIgnoreCase(fileName)) {
+                        writer.write(
+                                "REPORT_PERIOD|"
+                                + "TOTAL_PATIENTS|"
+                                + "APPOINTMENTS|"
+                                + "COMPLETED|"
+                                + "CANCELLED|"
+                                + "TOTAL_REVENUE"
+                        );
+                        writer.newLine();
+
+                    } else if ("roster.txt".equalsIgnoreCase(fileName)) {
+                        writer.write(
+                                "ROSTER_ID|"
+                                + "DOCTOR_NAME|"
+                                + "MANAGED_BY|"
+                                + "DEPARTMENT|"
+                                + "DATE|"
+                                + "SHIFT|"
+                                + "STATUS"
+                        );
+                        writer.newLine();
+                    }
                 }
 
                 writer.write(line);
@@ -155,7 +170,7 @@ public final class FileManager {
                     "Error writing " + fileName + ": " + e.getMessage()
             );
         }
-    }   
+    }
 
     // Overwrites the whole data file with the given lines (used for updates/deletes). 
     public static void writeAllLines(String fileName, List<String> lines) {

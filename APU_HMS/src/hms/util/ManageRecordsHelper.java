@@ -50,15 +50,30 @@ public final class ManageRecordsHelper {
 
     public void refreshTable() {
         List<String> lines = FileManager.readLines(fileName);
-        if (!initialized) {
-            headerPresent = !lines.isEmpty();
-            initialized = true;
+
+        if (!lines.isEmpty()) {
+            headerLine = lines.get(0);
+
+            if (reportTable) {
+                if (headerLine.startsWith("REPORT_PERIOD|")) {
+                    lines.remove(0);
+                }
+            } else if (rosterTable) {
+                if (headerLine.startsWith("ROSTER_ID|")) {
+                    lines.remove(0);
+                }
+            } else if (headerPresent) {
+                lines.remove(0);
+            }
+        } else {
+            headerLine = null;
         }
-        headerLine = headerPresent && !lines.isEmpty() ? lines.remove(0) : null;
+
         records.clear();
         records.addAll(lines);
-        refreshAssetFilterOptions();
+
         tableModel.setRowCount(0);
+
         for (String record : records) {
             addTableRow(record);
         }
@@ -287,14 +302,18 @@ public final class ManageRecordsHelper {
                 parts[4].trim(),
                 parts[5].trim()
             });
-
-        } else if (!departmentTable
-                && !appointmentTable
-                && !assetTable
-                && !insuranceTable
-                && !consultationRateTable
-                && !reportTable) {
-
+        
+        } else if (rosterTable && parts.length >= 7) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim()
+            });
+        } else {
             tableModel.addRow(new Object[]{
                 tableModel.getRowCount() + 1,
                 line
