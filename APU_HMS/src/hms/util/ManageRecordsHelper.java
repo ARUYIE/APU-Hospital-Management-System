@@ -1,5 +1,6 @@
 package hms.util;
 
+import hms.role.Role;
 import hms.role.User;
 
 import javax.swing.*;
@@ -20,6 +21,9 @@ public final class ManageRecordsHelper {
     private final boolean consultationRateTable;
     private final boolean rosterTable;
     private final boolean reportTable;
+    private final boolean consultationTable;
+    private final boolean prescriptionTable;
+    private final boolean labRequestTable;
     private final DefaultTableModel tableModel;
     private final JComboBox<String> doctorSearchBox;
     private final JComboBox<String> assetSearchBox;
@@ -29,8 +33,7 @@ public final class ManageRecordsHelper {
     private boolean headerPresent;
     private boolean initialized;
 
-    public ManageRecordsHelper(String fileName, DefaultTableModel tableModel,
-            JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox) {
+    public ManageRecordsHelper(String fileName, DefaultTableModel tableModel, JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox, boolean consultationTable, boolean prescriptionTable, boolean labRequestTable) {
         this.fileName = fileName;
         this.tableModel = tableModel;
         this.doctorSearchBox = doctorSearchBox;
@@ -42,6 +45,9 @@ public final class ManageRecordsHelper {
         consultationRateTable = "consultation_rates.txt".equalsIgnoreCase(fileName);
         rosterTable = "roster.txt".equalsIgnoreCase(fileName);
         reportTable = "report.txt".equalsIgnoreCase(fileName);
+        this.consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
+        this.prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
+        this.labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
     }
 
     public List<String> getRecords() {
@@ -302,6 +308,35 @@ public final class ManageRecordsHelper {
                 parts[4].trim(),
                 parts[5].trim()
             });
+           
+        } else if (consultationTable && parts.length >= 8) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(), 
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim()
+            });
+ 
+        } else if (prescriptionTable && parts.length >= 8) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), 
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim()
+            });
+ 
+        } else if (labRequestTable && parts.length >= 8) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), 
+                parts[1].trim(),
         
         } else if (rosterTable && parts.length >= 7) {
             tableModel.addRow(new Object[]{
@@ -311,6 +346,20 @@ public final class ManageRecordsHelper {
                 parts[3].trim(),
                 parts[4].trim(),
                 parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim()
+            });
+            
+        }else if (!departmentTable
+                && !appointmentTable
+                && !assetTable
+                && !insuranceTable
+                && !consultationRateTable
+                && !reportTable
+                && !consultationTable
+                && !prescriptionTable
+                && !labRequestTable) {
+ 
                 parts[6].trim()
             });
         } else {
@@ -320,7 +369,14 @@ public final class ManageRecordsHelper {
             });
         }
     }
-
+    private static boolean visibleToCurrentDoctor(String doctorId) {
+        User current = Session.getCurrentUser();
+        if (current == null || current.getRole() != Role.DOCTOR) {
+            return true;
+        }
+        return doctorId.equals(current.getUserId());
+    }
+    
     public static String[] splitRecord(String record) {
         return record.split("\\|", -1);
     }
@@ -347,7 +403,7 @@ public final class ManageRecordsHelper {
             return false;
         }
     }
-
+    
     public static boolean isValidRecord(String record) {
         return record != null && !record.isEmpty() && !record.contains("\n")
                 && !record.contains("\r") && record.indexOf('|') > 0;
