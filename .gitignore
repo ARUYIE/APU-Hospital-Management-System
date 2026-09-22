@@ -1,0 +1,9 @@
+# Java build output
+*.class
+
+# Maven build output
+APU_HMS/target/
+
+# NetBeans/Ant build output
+APU_HMS/bin/
+APU_HMS/build/

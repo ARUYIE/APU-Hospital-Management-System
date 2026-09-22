@@ -1,6 +1,7 @@
 package hms.gui;
 
 import hms.role.User;
+import hms.util.BackgroundPatternUtil;
 import hms.util.Session;
 import hms.util.UserRepository;
 import hms.util.Validator;
@@ -27,8 +28,7 @@ public class LoginFrame extends JFrame {
     }
 
     private void buildUI() {
-        JPanel root = new JPanel(new GridBagLayout());
-        root.setBackground(new Color(232, 240, 248));
+        JPanel root = BackgroundPatternUtil.createPatternPanel();
         root.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         JPanel loginPanel = new JPanel(new GridBagLayout());
@@ -74,18 +74,13 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 1;
         loginPanel.add(passwordField, gbc);
 
-        JButton loginButton = new JButton("Login");
-        JButton registerButton = new JButton("Register New Account");
+        JButton loginButton = new JButton("Login"); 
 
         loginButton.addActionListener(this::handleLogin);
-        registerButton.addActionListener((ActionEvent e) -> {
-            new RegisterFrame().setVisible(true);
-        });
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.setOpaque(false);
         buttonPanel.add(loginButton);
-        buttonPanel.add(registerButton);
 
         gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
         loginPanel.add(buttonPanel, gbc);

@@ -5,7 +5,9 @@ import hms.role.User;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Shared data and table operations for record-management panels. */
 public final class ManageRecordsHelper {
@@ -20,16 +22,19 @@ public final class ManageRecordsHelper {
     private final boolean reportTable;
     private final DefaultTableModel tableModel;
     private final JComboBox<String> doctorSearchBox;
+    private final JComboBox<String> assetSearchBox;
+    private boolean updatingAssetFilter;
     private final List<String> records = new ArrayList<>();
     private String headerLine;
     private boolean headerPresent;
     private boolean initialized;
 
     public ManageRecordsHelper(String fileName, DefaultTableModel tableModel,
-            JComboBox<String> doctorSearchBox) {
+            JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox) {
         this.fileName = fileName;
         this.tableModel = tableModel;
         this.doctorSearchBox = doctorSearchBox;
+        this.assetSearchBox = assetSearchBox;
         departmentTable = "department.txt".equalsIgnoreCase(fileName);
         appointmentTable = "bookings.txt".equalsIgnoreCase(fileName);
         assetTable = "hospital_assets.txt".equalsIgnoreCase(fileName);
@@ -198,6 +203,34 @@ public final class ManageRecordsHelper {
         }
     }
 
+    private void refreshAssetFilterOptions() {
+        if (!assetTable || updatingAssetFilter) {
+            return;
+        }
+
+        String selectedAssetType = (String) assetSearchBox.getSelectedItem();
+        Set<String> roomTypes = new LinkedHashSet<>();
+        for (String record : records) {
+            String[] parts = splitRecord(record);
+            if (parts.length >= 2 && !parts[1].trim().isEmpty()) {
+                roomTypes.add(parts[1].trim());
+            }
+        }
+
+        DefaultComboBoxModel<String> filterModel = new DefaultComboBoxModel<>();
+        filterModel.addElement("All Room Types");
+        for (String roomType : roomTypes) {
+            filterModel.addElement(roomType);
+        }
+
+        updatingAssetFilter = true;
+        assetSearchBox.setModel(filterModel);
+        if (selectedAssetType != null && roomTypes.contains(selectedAssetType)) {
+            assetSearchBox.setSelectedItem(selectedAssetType);
+        }
+        updatingAssetFilter = false;
+    }
+
     private void addTableRow(String line) {
         String[] parts = splitRecord(line);
 
@@ -231,15 +264,14 @@ public final class ManageRecordsHelper {
             });
 
         } else if (assetTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim()
-            });
-
+            String selectedAssetType = (String) assetSearchBox.getSelectedItem();
+            String roomType = parts[1].trim();
+            if (selectedAssetType != null && !"All Room Types".equals(selectedAssetType)
+                    && !roomType.equals(selectedAssetType)) {
+                return;
+            }
+            tableModel.addRow(new Object[]{parts[0].trim(), parts[1].trim(), parts[2].trim(),
+                    parts[3].trim(), parts[4].trim(), parts[5].trim()});
         } else if (insuranceTable && parts.length >= 6) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
