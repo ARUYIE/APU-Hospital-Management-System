@@ -1,8 +1,10 @@
 ID  |ROLE|NAME|PW|FULLNAME|EMAIL|PHONE|
 U001|ADMIN_STAFF|1|1|Admin Staff|1@email.com|0123456789
 U002|MEDICAL_MANAGER|2|2|medicalManagersBoss|2@gmail.com|0123456789
-U003|DOCTOR|3|3|Docter Low|3@gmail.com|3123456789|3
+U003|DOCTOR|3|3|Docter Lo|3@gmail.com|3123456789|3
 U004|PATIENT|4|4|Patient0|4@gmail.com|4|4|Male
 U005|ADMIN_STAFF|11|1|ADMS1|1|1
 U006|ADMIN_STAFF|111|1|anotheradmin|1|1
 U008|MEDICAL_MANAGER|manager|manager|Manager Two|manager@gmail.com|01001111111
+U009|ADMIN_STAFF|jdoe|password|Jane Doe|janedoe@gmail.com|0123456890
+U010|DOCTOR|liuSS|password|Sammy Liu|sammyliu@gmail.com|01238591942|Surgeon

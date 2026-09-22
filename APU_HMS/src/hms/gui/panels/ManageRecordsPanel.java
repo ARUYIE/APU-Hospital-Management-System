@@ -10,11 +10,11 @@ import hms.role.Role;
 import hms.role.User;
 import hms.util.ReportData;
 import hms.util.Session;
+import hms.util.ManagerMethods;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.io.*;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -48,9 +48,11 @@ public class ManageRecordsPanel extends JPanel {
     private boolean initialized;
     
     private final ReportData reportData;
+    private final ManagerMethods managerMethods;
 
     public ManageRecordsPanel(String title, String fileName) {
         this.fileName = fileName;
+        this.managerMethods = new ManagerMethods(this, fileName);
         reportData = new ReportData();
         
         // Tan Rui En - Admin
@@ -82,7 +84,7 @@ public class ManageRecordsPanel extends JPanel {
                 : consultationRateTable
                 ? new String[]{"SPECIALTY", "BASE_RATE", "MIN_RATE", "MAX_RATE", "CURRENCY", "EFFECTIVE_DATE"}
                 : rosterTable
-                ? new String[]{"ROSTER_ID", "DOCTOR_ID", "DOCTOR_NAME", "DEPARTMENT", "DATE", "SHIFT", "STATUS"}
+                ? new String[]{"ROSTER_ID", "DOCTOR_NAME", "MANAGED_BY", "DEPARTMENT", "DATE", "SHIFT", "STATUS"}
                 : reportTable
                 ? new String[]{"REPORT_PERIOD", "TOTAL_PATIENTS", "APPOINTMENTS", "COMPLETED_APPOINTMENTS", "CANCELLED_APPOINTMENTS", "TOTAL_REVENUE"}
                 : consultationTable
@@ -126,6 +128,7 @@ public class ManageRecordsPanel extends JPanel {
         finishButton.addActionListener(e -> finishSelectedAsset());
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        
         if (assetTable) {
             assetSearchBox.setToolTipText("Filter by room type");
             assetSearchBox.addActionListener(e -> refreshTable());
@@ -134,35 +137,15 @@ public class ManageRecordsPanel extends JPanel {
             populateDoctorSearchBox();
             actions.add(doctorSearchBox);
         } else if(reportTable){
-            populateReportTable();
-        }
-        actions.add(refreshButton);
-        actions.add(addButton);
-        actions.add(editButton);
-        actions.add(deleteButton);
-
-        //has two rows since its a bit too long
-        if (assetTable) {
-            JPanel wardActions = new JPanel();
-            wardActions.setLayout(new BoxLayout(wardActions, BoxLayout.Y_AXIS));
-
-            JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-            searchActions.add(new JLabel("Search Wards/Clinics:"));
-            searchActions.add(assetSearchBox);
-            searchActions.add(reserveButton);
-            searchActions.add(finishButton);
-
-            JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-            recordActions.add(refreshButton);
-            recordActions.add(addButton);
-            recordActions.add(editButton);
-            recordActions.add(deleteButton);
-
-            wardActions.add(searchActions);
-            wardActions.add(recordActions);
-            actions = wardActions;
+            managerMethods.populateReportTable(reportData);
         }
         
+        if (!reportTable){  // Only exclude report table because no need function button
+            actions.add(refreshButton);
+            actions.add(addButton);
+            actions.add(editButton);
+            actions.add(deleteButton);
+        }
         
 
         JPanel topBar = new JPanel(new BorderLayout());
@@ -175,7 +158,7 @@ public class ManageRecordsPanel extends JPanel {
         add(new JScrollPane(recordsTable), BorderLayout.CENTER);
         refreshTable();
     }
-
+    
     private String getSelectedAssetId() {
         int viewRow = recordsTable.getSelectedRow();
         if (viewRow == -1) {
@@ -221,6 +204,7 @@ public class ManageRecordsPanel extends JPanel {
 
     private void editSelectedRecord() {
         int viewRow = recordsTable.getSelectedRow();
+
         if (viewRow == -1) {
             JOptionPane.showMessageDialog(this,
                     "Please select a record first.",
@@ -229,26 +213,30 @@ public class ManageRecordsPanel extends JPanel {
         }
 
         int modelRow = recordsTable.convertRowIndexToModel(viewRow);
+
         String updatedRecord = departmentTable
-                            ? editDepartmentRecord(records.get(modelRow))
-                            : appointmentTable
-                            ? editAppointmentRecord(records.get(modelRow))
-                            : insuranceTable
-                            ? editInsuranceRecord(records.get(modelRow))
-                            : consultationRateTable
-                            ? editConsultationRateRecord(records.get(modelRow))
-                            : assetTable
-                            ? editAssetRecord(records.get(modelRow))
-                            : (String) JOptionPane.showInputDialog(this,
-                                    "Edit record:", "Edit Record",
-                                    JOptionPane.PLAIN_MESSAGE, null, null,
-                                    records.get(modelRow));
-                                refreshTable();
+                ? editDepartmentRecord(records.get(modelRow))
+                : appointmentTable
+                ? editAppointmentRecord(records.get(modelRow))
+                : insuranceTable
+                ? editInsuranceRecord(records.get(modelRow))
+                : consultationRateTable
+                ? editConsultationRateRecord(records.get(modelRow))
+                : assetTable
+                ? editAssetRecord(records.get(modelRow))
+                : rosterTable
+                ? managerMethods.editRosterRecord(records.get(modelRow))
+                : (String) JOptionPane.showInputDialog(this,
+                        "Edit record:", "Edit Record",
+                        JOptionPane.PLAIN_MESSAGE, null, null,
+                        records.get(modelRow));
+
         if (updatedRecord == null) {
             return;
         }
 
-        String normalizedRecord = updatedRecord.toString().trim();
+        String normalizedRecord = updatedRecord.trim();
+
         if (!isValidRecord(normalizedRecord)) {
             JOptionPane.showMessageDialog(this,
                     "Enter correct record.",
@@ -258,7 +246,11 @@ public class ManageRecordsPanel extends JPanel {
 
         List<String> updatedLines = new ArrayList<>(records);
         updatedLines.set(modelRow, normalizedRecord);
-        writeRecords(updatedLines, "The record could not be updated.");
+
+        writeRecords(
+                updatedLines,
+                "The record could not be updated."
+        );
     }
 
     private String[] splitRecord(String record) {
@@ -579,7 +571,7 @@ public class ManageRecordsPanel extends JPanel {
         }
     }
 
-    private void refreshTable() {
+    public void refreshTable() {
         recordHelper.refreshTable();
         records = recordHelper.getRecords();
     }
@@ -674,6 +666,20 @@ public class ManageRecordsPanel extends JPanel {
             addConsultationRateRecord();
             return;
         }
+        if (rosterTable) {
+            String newRecord = managerMethods.addRosterRecord();
+
+            if (newRecord == null) {
+                return;
+            }
+
+            List<String> updatedLines = new ArrayList<>(records);
+            updatedLines.add(newRecord);
+
+            writeRecords(updatedLines, "The roster could not be added.");
+            return;
+        }
+        
         if (insuranceTable) {
             addInsuranceRecord();
             return;
@@ -1073,118 +1079,8 @@ public class ManageRecordsPanel extends JPanel {
         return ManageRecordsHelper.hasIllegalChars(values);
     }
     
-    private void addRosterRecord(String line) {
-        String[] parts = splitRecord(line);
-        if (parts.length < 4) {
-            return;
-        }
-
-        tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                findName(parts[3].trim()),
-                parts[2].trim()
-        });
-    }
-    
-    private String editRosterRecord(String record) {
-        String[] parts = splitRecord(record);
-        if (parts.length < 6) {
-            return null;
-        }
-
-        String rosterId = parts[0].trim();
-        String doctorId = parts[1].trim();
-        String doctorName = parts[2].trim();
-        String departmentName = parts[3].trim();
-        String date = parts[4].trim();
-        String shift = parts[5].trim();
-        String status = parts[6].trim();
-
-        JTextField rosterIdField = new JTextField(rosterId);
-        setUneditable(rosterIdField);
-        JTextField doctorIdField = new JTextField(doctorId);
-        setUneditable(doctorIdField);
-        JTextField doctorNameField = new JTextField(doctorName);
-        JTextField departmentNameField = new JTextField(departmentName);
-        JTextField dateField = new JTextField(date);
-        JTextField shiftField = new JTextField(shift);
-        JTextField statusField = new JTextField(status);
-
-        JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
-        form.add(new JLabel("ROSTER_ID:"));
-        form.add(rosterIdField);
-        form.add(new JLabel("DOCTOR_ID:"));
-        form.add(doctorIdField);
-        form.add(new JLabel("DOCTOR_NAME:"));
-        form.add(doctorNameField);
-        form.add(new JLabel("DEPARTMENT:"));
-        form.add(departmentNameField);
-        form.add(new JLabel("DATE:"));
-        form.add(dateField);
-        form.add(new JLabel("SHIFT:"));
-        form.add(shiftField);
-        form.add(new JLabel("STATUS:"));
-        form.add(statusField);
-
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Edit Insurance", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return null;
-        }
-
-        String updatedRecord = String.join("|",
-                rosterIdField.getText().trim(),
-                doctorIdField.getText().trim(),
-                doctorNameField.getText().trim(),
-                departmentNameField.getText().trim(),
-                dateField.getText().trim(),
-                shiftField.getText().trim(),
-                statusField.getText().trim());
-
-        List<String> updatedLines = new ArrayList<>(records);
-        int modelRow = recordsTable.convertRowIndexToModel(recordsTable.getSelectedRow());
-        updatedLines.set(modelRow, updatedRecord);
-        writeRecords(updatedLines, "The insurance record could not be updated.");
-        return updatedRecord;
-    }
-    
-    private void populateReportTable() {
-        String currentPeriod = java.time.YearMonth.now().toString();
-
-        List<String> reportRecords = FileManager.readLines(fileName);
-
-        boolean currentMonthExists = false;
-
-        for (String record : reportRecords) {
-            if (record == null || record.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] parts = splitRecord(record);
-
-            if (parts.length >= 6
-                    && currentPeriod.equals(parts[0].trim())) {
-                currentMonthExists = true;
-                break;
-            }
-        }
-
-        if (!currentMonthExists) {
-            String newRecord = String.join("|",
-                    currentPeriod,
-                    String.valueOf(reportData.getTotalPatients()),
-                    String.valueOf(reportData.getAppointments()),
-                    String.valueOf(reportData.getCompleted()),
-                    String.valueOf(reportData.getCancelled()),
-                    String.valueOf(reportData.getTotalRevenue())
-            );
-
-            FileManager.appendLine(fileName, newRecord);
-        }
-
-        refreshTable();
+    public JTable getRecordsTable() {
+        return recordsTable;
     }
         
     private void addVitalSignRecord() {

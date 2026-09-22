@@ -1,0 +1,4 @@
+ROSTER_ID|DOCTOR_NAME|MANAGED_BY|DEPARTMENT|DATE|SHIFT|STATUS
+R001|Docter Lo|medicalManagersBoss|CARDIOLOGY|2026-09-22|Morning|Inactive
+R002|Docter Lo|medicalManagersBoss|NEUROLOGY|2026-09-19|Morning|Inactive
+R003|Sammy Liu|Manager Two|GENERAL_SURGERY|2026-09-23|Afternoon|Active
