@@ -2,6 +2,8 @@ package hms.util;
 
 import hms.role.Role;
 import hms.role.User;
+import hms.util.Session;
+import hms.util.UserRepository;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -309,16 +311,18 @@ public final class ManageRecordsHelper {
                 parts[5].trim()
             });
            
-        } else if (consultationTable && parts.length >= 8) {
+        } else if (consultationTable && parts.length >= 9) {
+            String notes = parts.length >= 10 ? parts[8].trim() : "";
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
                 parts[1].trim(),
-                parts[2].trim(), 
+                parts[2].trim(),
                 parts[3].trim(),
                 parts[4].trim(),
                 parts[5].trim(),
                 parts[6].trim(),
-                parts[7].trim()
+                parts[7].trim(),
+                notes
             });
  
         } else if (prescriptionTable && parts.length >= 8) {
@@ -337,6 +341,13 @@ public final class ManageRecordsHelper {
             tableModel.addRow(new Object[]{
                 parts[0].trim(), 
                 parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim()
+            });
         
         } else if (rosterTable && parts.length >= 7) {
             tableModel.addRow(new Object[]{
@@ -349,7 +360,7 @@ public final class ManageRecordsHelper {
                 parts[6].trim(),
                 parts[7].trim()
             });
-            
+      
         }else if (!departmentTable
                 && !appointmentTable
                 && !assetTable
@@ -359,9 +370,7 @@ public final class ManageRecordsHelper {
                 && !consultationTable
                 && !prescriptionTable
                 && !labRequestTable) {
- 
-                parts[6].trim()
-            });
+            
         } else {
             tableModel.addRow(new Object[]{
                 tableModel.getRowCount() + 1,
@@ -369,6 +378,7 @@ public final class ManageRecordsHelper {
             });
         }
     }
+
     private static boolean visibleToCurrentDoctor(String doctorId) {
         User current = Session.getCurrentUser();
         if (current == null || current.getRole() != Role.DOCTOR) {
