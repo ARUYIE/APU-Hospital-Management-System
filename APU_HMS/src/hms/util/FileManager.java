@@ -134,30 +134,59 @@ public final class FileManager {
                     StandardOpenOption.APPEND)) {
 
                 // Create headers when the file is created for the first time
-                if (!fileExists) {
+                 if (!fileExists) {
 
-                    if ("report.txt".equalsIgnoreCase(fileName)) {
-                        writer.write(
-                                "REPORT_PERIOD|"
-                                + "TOTAL_PATIENTS|"
-                                + "APPOINTMENTS|"
-                                + "COMPLETED|"
-                                + "CANCELLED|"
-                                + "TOTAL_REVENUE"
-                        );
-                        writer.newLine();
+                    switch (fileName.toLowerCase()) {
 
-                    } else if ("roster.txt".equalsIgnoreCase(fileName)) {
-                        writer.write(
-                                "ROSTER_ID|"
-                                + "DOCTOR_NAME|"
-                                + "MANAGED_BY|"
-                                + "DEPARTMENT|"
-                                + "DATE|"
-                                + "SHIFT|"
-                                + "STATUS"
-                        );
-                        writer.newLine();
+                        case "report.txt":
+                            writer.write(
+                                    "REPORT_PERIOD|"
+                                    + "TOTAL_PATIENTS|"
+                                    + "APPOINTMENTS|"
+                                    + "COMPLETED|"
+                                    + "CANCELLED|"
+                                    + "TOTAL_REVENUE"
+                            );
+                            writer.newLine();
+                            break;
+
+                        case "roster.txt":
+                            writer.write(
+                                    "ROSTER_ID|"
+                                    + "DOCTOR_NAME|"
+                                    + "MANAGED_BY|"
+                                    + "DEPARTMENT|"
+                                    + "DATE|"
+                                    + "SHIFT|"
+                                    + "STATUS"
+                            );
+                            writer.newLine();
+                            break;
+
+                        case "bookings.txt":
+                            writer.write(
+                                    "BOOK_ID|"
+                                    + "PATIENT_ID|"
+                                    + "DOCTOR_ID|"
+                                    + "CONSULTATION_DATE|"
+                                    + "CONSULTATION_TIME|"
+                                    + "STATUS|"
+                                    + "NOTES"
+                            );
+                            writer.newLine();
+                            break;
+
+                        case "consultation_rates.txt":
+                            writer.write(
+                                    "SPECIALTY|"
+                                    + "BASE_RATE|"
+                                    + "MIN_RATE|"
+                                    + "MAX_RATE|"
+                                    + "CURRENCY|"
+                                    + "EFFECTIVE_DATE"
+                            );
+                            writer.newLine();
+                            break;
                     }
                 }
 

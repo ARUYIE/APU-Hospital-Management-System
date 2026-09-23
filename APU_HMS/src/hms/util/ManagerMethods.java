@@ -426,40 +426,110 @@ public class ManagerMethods {
     }
 
     // Report Methods
-    public void populateReportTable(ReportData reportData) {
-        String currentPeriod = java.time.YearMonth.now().toString();
+    public void populateReportTable() {
+        List<String> bookingRecords =
+                FileManager.readLines("bookings.txt");
 
-        List<String> reportRecords = FileManager.readLines(fileName);
+        List<String> reportRecords =
+                FileManager.readLines("report.txt");
 
-        boolean currentMonthExists = false;
+        java.util.Set<String> months =
+                new java.util.LinkedHashSet<>();
 
-        for (String record : reportRecords) {
+        // Skip the first line because it is the header
+        for (int i = 1; i < bookingRecords.size(); i++) {
+
+            String record = bookingRecords.get(i);
+
             if (record == null || record.trim().isEmpty()) {
                 continue;
             }
 
-            String[] parts = ManageRecordsHelper.splitRecord(record);
+            String[] parts =
+                    record.split("\\|", -1);
 
-            if (parts.length >= 6
-                    && currentPeriod.equals(parts[0].trim())) {
-                currentMonthExists = true;
-                break;
+            if (parts.length < 7) {
+                continue;
+            }
+
+            String consultationDate =
+                    parts[3].trim();
+
+            if (consultationDate.length() >= 7) {
+
+                String month =
+                        consultationDate.substring(0, 7);
+
+                months.add(month);
             }
         }
 
-        if (!currentMonthExists) {
+        for (String month : months) {
+
+            ReportData reportData =
+                    new ReportData(month);
+
             String newRecord = String.join("|",
-                    currentPeriod,
-                    String.valueOf(reportData.getTotalPatients()),
-                    String.valueOf(reportData.getAppointments()),
-                    String.valueOf(reportData.getCompleted()),
-                    String.valueOf(reportData.getCancelled()),
-                    String.valueOf(reportData.getTotalRevenue())
+                    month,
+                    String.valueOf(
+                            reportData.getTotalPatients()
+                    ),
+                    String.valueOf(
+                            reportData.getAppointments()
+                    ),
+                    String.valueOf(
+                            reportData.getCompleted()
+                    ),
+                    String.valueOf(
+                            reportData.getCancelled()
+                    ),
+                    String.format(
+                            "%.2f",
+                            reportData.getTotalRevenue()
+                    )
             );
 
-            FileManager.appendLine(fileName, newRecord);
+            boolean monthExists = false;
+
+            for (int i = 1; i < reportRecords.size(); i++) {
+
+                String existingRecord =
+                        reportRecords.get(i);
+
+                if (existingRecord == null
+                        || existingRecord.trim().isEmpty()) {
+                    continue;
+                }
+
+                String[] parts =
+                        existingRecord.split("\\|", -1);
+
+                if (parts.length < 6) {
+                    continue;
+                }
+
+                if (month.equals(parts[0].trim())) {
+
+                    monthExists = true;
+
+                    // Update existing month
+                    reportRecords.set(i, newRecord);
+                    break;
+                }
+            }
+
+            // If this month does not exist, create a new report entry.
+            if (!monthExists) {
+
+                reportRecords.add(newRecord);
+            }
         }
-        
+
+        FileManager.writeAllLines(
+                "report.txt",
+                reportRecords
+        );
+        panel.refreshReportFilter();
         panel.refreshTable();
     }
 }

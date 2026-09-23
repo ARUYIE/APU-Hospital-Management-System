@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import javax.swing.table.TableRowSorter;
 
 // for wards, department,appontment, consultation rate, insurance
 public class ManageRecordsPanel extends JPanel {
@@ -30,6 +31,7 @@ public class ManageRecordsPanel extends JPanel {
     private final JComboBox<String> doctorSearchBox = new JComboBox<>();
     private final JComboBox<String> assetSearchBox = new JComboBox<>(
             new String[]{"All Room Types"});
+    private final JComboBox<String> reportSearchBox = new JComboBox<>();
     private final boolean assetTable;
     private final boolean shiftTime;
     private final boolean insuranceTable;
@@ -47,13 +49,11 @@ public class ManageRecordsPanel extends JPanel {
     private boolean headerPresent;
     private boolean initialized;
     
-    private final ReportData reportData;
     private final ManagerMethods managerMethods;
 
     public ManageRecordsPanel(String title, String fileName) {
         this.fileName = fileName;
         this.managerMethods = new ManagerMethods(this, fileName);
-        reportData = new ReportData();
         
         // Tan Rui En - Admin
         assetTable = "hospital_assets.txt".equalsIgnoreCase(fileName);
@@ -137,7 +137,10 @@ public class ManageRecordsPanel extends JPanel {
             populateDoctorSearchBox();
             actions.add(doctorSearchBox);
         } else if(reportTable){
-            managerMethods.populateReportTable(reportData);
+            actions.add(new JLabel("Filter:"));
+            actions.add(reportSearchBox);
+            setupReportFilter();
+            managerMethods.populateReportTable();
         }
         
         if (!reportTable){  // Only exclude report table because no need function button
@@ -950,105 +953,238 @@ public class ManageRecordsPanel extends JPanel {
         return AssetType.fromString(value).name();
     }
  
-    private void addAppointmentRecord() {
+   private void addAppointmentRecord() {
         List<User> users = UserRepository.loadAll();
-        // NOTE: change Role.PATIENT if your Role enum names it differently
+
         List<User> patients = users.stream()
                 .filter(user -> user.getRole() == Role.PATIENT)
                 .toList();
+
         List<User> doctors = users.stream()
                 .filter(user -> user.getRole() == Role.DOCTOR)
                 .toList();
- 
+
         if (patients.isEmpty() || doctors.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "At least one patient and one doctor must exist before adding an appointment.",
-                    "Cannot Add Appointment", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
- 
-        JComboBox<String> patientCombo = new JComboBox<>();
-        for (User patient : patients) {
-            patientCombo.addItem(patient.getFullName());
-        }
-        JComboBox<String> doctorCombo = new JComboBox<>();
-        for (User doctor : doctors) {
-            doctorCombo.addItem(doctor.getFullName());
-        }
-        JTextField dateField = new JTextField(java.time.LocalDate.now().toString());
-        JTextField timeField = new JTextField("09:00");
-        // NOTE: adjust these to match the statuses already used in bookings.txt
-        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"SCHEDULED", "COMPLETED", "CANCELLED"});
-        JTextField notesField = new JTextField();
- 
-        JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
-        form.add(new JLabel("PATIENT_NAME:")); form.add(patientCombo);
-        form.add(new JLabel("DOCTOR_NAME:")); form.add(doctorCombo);
-        form.add(new JLabel("DATE (YYYY-MM-DD):")); form.add(dateField);
-        form.add(new JLabel("TIME (HH:mm):")); form.add(timeField);
-        form.add(new JLabel("STATUS:")); form.add(statusCombo);
-        form.add(new JLabel("NOTES:")); form.add(notesField);
- 
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Add Appointment", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return;
-        }
- 
-        String appointmentId = IDGenerator.next("B", fileName);
-        String date = dateField.getText().trim();
-        String time = timeField.getText().trim();
-        String status = (String) statusCombo.getSelectedItem();
-        String notes = notesField.getText().trim();
- 
-        if (hasIllegalChars(appointmentId, date, time, notes)) {
-            JOptionPane.showMessageDialog(this,
-                    "Fields cannot contain the '|' character or line breaks.",
-                    "Invalid Appointment", JOptionPane.WARNING_MESSAGE);
+                    "Cannot Add Appointment",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
+        JComboBox<String> patientCombo = new JComboBox<>();
+
+        for (User patient : patients) {
+            patientCombo.addItem(patient.getFullName());
+        }
+
+        JComboBox<String> doctorCombo = new JComboBox<>();
+
+        for (User doctor : doctors) {
+            doctorCombo.addItem(doctor.getFullName());
+        }
+
+        JTextField dateField =
+                new JTextField(java.time.LocalDate.now().toString());
+
+        JTextField timeField =
+                new JTextField("09:00");
+
+        JComboBox<String> statusCombo =
+                new JComboBox<>(
+                        new String[]{
+                            "SCHEDULED",
+                            "COMPLETED",
+                            "CANCELLED"
+                        }
+                );
+
+        JTextField notesField =
+                new JTextField();
+
+        JPanel form =
+                new JPanel(new GridLayout(6, 2, 8, 8));
+
+        form.add(new JLabel("PATIENT_NAME:"));
+        form.add(patientCombo);
+
+        form.add(new JLabel("DOCTOR_NAME:"));
+        form.add(doctorCombo);
+
+        form.add(new JLabel("DATE (YYYY-MM-DD):"));
+        form.add(dateField);
+
+        form.add(new JLabel("TIME (HH:mm):"));
+        form.add(timeField);
+
+        form.add(new JLabel("STATUS:"));
+        form.add(statusCombo);
+
+        form.add(new JLabel("NOTES:"));
+        form.add(notesField);
+
+        int choice =
+                JOptionPane.showConfirmDialog(
+                        this,
+                        form,
+                        "Add Appointment",
+                        JOptionPane.OK_CANCEL_OPTION,
+                        JOptionPane.PLAIN_MESSAGE
+                );
+
+        if (choice != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String appointmentId =
+                IDGenerator.next("B", fileName);
+
+        String date =
+                dateField.getText().trim();
+
+        String time =
+                timeField.getText().trim();
+
+        String status =
+                statusCombo.getSelectedItem().toString();
+
+        String notes =
+                notesField.getText().trim();
+
+        String patientId =
+                patients
+                        .get(patientCombo.getSelectedIndex())
+                        .getUserId();
+
+        String doctorId =
+                doctors
+                        .get(doctorCombo.getSelectedIndex())
+                        .getUserId();
+
+        // Validate fields
+        if (date.isEmpty()
+                || time.isEmpty()
+                || status.isEmpty()) {
+
+            JOptionPane.showMessageDialog(this,
+                    "Please fill in all required appointment fields.",
+                    "Invalid Appointment",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (hasIllegalChars(
+                appointmentId,
+                patientId,
+                doctorId,
+                date,
+                time,
+                status,
+                notes)) {
+
+            JOptionPane.showMessageDialog(this,
+                    "Fields cannot contain the '|' character or line breaks.",
+                    "Invalid Appointment",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Validate date
         try {
-            java.time.LocalDate.parse(date);
+
+            java.time.LocalDate.parse(
+                    date,
+                    java.time.format.DateTimeFormatter.ofPattern(
+                            "yyyy-MM-dd"
+                    )
+            );
+
         } catch (java.time.format.DateTimeParseException exception) {
+
             JOptionPane.showMessageDialog(this,
                     "Date must be in YYYY-MM-DD format.",
-                    "Invalid Appointment", JOptionPane.WARNING_MESSAGE);
+                    "Invalid Appointment",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
+
+        // Validate time
         try {
-            java.time.LocalTime.parse(time, java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+
+            java.time.LocalTime.parse(
+                    time,
+                    java.time.format.DateTimeFormatter.ofPattern(
+                            "HH:mm"
+                    )
+            );
+
         } catch (java.time.format.DateTimeParseException exception) {
+
             JOptionPane.showMessageDialog(this,
                     "Time must be in HH:mm format (e.g. 09:30).",
-                    "Invalid Appointment", JOptionPane.WARNING_MESSAGE);
+                    "Invalid Appointment",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
- 
-        // Combo indexes line up with the filtered lists, so map back to user IDs
-        String patientId = patients.get(patientCombo.getSelectedIndex()).getUserId();
-        String doctorId = doctors.get(doctorCombo.getSelectedIndex()).getUserId();
- 
-        // Prevent double-booking the same doctor at the same date/time
+
+        // Prevent double-booking the same doctor
         for (String record : records) {
-            String[] parts = splitRecord(record);
-            if (parts.length >= 6
-                    && parts[2].trim().equals(doctorId)
-                    && parts[3].trim().equals(date)
-                    && parts[4].trim().equals(time)
-                    && !"CANCELLED".equalsIgnoreCase(parts[5].trim())) {
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts =
+                    splitRecord(record);
+
+            if (parts.length < 7) {
+                continue;
+            }
+
+            String existingDoctorId =
+                    parts[2].trim();
+
+            String existingDate =
+                    parts[3].trim();
+
+            String existingTime =
+                    parts[4].trim();
+
+            String existingStatus =
+                    parts[5].trim();
+
+            if (existingDoctorId.equals(doctorId)
+                    && existingDate.equals(date)
+                    && existingTime.equals(time)
+                    && !existingStatus.equalsIgnoreCase("CANCELLED")) {
+
                 JOptionPane.showMessageDialog(this,
                         "This doctor already has an appointment at that date and time.",
-                        "Scheduling Conflict", JOptionPane.WARNING_MESSAGE);
+                        "Scheduling Conflict",
+                        JOptionPane.WARNING_MESSAGE);
                 return;
             }
         }
- 
-        FileManager.appendLine(fileName, String.join("|",
-                appointmentId, patientId, doctorId, date, time, status, notes));
+
+        String normalizedRecord =
+                String.join("|",
+                        appointmentId,
+                        patientId,
+                        doctorId,
+                        date,
+                        time,
+                        status,
+                        notes
+                );
+
+        FileManager.appendLine(
+                fileName,
+                normalizedRecord
+        );
+
         refreshTable();
     }
+   
     private void deleteSelectedRecord() {
         int viewRow = recordsTable.getSelectedRow();
         if (viewRow == -1) {
@@ -1166,5 +1302,115 @@ public class ManageRecordsPanel extends JPanel {
         );
 
         refreshTable();
+    }
+    
+    private void setupReportFilter() {
+
+        reportSearchBox.removeAllItems();
+
+        reportSearchBox.addItem("All Records");
+        reportSearchBox.addItem("Latest Records");
+        reportSearchBox.addItem("Highest Revenue");
+
+        reportSearchBox.addActionListener(e -> filterReportTable());
+    }
+    
+    private void filterReportTable() {
+        if (!reportTable) {
+            return;
+        }
+
+        String selected =
+                (String) reportSearchBox.getSelectedItem();
+
+        if (selected == null) {
+            return;
+        }
+
+        List<String> reportRecords =
+                FileManager.readLines("report.txt");
+
+        List<String> records =
+                new ArrayList<>();
+
+        // Skip the first line because it is the header
+        for (int i = 1; i < reportRecords.size(); i++) {
+
+            String record = reportRecords.get(i);
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts =
+                    record.split("\\|", -1);
+
+            if (parts.length < 6) {
+                continue;
+            }
+
+            records.add(record);
+        }
+
+        // Latest month first
+        if (selected.equals("Latest Records")) {
+
+            records.sort((a, b) -> {
+
+                String[] partsA = a.split("\\|", -1);
+                String[] partsB = b.split("\\|", -1);
+
+                String monthA = partsA[0].trim();
+                String monthB = partsB[0].trim();
+
+                return monthB.compareTo(monthA);
+            });
+        }
+
+        // Highest revenue first
+        else if (selected.equals("Highest Revenue")) {
+
+            records.sort((a, b) -> {
+
+                String[] partsA = a.split("\\|", -1);
+                String[] partsB = b.split("\\|", -1);
+
+                double revenueA = parseRevenue(partsA[5]);
+                double revenueB = parseRevenue(partsB[5]);
+
+                return Double.compare(revenueB, revenueA);
+            });
+        }
+
+        // Clear current table
+        tableModel.setRowCount(0);
+
+        // Add sorted records to table
+        for (String record : records) {
+
+            String[] parts =
+                    record.split("\\|", -1);
+
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim()
+            });
+        }
+    }
+    
+    private double parseRevenue(String value) {
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+    
+    public void refreshReportFilter(){
+        setupReportFilter();
     }
 }
