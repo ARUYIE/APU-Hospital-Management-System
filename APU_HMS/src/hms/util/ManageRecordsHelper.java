@@ -55,24 +55,14 @@ public final class ManageRecordsHelper {
     }
 
     public void refreshTable() {
+
         List<String> lines = FileManager.readLines(fileName);
 
-        if (!lines.isEmpty()) {
-            headerLine = lines.get(0);
+        headerLine = null;
 
-            if (reportTable) {
-                if (headerLine.startsWith("REPORT_PERIOD|")) {
-                    lines.remove(0);
-                }
-            } else if (rosterTable) {
-                if (headerLine.startsWith("ROSTER_ID|")) {
-                    lines.remove(0);
-                }
-            } else if (headerPresent) {
-                lines.remove(0);
-            }
-        } else {
-            headerLine = null;
+        // Always treat the first line as the header
+        if (!lines.isEmpty()) {
+            headerLine = lines.remove(0);
         }
 
         records.clear();
@@ -81,6 +71,11 @@ public final class ManageRecordsHelper {
         tableModel.setRowCount(0);
 
         for (String record : records) {
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
             addTableRow(record);
         }
     }
