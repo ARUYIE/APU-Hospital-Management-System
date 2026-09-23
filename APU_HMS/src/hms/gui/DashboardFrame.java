@@ -1,11 +1,14 @@
 package hms.gui;
 
 import hms.role.User;
-import hms.util.BackgroundPatternUtil;
+import hms.util.UIUtil;
 import hms.util.Session;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 
 public class DashboardFrame extends JFrame {
 
@@ -18,10 +21,10 @@ public class DashboardFrame extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1280, 720);
         setLocationRelativeTo(null);
-        getContentPane().setBackground(BackgroundPatternUtil.DASHBOARD_BLUE);
+        getContentPane().setBackground(UIUtil.DASHBOARD_BLUE);
 
         JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(BackgroundPatternUtil.DASHBOARD_BLUE);
+        root.setBackground(UIUtil.DASHBOARD_BLUE);
         root.setLayout(new BorderLayout());
         root.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         root.add(buildHeader(user), BorderLayout.NORTH);
@@ -34,9 +37,9 @@ public class DashboardFrame extends JFrame {
     }
 
     private JComponent buildHeader(User user) {
-        JPanel header = BackgroundPatternUtil.createPatternPanel();
+        JPanel header = UIUtil.createPatternPanel();
         header.setLayout(new BorderLayout());
-        header.setBackground(BackgroundPatternUtil.DASHBOARD_BLUE);
+        header.setBackground(UIUtil.DASHBOARD_BLUE);
         header.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
 
         JLabel welcome = new JLabel("Welcome Back, " + user.getFullName()
@@ -62,7 +65,7 @@ public class DashboardFrame extends JFrame {
         // Built directly from the logged-in user's overridden getMenuOptions() - polymorphism.
         String[] options = user.getMenuOptions();
         JPanel menuPanel = new JPanel(new BorderLayout());
-        menuPanel.setBackground(BackgroundPatternUtil.DASHBOARD_BLUE);
+        menuPanel.setBackground(UIUtil.DASHBOARD_BLUE);
 
         JList<String> menuList = new JList<>(options);
         menuList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -70,6 +73,12 @@ public class DashboardFrame extends JFrame {
         menuList.setBackground(Color.WHITE);
         menuList.setFixedCellHeight(48);
         menuList.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+
+        // tracks the hovered row so the renderer can enlarge its text
+        int[] hoveredIndex = {-1};
+        float baseFontSize = 16f;
+        float hoverFontSize = 20f;
+
         menuList.setCellRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value,
@@ -86,7 +95,27 @@ public class DashboardFrame extends JFrame {
                 label.setBackground(new Color(232, 240, 252));
                 label.setForeground(new Color(27, 60, 108));
             }
+            label.setFont(label.getFont().deriveFont(Font.BOLD,
+                index == hoveredIndex[0] ? hoverFontSize : baseFontSize));
             return label;
+            }
+        });
+
+        menuList.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int index = menuList.locationToIndex(e.getPoint());
+                if (index != hoveredIndex[0]) {
+                    hoveredIndex[0] = index;
+                    menuList.repaint();
+                }
+            }
+        });
+        menuList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hoveredIndex[0] = -1;
+                menuList.repaint();
             }
         });
 
@@ -102,8 +131,8 @@ public class DashboardFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(menuList);
         scrollPane.setPreferredSize(new Dimension(320, 0));
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getViewport().setBackground(BackgroundPatternUtil.DASHBOARD_BLUE);
-        scrollPane.setBackground(BackgroundPatternUtil.DASHBOARD_BLUE);
+        scrollPane.getViewport().setBackground(UIUtil.DASHBOARD_BLUE);
+        scrollPane.setBackground(UIUtil.DASHBOARD_BLUE);
         menuPanel.add(scrollPane, BorderLayout.CENTER);
         return menuPanel;
     }

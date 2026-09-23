@@ -17,9 +17,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 // for wards, department,appontment, consultation rate, insurance
 public class ManageRecordsPanel extends JPanel {
@@ -31,23 +29,18 @@ public class ManageRecordsPanel extends JPanel {
     private final JComboBox<String> assetSearchBox = new JComboBox<>(
             new String[]{"All Room Types"});
     private final boolean assetTable;
-    private final boolean shiftTime;
     private final boolean insuranceTable;
     private final boolean consultationRateTable;
     private final DefaultTableModel tableModel;
     private final JTable recordsTable;
     private final ManageRecordsHelper recordHelper;
     private List<String> records = new ArrayList<>();
-    private String headerLine;
-    private boolean headerPresent;
-    private boolean initialized;
 
     public ManageRecordsPanel(String title, String fileName) {
         this.fileName = fileName;
         departmentTable = "department.txt".equalsIgnoreCase(fileName);
         assetTable = "hospital_assets.txt".equalsIgnoreCase(fileName);
         appointmentTable = "bookings.txt".equalsIgnoreCase(fileName);
-        shiftTime = "shift_time.txt".equalsIgnoreCase(fileName);
         insuranceTable = "insurance_networks.txt".equalsIgnoreCase(fileName);
         consultationRateTable = "consultation_rates.txt".equalsIgnoreCase(fileName);
         tableModel = new DefaultTableModel(
@@ -301,14 +294,7 @@ public class ManageRecordsPanel extends JPanel {
         return String.join("|", idField.getText().trim(), nameField.getText().trim(),
                 descriptionField.getText().trim(), selectedManagerId);
     }
-
-    
-
-
-    private boolean validRateFields(String baseRate, String minRate, String maxRate) {
-        return ManageRecordsHelper.validRateFields(baseRate, minRate, maxRate);
-    }
-
+ 
     private boolean isValidRecord(String record) {
         return ManageRecordsHelper.isValidRecord(record);
     }
@@ -489,9 +475,4 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
     }
-
-    private boolean hasIllegalChars(String... values) {
-        return ManageRecordsHelper.hasIllegalChars(values);
-    }
 }
-

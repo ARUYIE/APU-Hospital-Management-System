@@ -43,6 +43,11 @@ public class Profile extends JPanel {
         addEditableRow(form, gbc, row++, "Phone:", phoneField);
         addEditableRow(form, gbc, row++, "New Password (leave blank to keep current):", passwordField);
 
+        JButton saveButton = new JButton("Save Changes");
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.NONE;
+        form.add(saveButton, gbc);
+        gbc.gridwidth = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+
         if (currentUser instanceof Doctor doctor) {
             JTextField specialtyField = new JTextField(doctor.getSpecialty(), 20);
             addEditableRow(form, gbc, row++, "Specialty:", specialtyField);
@@ -54,7 +59,6 @@ public class Profile extends JPanel {
             addEditableRow(form, gbc, row++, "Gender:", genderBox);
         }
 
-        JButton saveButton = new JButton("Save Changes");
         saveButton.addActionListener(e -> {
             String fullName = fullNameField.getText().trim();
             String email = emailField.getText().trim();
@@ -88,7 +92,6 @@ public class Profile extends JPanel {
 
         add(title, BorderLayout.NORTH);
         add(form, BorderLayout.CENTER);
-        add(saveButton, BorderLayout.SOUTH);
     }
 
     private static void addReadOnlyRow(JPanel panel, GridBagConstraints gbc, int row, String label, String value) {

@@ -79,14 +79,14 @@ public final class RecordsHelperAppointment {
         List<User> doctors = users.stream()
                 .filter(user -> user.getRole() == Role.DOCTOR)
                 .toList();
- 
+
         if (patients.isEmpty() || doctors.isEmpty()) {
             JOptionPane.showMessageDialog(comp,
                     "At least one patient and one doctor must exist before adding an appointment.",
                     "Cannot Add Appointment", JOptionPane.WARNING_MESSAGE);
             return;
         }
- 
+
         JComboBox<String> patientCombo = new JComboBox<>();
         for (User patient : patients) {
             patientCombo.addItem(patient.getFullName());
