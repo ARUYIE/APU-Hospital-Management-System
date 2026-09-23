@@ -307,7 +307,7 @@ public final class ManageRecordsHelper {
             });
            
         } else if (consultationTable && parts.length >= 9) {
-            String notes = parts.length >= 10 ? parts[8].trim() : "";
+            String notes = parts.length >= 9 ? parts[8].trim() : "";
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
                 parts[1].trim(),
@@ -365,7 +365,7 @@ public final class ManageRecordsHelper {
                 parts[5].trim(),
                 parts[6].trim(),
                 parts[7].trim(),
-                parts[8].trim()
+                notes
             });
  
         } else if (prescriptionTable && parts.length >= 8) {
