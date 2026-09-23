@@ -1,13 +1,17 @@
 package hms.gui.panels;
 
-import hms.util.Asset;
-import hms.util.AssetType;
+
 import hms.util.FileManager;
 import hms.util.IDGenerator;
 import hms.util.ManageRecordsHelper;
 import hms.util.UserRepository;
 import hms.role.Role;
 import hms.role.User;
+
+import hms.util.RecordsHelperAsset;
+import hms.util.RecordsHelperAppointment;
+import hms.util.RecordsHelperInsurance;
+import hms.util.RecordsHelperConsultation;
 import hms.util.ReportData;
 
 import javax.swing.*;
@@ -15,9 +19,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 // for wards, department,appontment, consultation rate, insurance
 public class ManageRecordsPanel extends JPanel {
@@ -27,22 +29,17 @@ public class ManageRecordsPanel extends JPanel {
     private final boolean departmentTable;
     private final boolean appointmentTable;
     private final JComboBox<String> doctorSearchBox = new JComboBox<>();
-    private final JComboBox<String> assetSearchBox = new JComboBox<>(
-            new String[]{"All Room Types"});
+    private final JComboBox<String> assetSearchBox = new JComboBox<>(new String[]{"All Room Types"});
     private final boolean assetTable;
-    private final boolean shiftTime;
     private final boolean insuranceTable;
     private final boolean consultationRateTable;
     private final boolean rosterTable;
     private final boolean reportTable;
+
     private final DefaultTableModel tableModel;
     private final JTable recordsTable;
     private final ManageRecordsHelper recordHelper;
     private List<String> records = new ArrayList<>();
-    private String headerLine;
-    private boolean headerPresent;
-    private boolean initialized;
-    
     private final ReportData reportData;
 
     public ManageRecordsPanel(String title, String fileName) {
@@ -52,7 +49,6 @@ public class ManageRecordsPanel extends JPanel {
         // Tan Rui En - Admin
         assetTable = "hospital_assets.txt".equalsIgnoreCase(fileName);
         appointmentTable = "bookings.txt".equalsIgnoreCase(fileName);
-        shiftTime = "shift_time.txt".equalsIgnoreCase(fileName);
         insuranceTable = "insurance_networks.txt".equalsIgnoreCase(fileName);
         consultationRateTable = "consultation_rates.txt".equalsIgnoreCase(fileName);
         
@@ -116,8 +112,9 @@ public class ManageRecordsPanel extends JPanel {
             assetSearchBox.addActionListener(e -> refreshTable());
         } else if(appointmentTable){
             actions.add(new JLabel("Search Doctor:"));
-            populateDoctorSearchBox();
-            actions.add(doctorSearchBox);
+
+            RecordsHelperAppointment.populateDoctorSearchBox(doctorSearchBox);
+            doctorSearchBox.addActionListener(e -> refreshTable());
         } else if(reportTable){
             populateReportTable();
         }
@@ -125,6 +122,7 @@ public class ManageRecordsPanel extends JPanel {
         actions.add(addButton);
         actions.add(editButton);
         actions.add(deleteButton);
+
 
         //has two rows since its a bit too long
         if (assetTable) {
@@ -217,13 +215,13 @@ public class ManageRecordsPanel extends JPanel {
         String updatedRecord = departmentTable
                             ? editDepartmentRecord(records.get(modelRow))
                             : appointmentTable
-                            ? editAppointmentRecord(records.get(modelRow))
+                            ? RecordsHelperAppointment.editAppointmentRecord(this, records.get(modelRow))
                             : insuranceTable
-                            ? editInsuranceRecord(records.get(modelRow))
+                            ? RecordsHelperInsurance.editInsuranceRecord(this, records.get(modelRow))
                             : consultationRateTable
-                            ? editConsultationRateRecord(records.get(modelRow))
+                            ? RecordsHelperConsultation.editConsultationRateRecord(this, records.get(modelRow))
                             : assetTable
-                            ? editAssetRecord(records.get(modelRow))
+                            ? RecordsHelperAsset.editAssetRecord(this, records.get(modelRow))
                             : (String) JOptionPane.showInputDialog(this,
                                     "Edit record:", "Edit Record",
                                     JOptionPane.PLAIN_MESSAGE, null, null,
@@ -317,240 +315,6 @@ public class ManageRecordsPanel extends JPanel {
         return String.join("|", idField.getText().trim(), nameField.getText().trim(),
                 descriptionField.getText().trim(), selectedManagerId);
     }
-    private String editAppointmentRecord(String record) {
-        String[] parts = splitRecord(record);
-        if (parts.length < 7) {
-            return null;
-        }
-
-        String appointmentId = parts[0].trim();
-        String patientId = parts[1].trim();
-        String doctorId = parts[2].trim(); 
-        String date = parts[3].trim();
-        String time = parts[4].trim();
-        String status = parts[5].trim();
-        String notes = parts[6].trim();             
-        JTextField appointmentIdField = new JTextField(appointmentId);
-        setUneditable(appointmentIdField);
-        JTextField patientIdField = new JTextField(patientId);
-        JTextField doctorIdField = new JTextField(doctorId);
-        JTextField dateField = new JTextField(date);
-        JTextField timeField = new JTextField(time);
-        JComboBox<String> statusField = new JComboBox<>(new String[]{"SCHEDULED", "COMPLETED", "CANCELLED"});
-        JTextField notesField = new JTextField(notes);
-
-        JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
-        form.add(new JLabel("APPOINTMENT_ID:"));
-        form.add(appointmentIdField);
-        form.add(new JLabel("PATIENT_ID:"));
-        form.add(patientIdField);
-        form.add(new JLabel("DOCTOR_ID:"));
-        form.add(doctorIdField);
-        form.add(new JLabel("DATE:"));
-        form.add(dateField);
-        form.add(new JLabel("TIME:"));
-        form.add(timeField);
-        form.add(new JLabel("STATUS:"));
-        form.add(statusField);
-        form.add(new JLabel("NOTES:"));
-        form.add(notesField);
-
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Edit Appointment", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return null;
-        }
-
-        return String.join("|",
-                appointmentIdField.getText().trim(),
-                patientIdField.getText().trim(),
-                doctorIdField.getText().trim(),
-                dateField.getText().trim(),
-                timeField.getText().trim(),
-                statusField.getSelectedItem().toString().trim(),
-                notesField.getText().trim());
-    }
-
-
-    private void populateDoctorSearchBox() {
-        doctorSearchBox.addItem("All Doctors");
-        for (User user : UserRepository.loadAll()) {
-            if (user.getRole() == Role.DOCTOR) {
-                doctorSearchBox.addItem(user.getFullName());
-            }
-        }
-        doctorSearchBox.addActionListener(e -> refreshTable());
-    }
-
-
-
-    private String editAssetRecord(String record) {
-        String[] parts = splitRecord(record);
-        if (parts.length < 6) {
-            return null;
-        }
-
-        String assetId = parts[0].trim();
-        String roomType = parts[1].trim();
-        String roomName = parts[2].trim();
-        String location = parts[3].trim();
-        String status = parts[4].trim();
-        String reservedby = parts.length > 5 ? parts[5].trim() : "";
-
-        JTextField assetIdField = new JTextField(assetId);
-        setUneditable(assetIdField);
-        JComboBox<String> roomTypeCombo = createAssetTypeCombo();
-        roomTypeCombo.setSelectedItem(normalizeAssetType(roomType));
-        JTextField roomNameField = new JTextField(roomName);
-        JTextField locationField = new JTextField(location);
-        JTextField statusField = new JTextField(status);
-        JTextField reservedByField = new JTextField(reservedby);
-
-        JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
-        form.add(new JLabel("ASSET_ID:"));
-        form.add(assetIdField);
-        form.add(new JLabel("ROOM_TYPE:"));
-        form.add(roomTypeCombo);
-        form.add(new JLabel("ROOM_NAME:"));
-        form.add(roomNameField);
-        form.add(new JLabel("LOCATION:"));
-        form.add(locationField);
-        form.add(new JLabel("STATUS:"));
-        form.add(statusField);
-        form.add(new JLabel("RESERVED BY:"));
-        form.add(reservedByField);
-
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Edit Asset", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return null;
-        }
-
-        return String.join("|",
-                assetIdField.getText().trim(),
-            ((String) roomTypeCombo.getSelectedItem()).trim(),
-                roomNameField.getText().trim(),
-                locationField.getText().trim(),
-                statusField.getText().trim(),
-                reservedByField.getText().trim());
-    }
-    private String editInsuranceRecord(String record) {
-        String[] parts = splitRecord(record);
-        if (parts.length < 6) {
-            return null;
-        }
-
-        String insuranceId = parts[0].trim();
-        String insuranceName = parts[1].trim();
-        String coverageRate = parts[2].trim();
-        String coveragePercentage = parts[3].trim();
-        String status = parts[4].trim();
-        String contactInfo = parts[5].trim();
-        String effectiveDate = parts.length > 6 ? parts[6].trim() : "";
-
-        JTextField insuranceIdField = new JTextField(insuranceId);
-        setUneditable(insuranceIdField);
-        JTextField insuranceNameField = new JTextField(insuranceName);
-        setUneditable(insuranceNameField);
-        JTextField coverageRateField = new JTextField(coverageRate);
-        JTextField coveragePercentageField = new JTextField(coveragePercentage);
-        JTextField statusField = new JTextField(status);
-        JTextField contactInfoField = new JTextField(contactInfo);
-        JTextField effectiveDateField = new JTextField(effectiveDate);
-
-        JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
-        form.add(new JLabel("INSURANCE_ID:"));
-        form.add(insuranceIdField);
-        form.add(new JLabel("INSURANCE_NAME:"));
-        form.add(insuranceNameField);
-        form.add(new JLabel("COVERAGE_RATE:"));
-        form.add(coverageRateField);
-        form.add(new JLabel("COVERAGE_PERCENTAGE:"));
-        form.add(coveragePercentageField);
-        form.add(new JLabel("STATUS:"));
-        form.add(statusField);
-        form.add(new JLabel("CONTACT_INFO:"));
-        form.add(contactInfoField);
-        form.add(new JLabel("EFFECTIVE_DATE:"));
-        form.add(effectiveDateField);
-
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Edit Insurance", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return null;
-        }
-
-        String updatedRecord = String.join("|",
-                insuranceIdField.getText().trim(),
-                insuranceNameField.getText().trim(),
-                coverageRateField.getText().trim(),
-                coveragePercentageField.getText().trim(),
-                statusField.getText().trim(),
-                contactInfoField.getText().trim(),
-                effectiveDateField.getText().trim());
-
-        List<String> updatedLines = new ArrayList<>(records);
-        int modelRow = recordsTable.convertRowIndexToModel(recordsTable.getSelectedRow());
-        updatedLines.set(modelRow, updatedRecord);
-        writeRecords(updatedLines, "The insurance record could not be updated.");
-        return updatedRecord;
-    }
-
-    private String editConsultationRateRecord(String record) {
-        String[] parts = splitRecord(record);
-        if (parts.length < 6) {
-            return null;
-        }
-
-        JTextField specialtyField = new JTextField(parts[0].trim());
-        setUneditable(specialtyField);
-        JTextField baseRateField = new JTextField(parts[1].trim());
-        JTextField minRateField = new JTextField(parts[2].trim());
-        JTextField maxRateField = new JTextField(parts[3].trim());
-        JTextField currencyField = new JTextField(parts[4].trim());
-        JTextField effectiveDateField = new JTextField(parts[5].trim());
-
-        JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
-        form.add(new JLabel("SPECIALTY:"));
-        form.add(specialtyField);
-        form.add(new JLabel("BASE_RATE:"));
-        form.add(baseRateField);
-        form.add(new JLabel("MIN_RATE:"));
-        form.add(minRateField);
-        form.add(new JLabel("MAX_RATE:"));
-        form.add(maxRateField);
-        form.add(new JLabel("CURRENCY:"));
-        form.add(currencyField);
-        form.add(new JLabel("EFFECTIVE_DATE:"));
-        form.add(effectiveDateField);
-
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Edit Consultation Rate", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return null;
-        }
-
-        if (!validRateFields(baseRateField.getText(), minRateField.getText(), maxRateField.getText())) {
-            JOptionPane.showMessageDialog(this,
-                    "Rates must be numeric and satisfy MIN_RATE <= BASE_RATE <= MAX_RATE.",
-                    "Invalid Consultation Rate", JOptionPane.WARNING_MESSAGE);
-            return null;
-        }
-
-        return String.join("|",
-                specialtyField.getText().trim(), baseRateField.getText().trim(),
-                minRateField.getText().trim(), maxRateField.getText().trim(),
-                currencyField.getText().trim(), effectiveDateField.getText().trim());
-    }
-
-
-    private boolean validRateFields(String baseRate, String minRate, String maxRate) {
-        return ManageRecordsHelper.validRateFields(baseRate, minRate, maxRate);
-    }
 
     private boolean isValidRecord(String record) {
         return ManageRecordsHelper.isValidRecord(record);
@@ -569,6 +333,7 @@ public class ManageRecordsPanel extends JPanel {
         records = recordHelper.getRecords();
     }
 
+
     private void addDepartmentRow(String line) {
         String[] parts = splitRecord(line);
         if (parts.length < 4) {
@@ -583,84 +348,19 @@ public class ManageRecordsPanel extends JPanel {
         });
     }
 
-    private void addAppointmentRow(String line) {
-        String[] parts = splitRecord(line);
-        if (parts.length < 7) {
-            return;
-        }
-        
-        String doctorName = findName(parts[2].trim());
-        String selectedDoctor = (String) doctorSearchBox.getSelectedItem();
-        if (selectedDoctor != null && !selectedDoctor.equals("All Doctors") && !selectedDoctor.equals("Doctor Name")) {
-            if (!doctorName.equals(selectedDoctor)) {
-                return;
-            }
-        }
 
-        tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                findName(parts[1].trim()),
-                doctorName,
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim()
-        });
-    }
-    
-    private void addAssetRow(String line) {
-        String[] parts = splitRecord(line);
-        if (parts.length < 6) {
-            return;
-        }
-
-        tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts.length > 5 ? parts[5].trim() : ""
-        });
-    }
-    private void addInsuranceRow(String line) {
-        String[] parts = splitRecord(line);
-        if (parts.length < 6) {
-            return;
-        }
-
-        tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts.length > 6 ? parts[6].trim() : ""
-        });
-    }
-
-    private void addConsultationRateRow(String line) {
-        String[] parts = splitRecord(line);
-        if (parts.length < 6) {
-            return;
-        }
-        tableModel.addRow(new Object[]{
-                parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                parts[3].trim(), parts[4].trim(), parts[5].trim()
-        });
-    }
     private String findName(String userId) {
         return ManageRecordsHelper.findName(userId);
     }
 
+
     private void addRecord() {
         if (consultationRateTable) {
-            addConsultationRateRecord();
+            RecordsHelperConsultation.addConsultationRateRecord(this, fileName, this::refreshTable);
             return;
         }
         if (insuranceTable) {
-            addInsuranceRecord();
+            RecordsHelperInsurance.addInsuranceRecord(this, fileName, this::refreshTable);
             return;
         }
         if (departmentTable) {
@@ -721,11 +421,11 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
         if (appointmentTable) {
-            addAppointmentRecord();
+            RecordsHelperAppointment.addAppointmentRecord(this, fileName, records, this::refreshTable);
             return;
         }
         if (assetTable) {
-            addAssetRecord();
+            RecordsHelperAsset.addAssetRecord(this, fileName, this::refreshTable);
             return;
         }
         //if not the above tables, will default to doing it via the txt file method
@@ -768,262 +468,7 @@ public class ManageRecordsPanel extends JPanel {
         refreshTable();
     }
 
-    private void addInsuranceRecord() {
-        JTextField providerField = new JTextField();
-        JTextField coverageRateField = new JTextField();
-        JTextField coveragePercentageField = new JTextField();
-        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"ACTIVE", "INACTIVE"});
-        JTextField contactField = new JTextField();
-        JTextField effectiveDateField = new JTextField(java.time.LocalDate.now().toString());
 
-        JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
-        form.add(new JLabel("PROVIDER_NAME:")); form.add(providerField);
-        form.add(new JLabel("COVERAGE_RATE:")); form.add(coverageRateField);
-        form.add(new JLabel("COVERAGE_PERCENTAGE:")); form.add(coveragePercentageField);
-        form.add(new JLabel("STATUS:")); form.add(statusCombo);
-        form.add(new JLabel("CONTACT_INFO:")); form.add(contactField);
-        form.add(new JLabel("EFFECTIVE_DATE:")); form.add(effectiveDateField);
-
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Add Accepted Insurance Network", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return;
-        }
-
-        String percentage = coveragePercentageField.getText().trim();
-        try {
-            double numericPercentage = Double.parseDouble(percentage);
-            if (numericPercentage < 0 || numericPercentage > 100) {
-                throw new NumberFormatException();
-            }
-        } catch (NumberFormatException exception) {
-            JOptionPane.showMessageDialog(this,
-                    "Coverage percentage must be a number from 0 to 100.",
-                    "Invalid Insurance Network", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        if (providerField.getText().trim().isEmpty()
-                || coverageRateField.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Insurance ID, provider name, and coverage rate are required.",
-                    "Invalid Insurance Network", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        FileManager.appendLine(fileName, String.join("|",
-            IDGenerator.next("INS", fileName), providerField.getText().trim(),
-                coverageRateField.getText().trim(), percentage,
-                (String) statusCombo.getSelectedItem(), contactField.getText().trim(),
-                effectiveDateField.getText().trim()));
-        refreshTable();
-    }
-
-    private void addConsultationRateRecord() {
-        JTextField specialtyField = new JTextField();
-        JTextField baseRateField = new JTextField();
-        JTextField minRateField = new JTextField();
-        JTextField maxRateField = new JTextField();
-        JTextField currencyField = new JTextField("USD");
-        JTextField effectiveDateField = new JTextField(java.time.LocalDate.now().toString());
-
-        JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
-        form.add(new JLabel("SPECIALTY:")); form.add(specialtyField);
-        form.add(new JLabel("BASE_RATE:")); form.add(baseRateField);
-        form.add(new JLabel("MIN_RATE:")); form.add(minRateField);
-        form.add(new JLabel("MAX_RATE:")); form.add(maxRateField);
-        form.add(new JLabel("CURRENCY:")); form.add(currencyField);
-        form.add(new JLabel("EFFECTIVE_DATE:")); form.add(effectiveDateField);
-
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Add Consultation Rate", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return;
-        }
-        if (specialtyField.getText().trim().isEmpty()
-                || !validRateFields(baseRateField.getText(), minRateField.getText(), maxRateField.getText())) {
-            JOptionPane.showMessageDialog(this,
-                    "Enter a specialty and valid rates where MIN_RATE <= BASE_RATE <= MAX_RATE.",
-                    "Invalid Consultation Rate", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        FileManager.appendLine(fileName, String.join("|",
-                specialtyField.getText().trim(), baseRateField.getText().trim(),
-                minRateField.getText().trim(), maxRateField.getText().trim(),
-                currencyField.getText().trim(), effectiveDateField.getText().trim()));
-        refreshTable();
-    }
-
-     private void addAssetRecord() {
-        JComboBox<String> roomTypeCombo = createAssetTypeCombo();
-        JTextField roomNameField = new JTextField();
-        JTextField locationField = new JTextField();
-        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"AVAILABLE", "OCCUPIED"});
-        JTextField reservedByField = new JTextField();
- 
-        JPanel form = new JPanel(new GridLayout(5, 2, 8, 8));
-        form.add(new JLabel("ROOM_TYPE:")); form.add(roomTypeCombo);
-        form.add(new JLabel("ROOM_NAME:")); form.add(roomNameField);
-        form.add(new JLabel("LOCATION:")); form.add(locationField);
-        form.add(new JLabel("STATUS:")); form.add(statusCombo);
-        form.add(new JLabel("RESERVED BY:")); form.add(reservedByField);
- 
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Add Ward / Clinic", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return;
-        }
- 
-        String assetId = IDGenerator.next("ASSET", fileName);
-        String roomType = ((String) roomTypeCombo.getSelectedItem()).trim();
-        String roomName = roomNameField.getText().trim();
-        String location = locationField.getText().trim();
-        String status = (String) statusCombo.getSelectedItem();
-        String reservedBy = reservedByField.getText().trim();
- 
-        if (roomType.isEmpty() || roomName.isEmpty() || location.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Asset ID, room type, room name, and location are required.",
-                    "Invalid Asset", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        if (hasIllegalChars(assetId, roomType, roomName, location, reservedBy)) {
-            JOptionPane.showMessageDialog(this,
-                    "Fields cannot contain the '|' character or line breaks.",
-                    "Invalid Asset", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
- 
-        // Keep status and reservation consistent with Reserve / Finished buttons
-        if ("AVAILABLE".equals(status)) {
-            reservedBy = "";
-        } else if (reservedBy.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "An occupied ward/clinic must have a 'Reserved By' value.",
-                    "Invalid Asset", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
- 
-        FileManager.appendLine(fileName, String.join("|",
-                assetId, roomType, roomName, location, status, reservedBy));
-        refreshTable();
-    }
-
-    private JComboBox<String> createAssetTypeCombo() {
-        JComboBox<String> roomTypeCombo = new JComboBox<>();
-        for (AssetType assetType : AssetType.values()) {
-            roomTypeCombo.addItem(assetType.name());
-        }
-        return roomTypeCombo;
-    }
-
-    private String normalizeAssetType(String value) {
-        return AssetType.fromString(value).name();
-    }
- 
-    private void addAppointmentRecord() {
-        List<User> users = UserRepository.loadAll();
-        // NOTE: change Role.PATIENT if your Role enum names it differently
-        List<User> patients = users.stream()
-                .filter(user -> user.getRole() == Role.PATIENT)
-                .toList();
-        List<User> doctors = users.stream()
-                .filter(user -> user.getRole() == Role.DOCTOR)
-                .toList();
- 
-        if (patients.isEmpty() || doctors.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "At least one patient and one doctor must exist before adding an appointment.",
-                    "Cannot Add Appointment", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
- 
-        JComboBox<String> patientCombo = new JComboBox<>();
-        for (User patient : patients) {
-            patientCombo.addItem(patient.getFullName());
-        }
-        JComboBox<String> doctorCombo = new JComboBox<>();
-        for (User doctor : doctors) {
-            doctorCombo.addItem(doctor.getFullName());
-        }
-        JTextField dateField = new JTextField(java.time.LocalDate.now().toString());
-        JTextField timeField = new JTextField("09:00");
-        // NOTE: adjust these to match the statuses already used in bookings.txt
-        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"SCHEDULED", "COMPLETED", "CANCELLED"});
-        JTextField notesField = new JTextField();
- 
-        JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
-        form.add(new JLabel("PATIENT_NAME:")); form.add(patientCombo);
-        form.add(new JLabel("DOCTOR_NAME:")); form.add(doctorCombo);
-        form.add(new JLabel("DATE (YYYY-MM-DD):")); form.add(dateField);
-        form.add(new JLabel("TIME (HH:mm):")); form.add(timeField);
-        form.add(new JLabel("STATUS:")); form.add(statusCombo);
-        form.add(new JLabel("NOTES:")); form.add(notesField);
- 
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Add Appointment", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return;
-        }
- 
-        String appointmentId = IDGenerator.next("B", fileName);
-        String date = dateField.getText().trim();
-        String time = timeField.getText().trim();
-        String status = (String) statusCombo.getSelectedItem();
-        String notes = notesField.getText().trim();
- 
-        if (hasIllegalChars(appointmentId, date, time, notes)) {
-            JOptionPane.showMessageDialog(this,
-                    "Fields cannot contain the '|' character or line breaks.",
-                    "Invalid Appointment", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        try {
-            java.time.LocalDate.parse(date);
-        } catch (java.time.format.DateTimeParseException exception) {
-            JOptionPane.showMessageDialog(this,
-                    "Date must be in YYYY-MM-DD format.",
-                    "Invalid Appointment", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        try {
-            java.time.LocalTime.parse(time, java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
-        } catch (java.time.format.DateTimeParseException exception) {
-            JOptionPane.showMessageDialog(this,
-                    "Time must be in HH:mm format (e.g. 09:30).",
-                    "Invalid Appointment", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
- 
-        // Combo indexes line up with the filtered lists, so map back to user IDs
-        String patientId = patients.get(patientCombo.getSelectedIndex()).getUserId();
-        String doctorId = doctors.get(doctorCombo.getSelectedIndex()).getUserId();
- 
-        // Prevent double-booking the same doctor at the same date/time
-        for (String record : records) {
-            String[] parts = splitRecord(record);
-            if (parts.length >= 6
-                    && parts[2].trim().equals(doctorId)
-                    && parts[3].trim().equals(date)
-                    && parts[4].trim().equals(time)
-                    && !"CANCELLED".equalsIgnoreCase(parts[5].trim())) {
-                JOptionPane.showMessageDialog(this,
-                        "This doctor already has an appointment at that date and time.",
-                        "Scheduling Conflict", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-        }
- 
-        FileManager.appendLine(fileName, String.join("|",
-                appointmentId, patientId, doctorId, date, time, status, notes));
-        refreshTable();
-    }
     private void deleteSelectedRecord() {
         int viewRow = recordsTable.getSelectedRow();
         if (viewRow == -1) {

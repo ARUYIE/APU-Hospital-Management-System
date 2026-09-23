@@ -1,7 +1,7 @@
 package hms.gui;
 
 import hms.role.User;
-import hms.util.BackgroundPatternUtil;
+import hms.util.UIUtil;
 import hms.util.Session;
 import hms.util.UserRepository;
 import hms.util.Validator;
@@ -28,7 +28,7 @@ public class LoginFrame extends JFrame {
     }
 
     private void buildUI() {
-        JPanel root = BackgroundPatternUtil.createPatternPanel();
+        JPanel root = UIUtil.createPatternPanel();
         root.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         JPanel loginPanel = new JPanel(new GridBagLayout());
