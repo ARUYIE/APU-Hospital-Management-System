@@ -121,14 +121,18 @@ public class ManageRecordsPanel extends JPanel {
         JButton finishButton = new JButton("Finished");
         finishButton.addActionListener(e -> finishSelectedAsset());
 
+        JButton markCompletedButton = new JButton("Mark Completed");
+        markCompletedButton.addActionListener(e -> updateSelectedAppointmentStatus("COMPLETED"));
+
+        JButton cancelAppointmentButton = new JButton("Cancel Appointment");
+        cancelAppointmentButton.addActionListener(e -> updateSelectedAppointmentStatus("CANCELLED"));
+
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         
         if (assetTable) {
             assetSearchBox.setToolTipText("Filter by room type");
             assetSearchBox.addActionListener(e -> refreshTable());
         } else if(appointmentTable){
-            actions.add(new JLabel("Search Doctor:"));
-
             RecordsHelperAppointment.populateDoctorSearchBox(doctorSearchBox);
             doctorSearchBox.addActionListener(e -> refreshTable());
         } else if(reportTable){
@@ -166,7 +170,26 @@ public class ManageRecordsPanel extends JPanel {
             wardActions.add(recordActions);
             actions = wardActions;
         }
-        
+        if (appointmentTable) {
+            JPanel appointmentActions = new JPanel();
+            appointmentActions.setLayout(new BoxLayout(appointmentActions, BoxLayout.Y_AXIS));
+
+            JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            searchActions.add(new JLabel("Search Doctor:"));
+            searchActions.add(doctorSearchBox);
+            searchActions.add(markCompletedButton);
+            searchActions.add(cancelAppointmentButton);
+
+            JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            recordActions.add(refreshButton);
+            recordActions.add(addButton);
+            recordActions.add(editButton);
+            recordActions.add(deleteButton);
+
+            appointmentActions.add(searchActions);
+            appointmentActions.add(recordActions);
+            actions = appointmentActions;
+        }
 
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.add(heading, BorderLayout.WEST);
@@ -220,6 +243,27 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
         recordHelper.finishAsset(this, assetId);
+    }
+
+    private void updateSelectedAppointmentStatus(String newStatus) {
+        if (!appointmentTable) {
+            return;
+        }
+
+        String appointmentId = getSelectedAssetId();
+        if (appointmentId == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select an appointment first.",
+                    "No Record Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        List<String> updatedLines = RecordsHelperAppointment.updateAppointmentStatus(this, records, appointmentId, newStatus);
+        if (updatedLines == null) {
+            return;
+        }
+
+        writeRecords(updatedLines, "The appointment status could not be updated.");
     }
 
     private void editSelectedRecord() {

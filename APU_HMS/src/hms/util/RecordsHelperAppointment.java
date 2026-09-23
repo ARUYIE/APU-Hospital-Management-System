@@ -199,6 +199,30 @@ public final class RecordsHelperAppointment {
             });
         }
     
+    public static List<String> updateAppointmentStatus(Component comp, List<String> records,
+            String appointmentId, String newStatus) {
+        List<String> updatedLines = new java.util.ArrayList<>();
+        boolean found = false;
+        for (String record : records) {
+            String[] parts = ManageRecordsHelper.splitRecord(record);
+            if (parts.length >= 7 && parts[0].trim().equals(appointmentId)) {
+                found = true;
+                parts[5] = newStatus;
+                updatedLines.add(String.join("|", parts));
+            } else {
+                updatedLines.add(record);
+            }
+        }
+
+        if (!found) {
+            JOptionPane.showMessageDialog(comp,
+                    "The selected appointment could not be found.",
+                    "Record Not Found", JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+        return updatedLines;
+    }
+
     public static void populateDoctorSearchBox(JComboBox<String> doctorSearchBox) {
         doctorSearchBox.addItem("All Doctors");
         for (User user : UserRepository.loadAll()) {

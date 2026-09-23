@@ -22,7 +22,7 @@ public final class RecordsHelperAsset {
         roomTypeCombo.setSelectedItem(normalizeAssetType(parts[1].trim()));
         JTextField roomNameField = new JTextField(parts[2].trim());
         JTextField locationField = new JTextField(parts[3].trim());
-        JTextField statusField = new JTextField(parts[4].trim());
+        JComboBox<String> statusField = new JComboBox<>(new String[]{"AVAILABLE", "OCCUPIED"});
         JTextField reservedByField = new JTextField(parts[5].trim());
 
         JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
@@ -51,7 +51,7 @@ public final class RecordsHelperAsset {
                 ((String) roomTypeCombo.getSelectedItem()).trim(),
                 roomNameField.getText().trim(),
                 locationField.getText().trim(),
-                statusField.getText().trim(),
+                statusField.getSelectedItem().toString().trim(),
                 reservedByField.getText().trim());
     }
 

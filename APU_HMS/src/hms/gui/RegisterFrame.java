@@ -72,16 +72,17 @@ public class RegisterFrame extends JDialog {
         pgbc.gridx = 1;
         patientCard.add(genderBox, pgbc);
 
-        JPanel blankCard = new JPanel(); // Admin Staff / Medical Manager need no extra fields
-
-        extraFieldsPanel.add(blankCard, Role.ADMIN_STAFF.name());
-        extraFieldsPanel.add(blankCard, Role.MEDICAL_MANAGER.name());
+        // Admin Staff / Medical Manager need no extra fields; CardLayout requires a distinct instance per key.
+        extraFieldsPanel.add(new JPanel(), Role.ADMIN_STAFF.name());
+        extraFieldsPanel.add(new JPanel(), Role.MEDICAL_MANAGER.name());
         extraFieldsPanel.add(doctorCard, Role.DOCTOR.name());
         extraFieldsPanel.add(patientCard, Role.PATIENT.name());
 
         roleBox.addActionListener(e -> {
             CardLayout cl = (CardLayout) extraFieldsPanel.getLayout();
             cl.show(extraFieldsPanel, ((Role) roleBox.getSelectedItem()).name());
+            extraFieldsPanel.revalidate();
+            extraFieldsPanel.repaint();
         });
 
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;

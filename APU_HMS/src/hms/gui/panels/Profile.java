@@ -38,6 +38,13 @@ public class Profile extends JPanel {
         addReadOnlyRow(form, gbc, row++, "User ID:", currentUser.getUserId());
         addReadOnlyRow(form, gbc, row++, "Username:", currentUser.getUsername());
         addReadOnlyRow(form, gbc, row++, "Role:", currentUser.getRole().getDisplayName());
+        if (currentUser instanceof Doctor doctor) {
+            addReadOnlyRow(form, gbc, row++, "Department:", doctor.getSpecialty());
+            addReadOnlyRow(form, gbc, row++, "Medical Manager:", findAssignedManagerName(doctor));
+        } else if (currentUser instanceof Patient patient) {
+            addReadOnlyRow(form, gbc, row++, "Date of Birth (YYYY-MM-DD):", patient.getDateOfBirth());
+            addReadOnlyRow(form, gbc, row++, "Gender:", patient.getGender());
+        }
         addEditableRow(form, gbc, row++, "Full Name:", fullNameField);
         addEditableRow(form, gbc, row++, "Email:", emailField);
         addEditableRow(form, gbc, row++, "Phone:", phoneField);
@@ -48,16 +55,7 @@ public class Profile extends JPanel {
         form.add(saveButton, gbc);
         gbc.gridwidth = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        if (currentUser instanceof Doctor doctor) {
-            JTextField specialtyField = new JTextField(doctor.getSpecialty(), 20);
-            addEditableRow(form, gbc, row++, "Specialty:", specialtyField);
-        } else if (currentUser instanceof Patient patient) {
-            JTextField dobField = new JTextField(patient.getDateOfBirth(), 20);
-            JComboBox<String> genderBox = new JComboBox<>(new String[]{"Male", "Female", "Other"});
-            genderBox.setSelectedItem(patient.getGender());
-            addEditableRow(form, gbc, row++, "Date of Birth (YYYY-MM-DD):", dobField);
-            addEditableRow(form, gbc, row++, "Gender:", genderBox);
-        }
+        
 
         saveButton.addActionListener(e -> {
             String fullName = fullNameField.getText().trim();
@@ -108,5 +106,18 @@ public class Profile extends JPanel {
         panel.add(new JLabel(label), gbc);
         gbc.gridx = 1;
         panel.add(field, gbc);
+    }
+
+    private static String findAssignedManagerName(Doctor doctor) {
+        String managerId = hms.util.DoctorManagerAssignmentRepository.loadAll().get(doctor.getUserId());
+        if (managerId == null) {
+            return "-";
+        }
+        for (User user : UserRepository.loadAll()) {
+            if (managerId.equals(user.getUserId())) {
+                return user.getFullName();
+            }
+        }
+        return "-";
     }
 }

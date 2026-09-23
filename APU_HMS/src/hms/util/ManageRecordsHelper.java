@@ -71,6 +71,7 @@ public final class ManageRecordsHelper {
         records.clear();
         records.addAll(lines);
 
+        refreshAssetFilterOptions();
         tableModel.setRowCount(0);
 
         for (String record : records) {
@@ -274,18 +275,6 @@ public final class ManageRecordsHelper {
                                             parts[3].trim(),
                                             parts[4].trim(),
                                             parts[5].trim()});
-        } else if (!departmentTable && !appointmentTable && !assetTable
-                && !insuranceTable && !consultationRateTable) {
-            tableModel.addRow(new Object[]{tableModel.getRowCount() + 1, line});
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim()
-            });
-
         } else if (reportTable && parts.length >= 6) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
@@ -343,43 +332,6 @@ public final class ManageRecordsHelper {
                 parts[4].trim(),
                 parts[5].trim(),
                 parts[6].trim()
-            });
-        } else if (consultationTable && parts.length >= 9) {
-            String notes = parts.length >= 9 ? parts[8].trim() : "";
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim(),
-                notes
-            });
- 
-        } else if (prescriptionTable && parts.length >= 8) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), 
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim()
-            });
- 
-        } else if (labRequestTable && parts.length >= 8) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), 
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim()
             });
         } else {
             tableModel.addRow(new Object[]{
