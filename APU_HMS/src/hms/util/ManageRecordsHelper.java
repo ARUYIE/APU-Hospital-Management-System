@@ -339,7 +339,7 @@ public final class ManageRecordsHelper {
  
         } else if (labRequestTable && parts.length >= 8) {
             tableModel.addRow(new Object[]{
-                parts[0].trim(), 
+                parts[0].trim(),
                 parts[1].trim(),
                 parts[2].trim(),
                 parts[3].trim(),
@@ -357,20 +357,8 @@ public final class ManageRecordsHelper {
                 parts[3].trim(),
                 parts[4].trim(),
                 parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim()
+                parts[6].trim()
             });
-      
-        }else if (!departmentTable
-                && !appointmentTable
-                && !assetTable
-                && !insuranceTable
-                && !consultationRateTable
-                && !reportTable
-                && !consultationTable
-                && !prescriptionTable
-                && !labRequestTable) {
-            
         } else {
             tableModel.addRow(new Object[]{
                 tableModel.getRowCount() + 1,
