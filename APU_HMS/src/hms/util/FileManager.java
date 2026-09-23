@@ -133,17 +133,61 @@ public final class FileManager {
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND)) {
 
-                // Create the header when report.txt is created for the first time
-                if (!fileExists && "report.txt".equalsIgnoreCase(fileName)) {
-                    writer.write(
-                            "REPORT_PERIOD|"
-                            + "TOTAL_PATIENTS|"
-                            + "APPOINTMENTS|"
-                            + "COMPLETED|"
-                            + "CANCELLED|"
-                            + "TOTAL_REVENUE"
-                    );
-                    writer.newLine();
+                // Create headers when the file is created for the first time
+                 if (!fileExists) {
+
+                    switch (fileName.toLowerCase()) {
+
+                        case "report.txt":
+                            writer.write(
+                                    "REPORT_PERIOD|"
+                                    + "TOTAL_PATIENTS|"
+                                    + "APPOINTMENTS|"
+                                    + "COMPLETED|"
+                                    + "CANCELLED|"
+                                    + "TOTAL_REVENUE"
+                            );
+                            writer.newLine();
+                            break;
+
+                        case "roster.txt":
+                            writer.write(
+                                    "ROSTER_ID|"
+                                    + "DOCTOR_NAME|"
+                                    + "MANAGED_BY|"
+                                    + "DEPARTMENT|"
+                                    + "DATE|"
+                                    + "SHIFT|"
+                                    + "STATUS"
+                            );
+                            writer.newLine();
+                            break;
+
+                        case "bookings.txt":
+                            writer.write(
+                                    "BOOK_ID|"
+                                    + "PATIENT_ID|"
+                                    + "DOCTOR_ID|"
+                                    + "CONSULTATION_DATE|"
+                                    + "CONSULTATION_TIME|"
+                                    + "STATUS|"
+                                    + "NOTES"
+                            );
+                            writer.newLine();
+                            break;
+
+                        case "consultation_rates.txt":
+                            writer.write(
+                                    "SPECIALTY|"
+                                    + "BASE_RATE|"
+                                    + "MIN_RATE|"
+                                    + "MAX_RATE|"
+                                    + "CURRENCY|"
+                                    + "EFFECTIVE_DATE"
+                            );
+                            writer.newLine();
+                            break;
+                    }
                 }
 
                 writer.write(line);
@@ -155,7 +199,7 @@ public final class FileManager {
                     "Error writing " + fileName + ": " + e.getMessage()
             );
         }
-    }   
+    }
 
     // Overwrites the whole data file with the given lines (used for updates/deletes). 
     public static void writeAllLines(String fileName, List<String> lines) {

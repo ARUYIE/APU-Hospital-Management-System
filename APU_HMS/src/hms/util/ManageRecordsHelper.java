@@ -1,6 +1,9 @@
 package hms.util;
 
+import hms.role.Role;
 import hms.role.User;
+import hms.util.Session;
+import hms.util.UserRepository;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -21,6 +24,9 @@ public final class ManageRecordsHelper {
     private final boolean consultationRateTable;
     private final boolean rosterTable;
     private final boolean reportTable;
+    private final boolean consultationTable;
+    private final boolean prescriptionTable;
+    private final boolean labRequestTable;
     private final DefaultTableModel tableModel;
     private final JComboBox<String> doctorSearchBox;
     private final JComboBox<String> assetSearchBox;
@@ -30,8 +36,7 @@ public final class ManageRecordsHelper {
     private boolean headerPresent;
     private boolean initialized;
 
-    public ManageRecordsHelper(String fileName, DefaultTableModel tableModel,
-            JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox) {
+    public ManageRecordsHelper(String fileName, DefaultTableModel tableModel, JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox, boolean consultationTable, boolean prescriptionTable, boolean labRequestTable) {
         this.fileName = fileName;
         this.tableModel = tableModel;
         this.doctorSearchBox = doctorSearchBox;
@@ -43,6 +48,9 @@ public final class ManageRecordsHelper {
         consultationRateTable = "consultation_rates.txt".equalsIgnoreCase(fileName);
         rosterTable = "roster.txt".equalsIgnoreCase(fileName);
         reportTable = "report.txt".equalsIgnoreCase(fileName);
+        this.consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
+        this.prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
+        this.labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
     }
 
     public List<String> getRecords() {
@@ -50,17 +58,27 @@ public final class ManageRecordsHelper {
     }
 
     public void refreshTable() {
+
         List<String> lines = FileManager.readLines(fileName);
-        if (!initialized) {
-            headerPresent = !lines.isEmpty();
-            initialized = true;
+
+        headerLine = null;
+
+        // Always treat the first line as the header
+        if (!lines.isEmpty()) {
+            headerLine = lines.remove(0);
         }
-        headerLine = headerPresent && !lines.isEmpty() ? lines.remove(0) : null;
+
         records.clear();
         records.addAll(lines);
-        refreshAssetFilterOptions();
+
         tableModel.setRowCount(0);
+
         for (String record : records) {
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
             addTableRow(record);
         }
     }
@@ -259,9 +277,126 @@ public final class ManageRecordsHelper {
         } else if (!departmentTable && !appointmentTable && !assetTable
                 && !insuranceTable && !consultationRateTable) {
             tableModel.addRow(new Object[]{tableModel.getRowCount() + 1, line});
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim()
+            });
+
+        } else if (reportTable && parts.length >= 6) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim()
+            });
+           
+        } else if (consultationTable && parts.length >= 9) {
+            String notes = parts.length >= 9 ? parts[8].trim() : "";
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim(),
+                notes
+            });
+ 
+        } else if (prescriptionTable && parts.length >= 8) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), 
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim()
+            });
+ 
+        } else if (labRequestTable && parts.length >= 8) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim()
+            });
+        
+        } else if (rosterTable && parts.length >= 7) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim()
+            });
+        } else if (consultationTable && parts.length >= 9) {
+            String notes = parts.length >= 9 ? parts[8].trim() : "";
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim(),
+                notes
+            });
+ 
+        } else if (prescriptionTable && parts.length >= 8) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), 
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim()
+            });
+ 
+        } else if (labRequestTable && parts.length >= 8) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), 
+                parts[1].trim(),
+                parts[2].trim(),
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                parts[6].trim(),
+                parts[7].trim()
+            });
+        } else {
+            tableModel.addRow(new Object[]{
+                tableModel.getRowCount() + 1,
+                line
+            });
         }
     }
 
+    private static boolean visibleToCurrentDoctor(String doctorId) {
+        User current = Session.getCurrentUser();
+        if (current == null || current.getRole() != Role.DOCTOR) {
+            return true;
+        }
+        return doctorId.equals(current.getUserId());
+    }
+    
     public static String[] splitRecord(String record) {
         return record.split("\\|", -1);
     }
@@ -288,7 +423,7 @@ public final class ManageRecordsHelper {
             return false;
         }
     }
-
+    
     public static boolean isValidRecord(String record) {
         return record != null && !record.isEmpty() && !record.contains("\n")
                 && !record.contains("\r") && record.indexOf('|') > 0;

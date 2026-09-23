@@ -178,6 +178,20 @@ public class DashboardFrame extends JFrame {
                     "View Hospital Metrics and Revenue Summaries", "report.txt"));
                 break;
                 
+            //Low Kai Lun - Doctor
+            case "Patient Vitals & Consultation Notes":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "Log Vitals & Consultation Notes", "vital_signs.txt"));
+                break;
+            case "Prescriptions":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "Issue Prescriptions", "prescriptions.txt"));
+                break;
+            case "Lab & Imaging Requests":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "Request Lab Tests / Imaging", "lab_requests.txt"));
+                break;
+                
             default:
                 setContent(new hms.gui.panels.PlaceholderPanel(menuLabel));
         }
