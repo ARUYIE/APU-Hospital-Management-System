@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.awt.*;
 
 /** Shared data and table operations for record-management panels. */
 public final class ManageRecordsHelper {
@@ -70,6 +71,7 @@ public final class ManageRecordsHelper {
         records.clear();
         records.addAll(lines);
 
+        refreshAssetFilterOptions();
         tableModel.setRowCount(0);
 
         for (String record : records) {
@@ -108,6 +110,7 @@ public final class ManageRecordsHelper {
         }
         return saved;
     }
+    
 
     public boolean deleteRecord(int modelRow) {
         if (modelRow < 0 || modelRow >= records.size()) {
@@ -132,10 +135,10 @@ public final class ManageRecordsHelper {
         return modelRow >= 0 && modelRow < records.size() ? records.get(modelRow) : null;
     }
 
-    public void reserveAsset(java.awt.Component owner, String assetId) {
+    public void reserveAsset(Component comp, String assetId) {
         Asset asset = AssetManager.getAsset(assetId);
         if (asset == null) {
-            JOptionPane.showMessageDialog(owner,
+            JOptionPane.showMessageDialog(comp,
                     "The selected ward or clinic could not be found.",
                     "Record Not Found", JOptionPane.ERROR_MESSAGE);
             return;
@@ -143,14 +146,14 @@ public final class ManageRecordsHelper {
 
         List<String> departments = DepartmentManager.getDepartmentNames();
         if (departments.isEmpty()) {
-            JOptionPane.showMessageDialog(owner,
+            JOptionPane.showMessageDialog(comp,
                     "There are no departments available to reserve this asset.",
                     "No Departments Found", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         JComboBox<String> departmentCombo = new JComboBox<>(departments.toArray(new String[0]));
-        int choice = JOptionPane.showConfirmDialog(owner, departmentCombo,
+        int choice = JOptionPane.showConfirmDialog(comp, departmentCombo,
                 "Select Department Reserving This Asset", JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.PLAIN_MESSAGE);
         if (choice != JOptionPane.OK_OPTION) {
@@ -162,7 +165,7 @@ public final class ManageRecordsHelper {
             return;
         }
         if (!"AVAILABLE".equalsIgnoreCase(asset.getStatus())) {
-            JOptionPane.showMessageDialog(owner,
+            JOptionPane.showMessageDialog(comp,
                     "This ward/clinic is already in use.",
                     "Reservation Conflict", JOptionPane.WARNING_MESSAGE);
             return;
@@ -171,24 +174,24 @@ public final class ManageRecordsHelper {
         asset.setStatus("OCCUPIED");
         asset.setDescription(departmentName.trim());
         if (AssetManager.updateAsset(asset)) {
-            JOptionPane.showMessageDialog(owner, "Ward/clinic reserved successfully.");
+            JOptionPane.showMessageDialog(comp, "Ward/clinic reserved successfully.");
             refreshTable();
         } else {
-            JOptionPane.showMessageDialog(owner,
+            JOptionPane.showMessageDialog(comp,
                     "The reservation could not be saved.", "Save Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    public void finishAsset(java.awt.Component owner, String assetId) {
+    public void finishAsset(java.awt.Component comp, String assetId) {
         Asset asset = AssetManager.getAsset(assetId);
         if (asset == null) {
-            JOptionPane.showMessageDialog(owner,
+            JOptionPane.showMessageDialog(comp,
                     "The selected ward or clinic could not be found.",
                     "Record Not Found", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(owner,
+        int confirm = JOptionPane.showConfirmDialog(comp,
                 "Mark this ward/clinic as finished and available again?", "Finish Usage",
                 JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (confirm != JOptionPane.YES_OPTION) {
@@ -198,10 +201,10 @@ public final class ManageRecordsHelper {
         asset.setStatus("AVAILABLE");
         asset.setDescription("");
         if (AssetManager.updateAsset(asset)) {
-            JOptionPane.showMessageDialog(owner, "Ward/clinic marked as finished.");
+            JOptionPane.showMessageDialog(comp, "Ward/clinic marked as finished.");
             refreshTable();
         } else {
-            JOptionPane.showMessageDialog(owner,
+            JOptionPane.showMessageDialog(comp,
                     "The status update could not be saved.", "Save Error", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -255,47 +258,23 @@ public final class ManageRecordsHelper {
                     && !doctorName.equals(selectedDoctor)) {
                 return;
             }
-
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                findName(parts[1].trim()),
-                doctorName,
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim()
-            });
-
-        } else if (assetTable && parts.length >= 6) {
-            String selectedAssetType = (String) assetSearchBox.getSelectedItem();
-            String roomType = parts[1].trim();
-            if (selectedAssetType != null && !"All Room Types".equals(selectedAssetType)
-                    && !roomType.equals(selectedAssetType)) {
-                return;
-            }
-            tableModel.addRow(new Object[]{parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                    parts[3].trim(), parts[4].trim(), parts[5].trim()});
-        } else if (insuranceTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts.length > 6 ? parts[6].trim() : ""
-            });
-
+            tableModel.addRow(new Object[]{parts[0].trim(), findName(parts[1].trim()),
+                                                                    doctorName,
+                                                                    parts[3].trim(),
+                                                                    parts[4].trim(),
+                                                                    parts[5].trim(),
+                                                                    parts[6].trim()});
+        } else if (assetTable) {
+            RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
+        } else if (insuranceTable){
+            RecordsHelperInsurance.addInsuranceRow(tableModel, line);
         } else if (consultationRateTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim()
-            });
-
+            tableModel.addRow(new Object[]{parts[0].trim(),
+                                            parts[1].trim(),
+                                            parts[2].trim(),
+                                            parts[3].trim(),
+                                            parts[4].trim(),
+                                            parts[5].trim()});
         } else if (reportTable && parts.length >= 6) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
@@ -354,43 +333,6 @@ public final class ManageRecordsHelper {
                 parts[5].trim(),
                 parts[6].trim()
             });
-        } else if (consultationTable && parts.length >= 9) {
-            String notes = parts.length >= 9 ? parts[8].trim() : "";
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim(),
-                notes
-            });
- 
-        } else if (prescriptionTable && parts.length >= 8) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), 
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim()
-            });
- 
-        } else if (labRequestTable && parts.length >= 8) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), 
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim()
-            });
         } else {
             tableModel.addRow(new Object[]{
                 tableModel.getRowCount() + 1,
@@ -447,4 +389,7 @@ public final class ManageRecordsHelper {
         }
         return false;
     }
+
+
 }
+
