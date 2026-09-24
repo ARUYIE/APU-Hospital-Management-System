@@ -38,23 +38,25 @@ public class Profile extends JPanel {
         addReadOnlyRow(form, gbc, row++, "User ID:", currentUser.getUserId());
         addReadOnlyRow(form, gbc, row++, "Username:", currentUser.getUsername());
         addReadOnlyRow(form, gbc, row++, "Role:", currentUser.getRole().getDisplayName());
+        if (currentUser instanceof Doctor doctor) {
+            addReadOnlyRow(form, gbc, row++, "Department:", doctor.getSpecialty());
+            addReadOnlyRow(form, gbc, row++, "Medical Manager:", findAssignedManagerName(doctor));
+        } else if (currentUser instanceof Patient patient) {
+            addReadOnlyRow(form, gbc, row++, "Date of Birth (YYYY-MM-DD):", patient.getDateOfBirth());
+            addReadOnlyRow(form, gbc, row++, "Gender:", patient.getGender());
+        }
         addEditableRow(form, gbc, row++, "Full Name:", fullNameField);
         addEditableRow(form, gbc, row++, "Email:", emailField);
         addEditableRow(form, gbc, row++, "Phone:", phoneField);
         addEditableRow(form, gbc, row++, "New Password (leave blank to keep current):", passwordField);
 
-        if (currentUser instanceof Doctor doctor) {
-            JTextField specialtyField = new JTextField(doctor.getSpecialty(), 20);
-            addEditableRow(form, gbc, row++, "Specialty:", specialtyField);
-        } else if (currentUser instanceof Patient patient) {
-            JTextField dobField = new JTextField(patient.getDateOfBirth(), 20);
-            JComboBox<String> genderBox = new JComboBox<>(new String[]{"Male", "Female", "Other"});
-            genderBox.setSelectedItem(patient.getGender());
-            addEditableRow(form, gbc, row++, "Date of Birth (YYYY-MM-DD):", dobField);
-            addEditableRow(form, gbc, row++, "Gender:", genderBox);
-        }
-
         JButton saveButton = new JButton("Save Changes");
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.NONE;
+        form.add(saveButton, gbc);
+        gbc.gridwidth = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        
+
         saveButton.addActionListener(e -> {
             String fullName = fullNameField.getText().trim();
             String email = emailField.getText().trim();
@@ -88,7 +90,6 @@ public class Profile extends JPanel {
 
         add(title, BorderLayout.NORTH);
         add(form, BorderLayout.CENTER);
-        add(saveButton, BorderLayout.SOUTH);
     }
 
     private static void addReadOnlyRow(JPanel panel, GridBagConstraints gbc, int row, String label, String value) {
@@ -105,5 +106,18 @@ public class Profile extends JPanel {
         panel.add(new JLabel(label), gbc);
         gbc.gridx = 1;
         panel.add(field, gbc);
+    }
+
+    private static String findAssignedManagerName(Doctor doctor) {
+        String managerId = hms.util.DoctorManagerAssignmentRepository.loadAll().get(doctor.getUserId());
+        if (managerId == null) {
+            return "-";
+        }
+        for (User user : UserRepository.loadAll()) {
+            if (managerId.equals(user.getUserId())) {
+                return user.getFullName();
+            }
+        }
+        return "-";
     }
 }

@@ -4,167 +4,184 @@
  */
 package hms.util;
 
-import java.time.LocalDate;
-import java.time.YearMonth;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 public class ReportData {
-    Random random = new Random();
+
+    private final String month;
     
-    public String getReportPeriod() {
-        System.out.println(YearMonth.now().toString());
-        return YearMonth.now().toString();
+    private int totalPatients;
+    private int appointments;
+    private int completed;
+    private int cancelled;
+    private double totalRevenue;
+
+    public ReportData(String month) {
+        this.month = month;
+        calculateReport(month);
     }
 
-    public int getTotalPatients() {
-        List<String> users = FileManager.readLines("users.txt");
+    private void calculateReport(String month) {
 
-        int count = 0;
+        totalPatients = 0;
+        appointments = 0;
+        completed = 0;
+        cancelled = 0;
+        totalRevenue = 0.0;
 
-        for (String record : users) {
-            if (record == null || record.trim().isEmpty()) {
-                continue;
-            }
+        List<String> bookings =
+                FileManager.readLines("bookings.txt");
 
-            String[] parts = record.split("\\|", -1);
+        List<String> rateRecords =
+                FileManager.readLines("consultation_rates.txt");
 
-            // Skip header
-            if (parts.length > 0 && "ID".equalsIgnoreCase(parts[0].trim())) {
-                continue;
-            }
+        double[] rateRange =
+                getRateRange(rateRecords);
 
-            if (parts.length > 0 && "PATIENT".equalsIgnoreCase(parts[1].trim())) {
-                count++;
-            }
-        }
-        
-        System.out.println(count);
-        return count;
-    }
+        double minimumRate = rateRange[0];
+        double maximumRate = rateRange[1];
 
-    public int getAppointments() {
-        List<String> bookings = FileManager.readLines("bookings.txt");
+        Set<String> patientIds =
+                new HashSet<>();
 
-        int count = 0;
+        // Skip the first line because it is the header
+        for (int i = 1; i < bookings.size(); i++) {
 
-        for (String record : bookings) {
-            if (record == null || record.trim().isEmpty()) {
-                continue;
-            }
+            String booking = bookings.get(i);
 
-            String[] parts = record.split("\\|", -1);
-
-            if (parts.length > 0
-                    && "BOOK_ID".equalsIgnoreCase(parts[0].trim())) {
-                continue;
-            }
-
-            count++;
-        }
-
-        System.out.println(count);
-        return count;
-    }
-
-    public int getCompleted() {
-        List<String> bookings = FileManager.readLines("bookings.txt");
-
-        int count = 0;
-
-        for (String record : bookings) {
-            if (record == null || record.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] parts = record.split("\\|", -1);
-
-            if (parts.length >= 6
-                    && "COMPLETED".equalsIgnoreCase(parts[5].trim())) {
-                count++;
-            }
-        }
-
-        System.out.println(count);
-        return count;
-    }
-
-    public int getCancelled() {
-        List<String> bookings = FileManager.readLines("bookings.txt");
-
-        int count = 0;
-
-        for (String record : bookings) {
-            if (record == null || record.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] parts = record.split("\\|", -1);
-
-            if (parts.length >= 6
-                    && "CANCELLED".equalsIgnoreCase(parts[5].trim())) {
-                count++;
-            }
-        }
-
-        System.out.println(count);
-        return count;
-    }
-
-    public int getActiveDepartments() {
-        List<String> departments = FileManager.readLines("department.txt");
-
-        int count = 0;
-
-        for (String record : departments) {
-            if (record == null || record.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] parts = record.split("\\|", -1);
-
-            if (parts.length > 0
-                    && "DEPTARTMENT_ID".equalsIgnoreCase(parts[0].trim())) {
-                continue;
-            }
-
-            count++;
-        }
-
-        System.out.println(count);
-        return count;
-    }
-
-    public double getTotalRevenue() {
-        List<String> bookings = FileManager.readLines("bookings.txt");
-        List<String> consultationRates = FileManager.readLines("consultation_rates.txt");
-
-        double totalRevenue = 0.0;
-
-        for (String booking : bookings) {
             if (booking == null || booking.trim().isEmpty()) {
                 continue;
             }
 
-            String[] bookingParts = booking.split("\\|", -1);
+            String[] parts = booking.split("\\|", -1);
 
-            if (bookingParts.length < 6) {
+            if (parts.length < 7) {
                 continue;
             }
 
-            // Only completed appointments generate revenue
-            if (!"COMPLETED".equalsIgnoreCase(bookingParts[5].trim())) {
+            String bookId = parts[0].trim();
+            String patientId = parts[1].trim();
+            String consultationDate = parts[3].trim();
+            String status = parts[5].trim();
+
+            if (!consultationDate.startsWith(month)) {
                 continue;
             }
 
-            String doctorId = bookingParts[2].trim();
+            patientIds.add(patientId);
 
-            for (int i = 0; i < random.nextInt(10, 100); i++) {
-                totalRevenue += random.nextInt(100, 250);
+            if (status.equalsIgnoreCase("SCHEDULED")) {
+
+                appointments++;
+
+            } else if (status.equalsIgnoreCase("COMPLETED")) {
+
+                completed++;
+
+                totalRevenue += generateAppointmentFee(
+                        bookId,
+                        minimumRate,
+                        maximumRate
+                );
+
+            } else if (status.equalsIgnoreCase("CANCELLED")) {
+
+                cancelled++;
             }
         }
 
-        System.out.println(totalRevenue);
+        totalPatients = patientIds.size();
+    }
+
+    private double[] getRateRange(
+            List<String> rateRecords) {
+
+        double minimumRate = Double.MAX_VALUE;
+        double maximumRate = -Double.MAX_VALUE;
+
+        // Skip first line because it is the header
+        for (int i = 1; i < rateRecords.size(); i++) {
+
+            String record = rateRecords.get(i);
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts = record.split("\\|", -1);
+
+            if (parts.length < 6) {
+                continue;
+            }
+
+            try {
+
+                double minRate =
+                        Double.parseDouble(parts[2].trim());
+
+                double maxRate =
+                        Double.parseDouble(parts[3].trim());
+
+                if (minRate < minimumRate) {
+                    minimumRate = minRate;
+                }
+
+                if (maxRate > maximumRate) {
+                    maximumRate = maxRate;
+                }
+
+            } catch (NumberFormatException e) {
+                continue;
+            }
+        }
+
+        // If no valid consultation rates exist
+        if (minimumRate == Double.MAX_VALUE
+                || maximumRate == -Double.MAX_VALUE) {
+
+            minimumRate = 100.00;
+            maximumRate = 250.00;
+        }
+
+        return new double[]{
+            minimumRate,
+            maximumRate
+        };
+    }
+
+    private double generateAppointmentFee(
+            String bookId,
+            double minimumRate,
+            double maximumRate) {
+
+        Random random =
+                new Random(bookId.hashCode());
+
+        return minimumRate
+                + (maximumRate - minimumRate)
+                * random.nextDouble();
+    }
+
+    public int getTotalPatients() {
+        return totalPatients;
+    }
+
+    public int getAppointments() {
+        return appointments;
+    }
+
+    public int getCompleted() {
+        return completed;
+    }
+
+    public int getCancelled() {
+        return cancelled;
+    }
+
+    public double getTotalRevenue() {
         return totalRevenue;
     }
 }
