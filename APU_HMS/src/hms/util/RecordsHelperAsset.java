@@ -3,6 +3,7 @@ package hms.util;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.List;
 
 /** Asset-specific record forms and persistence operations for record panels. */
 public final class RecordsHelperAsset {
@@ -123,10 +124,34 @@ public final class RecordsHelperAsset {
             return;
         }
 
+        String assetId = parts[0].trim();
         tableModel.addRow(new Object[]{
-                parts[0].trim(), roomType, parts[2].trim(),
-                parts[3].trim(), parts[4].trim(), parts[5].trim()
+                assetId,
+                roomType,
+                parts[2].trim(),
+                parts[3].trim(),
+                findLabRequestStatus(assetId, parts[2].trim(), parts[4].trim()),
+                parts[5].trim()
         });
+    }
+
+    private static String findLabRequestStatus(String assetId, String assetName,
+            String fallbackStatus) {
+        List<String> requestLines = FileManager.readLines("lab_requests.txt");
+        for (String requestLine : requestLines) {
+            String[] requestParts = ManageRecordsHelper.splitRecord(requestLine);
+            if (requestParts.length < 8
+                    || "REQUEST_ID".equalsIgnoreCase(requestParts[0].trim())) {
+                continue;
+            }
+
+            String requestedAsset = requestParts[3].trim();
+            if (requestedAsset.equalsIgnoreCase(assetId)
+                    || requestedAsset.equalsIgnoreCase(assetName)) {
+                return requestParts[4].trim();
+            }
+        }
+        return fallbackStatus;
     }
 
     public static JComboBox<String> createAssetTypeCombo() {

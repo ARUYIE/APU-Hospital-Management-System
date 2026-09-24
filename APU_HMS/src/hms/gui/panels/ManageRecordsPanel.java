@@ -12,9 +12,12 @@ import hms.util.RecordsHelperAsset;
 import hms.util.RecordsHelperAppointment;
 import hms.util.RecordsHelperInsurance;
 import hms.util.RecordsHelperConsultation;
+import hms.util.RecordsHelperLab;
+
 import hms.util.ReportData;
 import hms.util.Session;
 import hms.util.ManagerMethods;
+
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -294,6 +297,8 @@ public class ManageRecordsPanel extends JPanel {
                 ? editVitalSignRecord(records.get(modelRow))
                 : prescriptionTable
                 ? editPrescriptionRecord(records.get(modelRow))
+                : labRequestTable
+                ? RecordsHelperLab.editLabRecord(this, records.get(modelRow))
                 : (String) JOptionPane.showInputDialog(this,
                         "Edit record:", "Edit Record",
                         JOptionPane.PLAIN_MESSAGE, null, null,
@@ -319,6 +324,7 @@ public class ManageRecordsPanel extends JPanel {
                 updatedLines,
                 "The record could not be updated."
         );
+        refreshTable();
     }
 
     private String[] splitRecord(String record) {
@@ -751,7 +757,12 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
         if (assetTable) {
+            
             RecordsHelperAsset.addAssetRecord(this, fileName, this::refreshTable);
+            return;
+        }
+        if (labRequestTable) {
+            RecordsHelperLab.addLabRecord(this, fileName, this::refreshTable);
             return;
         }
         //if not the above tables, will default to doing it via the txt file method
