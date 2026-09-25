@@ -39,11 +39,16 @@ public class ManageRecordsPanel extends JPanel {
     private final boolean consultationTable;
     private final boolean prescriptionTable;
     private final boolean labRequestTable;
+    private final boolean medicalRecordTable;
+    private final boolean billTable;
+    private final boolean feedbackTable;
+    private final boolean patientAppointmentTable;
     private final DefaultTableModel tableModel;
     private final JTable recordsTable;
     private final ManageRecordsHelper recordHelper;
     private List<String> records = new ArrayList<>();
     private final ManagerMethods managerMethods;
+    
 
     public ManageRecordsPanel(String title, String fileName) {
         this.fileName = fileName;
@@ -64,6 +69,13 @@ public class ManageRecordsPanel extends JPanel {
         consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
         prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
         labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
+        
+        //Yong Jun Hong - Patient
+        medicalRecordTable = "medical_records.txt".equalsIgnoreCase(fileName);
+        billTable = "bills.txt".equalsIgnoreCase(fileName);
+        feedbackTable = "feedback_records.txt".equalsIgnoreCase(fileName);
+        patientAppointmentTable = "appointments.txt".equalsIgnoreCase(fileName);
+       
         
         tableModel = new DefaultTableModel(
                 departmentTable
@@ -86,7 +98,16 @@ public class ManageRecordsPanel extends JPanel {
                 ? new String[]{"PRESCRIPTION_ID", "PATIENT_ID", "DOCTOR_ID", "MEDICATION", "DOSAGE", "DURATION", "DATE_ISSUED", "STATUS"}
                 : labRequestTable       
                 ? new String[]{"REQUEST_ID", "PATIENT_ID", "DOCTOR_ID", "TEST_TYPE", "STATUS", "DATE_REQUESTED", "DATE_COMPLETED", "RESULT"}
+                : patientAppointmentTable
+                ? new String[]{"APPOINTMENT_ID", "PATIENT_USERNAME", "DOCTOR", "DATE", "TIME", "STATUS"}
+                : medicalRecordTable
+                ? new String[]{"RECORD_ID", "PATIENT_ID", "DOCTOR_ID", "DATE", "VITALS", "DIAGNOSIS_NOTES", "PRESCRIPTION"}
+                : billTable
+                ? new String[]{"BILL_ID", "PATIENT_ID", "AMOUNT", "SERVICES", "DATE", "STATUS"}
+                : feedbackTable
+                ? new String[]{"FEEDBACK_ID", "RECORD_ID", "PATIENT_ID", "DOCTOR_ID", "RATING", "COMMENTS"}
                 : new String[]{"#", "Record"}, 0) {
+                    
                    
         @Override
         public boolean isCellEditable(int row, int column) {
@@ -628,14 +649,24 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
         
-        if (appointmentTable) {
-            RecordsHelperAppointment.addAppointmentRecord(this, fileName, records, this::refreshTable);
+        
+         if (patientAppointmentTable) {
+            addPatientAppointmentRecord();
             return;
         }
+
+        if (appointmentTable) {
+            addAdminAppointmentRecord();
+            return;
+        }
+        
         if (assetTable) {
             RecordsHelperAsset.addAssetRecord(this, fileName, this::refreshTable);
             return;
         }
+        
+        
+        
         //if not the above tables, will default to doing it via the txt file method
         String record = JOptionPane.showInputDialog(this,
                 "Enter the record:\nExample: D001|Cardiology|Dr. Lee|Emergency care",
@@ -1033,4 +1064,254 @@ public class ManageRecordsPanel extends JPanel {
     private String findName(String userId) {
         return ManageRecordsHelper.findName(userId);
     }
+    
+    private void handlePatientAppointmentRecord() {
+        // Calls existing appointment helper safely under your own method name
+        RecordsHelperAppointment.addAppointmentRecord(this, fileName, records, this::refreshTable);
+    }
+
+    private void handleDefaultTextRecord() {
+        String record = JOptionPane.showInputDialog(
+                this,
+                "Enter the record:\nExample: R001|Data1|Data2",
+                "Add Record",
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (record == null || record.trim().isEmpty()) {
+            return;
+        }
+
+        String normalizedRecord = record.trim();
+        if (normalizedRecord.contains("\n") || normalizedRecord.contains("\r") || !normalizedRecord.contains("|")) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Enter a single pipe-separated record.",
+                    "Invalid Record",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        FileManager.appendLine(fileName, normalizedRecord);
+        refreshTable();
+    }
+    
+    //patient
+    
+    private void addAdminAppointmentRecord() {
+        JTextField patientUsernameField = new JTextField();
+        JTextField doctorField = new JTextField();
+        JTextField dateField = new JTextField(java.time.LocalDate.now().plusDays(1).toString());
+        
+        JComboBox<String> timeSlotCombo = new JComboBox<>(new String[]{
+            "09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM"
+        });
+
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{
+            "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"
+        });
+
+        // Form Layout
+        JPanel form = new JPanel(new java.awt.GridLayout(5, 2, 8, 8));
+        form.add(new JLabel("PATIENT USERNAME:"));
+        form.add(patientUsernameField);
+        form.add(new JLabel("DOCTOR:"));
+        form.add(doctorField);
+        form.add(new JLabel("DATE (YYYY-MM-DD):"));
+        form.add(dateField);
+        form.add(new JLabel("TIME SLOT:"));
+        form.add(timeSlotCombo);
+        form.add(new JLabel("STATUS:"));
+        form.add(statusCombo);
+
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                form,
+                "Add Appointment Record (Admin)",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (choice != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String username = patientUsernameField.getText().trim();
+        String doctor = doctorField.getText().trim();
+        String date = dateField.getText().trim();
+        String time = (String) timeSlotCombo.getSelectedItem();
+        String status = (String) statusCombo.getSelectedItem();
+
+        // Validation
+        if (username.isEmpty() || doctor.isEmpty() || date.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Patient Username, Doctor, and Date are required.", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            java.time.LocalDate.parse(date);
+        } catch (java.time.format.DateTimeParseException exception) {
+            JOptionPane.showMessageDialog(this, "Date must be in YYYY-MM-DD format.", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (hasIllegalChars(username, doctor, date, time, status)) {
+            JOptionPane.showMessageDialog(this, "Fields cannot contain the '|' character.", "Invalid Input", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        FileManager.appendLine(
+                fileName,
+                String.join("|",
+                        IDGenerator.next("APT", fileName),
+                        username,
+                        doctor,
+                        date,
+                        time,
+                        status
+                )
+        );
+
+        refreshTable();
+    }
+    
+    
+    private void addPatientAppointmentRecord() {
+    User currentPatient = Session.getCurrentUser();
+
+    // 1. Read doctors from users.txt
+    List<String> userLines = FileManager.readLines("users.txt");
+    List<String[]> doctorRows = new ArrayList<>();
+
+    if (userLines != null) {
+        for (String line : userLines) {
+            if (line.trim().isEmpty() || line.startsWith("ID")) {
+                continue;
+            }
+            String[] parts = line.split("\\|");
+            // ID|ROLE|NAME|PW|FULLNAME|EMAIL|PHONE|SPECIALIZATION
+            if (parts.length >= 5 && "DOCTOR".equalsIgnoreCase(parts[1].trim())) {
+                String id = parts[0].trim();
+                String name = parts[4].trim();
+                String phone = parts.length >= 7 ? parts[6].trim() : "-";
+                String spec = parts.length >= 8 ? parts[7].trim() : "General";
+                doctorRows.add(new String[]{id, name, spec, phone});
+            }
+        }
+    }
+
+    if (doctorRows.isEmpty()) {
+        doctorRows.add(new String[]{"U003", "Docter Lo", "General", "3123456789"});
+        doctorRows.add(new String[]{"U010", "Sammy Liu", "Surgeon", "01238591942"});
+    }
+
+    // 2. Build Doctor Selection Table
+    String[] columns = {"ID", "Doctor Name", "Specialization", "Phone"};
+    String[][] data = doctorRows.toArray(new String[0][0]);
+    JTable doctorTable = new JTable(data, columns);
+    doctorTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    doctorTable.setRowSelectionInterval(0, 0); // Select first row by default
+
+    JScrollPane scrollPane = new JScrollPane(doctorTable);
+    scrollPane.setPreferredSize(new java.awt.Dimension(500, 150));
+
+    JTextField dateField = new JTextField(java.time.LocalDate.now().plusDays(1).toString());
+    JComboBox<String> timeSlotCombo = new JComboBox<>(new String[]{
+        "09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM"
+    });
+
+    JPanel panel = new JPanel(new java.awt.BorderLayout(10, 10));
+    panel.add(new JLabel("Select a Doctor from the list below:"), java.awt.BorderLayout.NORTH);
+    panel.add(scrollPane, java.awt.BorderLayout.CENTER);
+
+    JPanel inputPanel = new JPanel(new java.awt.GridLayout(2, 2, 8, 8));
+    inputPanel.add(new JLabel("DATE (YYYY-MM-DD):"));
+    inputPanel.add(dateField);
+    inputPanel.add(new JLabel("TIME SLOT:"));
+    inputPanel.add(timeSlotCombo);
+    panel.add(inputPanel, java.awt.BorderLayout.SOUTH);
+
+    int choice = JOptionPane.showConfirmDialog(
+            this,
+            panel,
+            "Select Doctor & Schedule Appointment",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE
+    );
+
+    if (choice != JOptionPane.OK_OPTION) {
+        return;
+    }
+
+    int selectedRow = doctorTable.getSelectedRow();
+    if (selectedRow == -1) {
+        JOptionPane.showMessageDialog(this, "Please select a doctor from the table.", "Invalid Selection", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    String selectedDoctorName = (String) doctorTable.getValueAt(selectedRow, 1);
+    String selectedDate = dateField.getText().trim();
+    String selectedTime = (String) timeSlotCombo.getSelectedItem();
+    String username = currentPatient != null ? currentPatient.getUserId() : "";
+
+    // 3. Validation: Date parsing
+    try {
+        java.time.LocalDate.parse(selectedDate);
+    } catch (java.time.format.DateTimeParseException exception) {
+        JOptionPane.showMessageDialog(this, "Date must be in YYYY-MM-DD format.", "Invalid Date", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    // 4. Availability Check: Check existing appointments in fileName
+    List<String> existingAppts = FileManager.readLines(fileName);
+    if (existingAppts != null) {
+        for (String line : existingAppts) {
+            String[] parts = line.split("\\|");
+            // Format: APT_ID|PATIENT|DOCTOR|DATE|TIME|STATUS
+            if (parts.length >= 6) {
+                String doc = parts[2].trim();
+                String dt = parts[3].trim();
+                String tm = parts[4].trim();
+                String status = parts[5].trim();
+
+                if (doc.equalsIgnoreCase(selectedDoctorName) && dt.equalsIgnoreCase(selectedDate) && tm.equalsIgnoreCase(selectedTime) && !"CANCELLED".equalsIgnoreCase(status)) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            selectedDoctorName + " is already booked at " + selectedTime + " on " + selectedDate + ".\nPlease choose another time slot or date.",
+                            "Slot Unavailable",
+                            JOptionPane.WARNING_MESSAGE
+                    );
+                    return;
+                }
+            }
+        }
+    }
+
+    // 5. Save Valid Appointment
+    FileManager.appendLine(
+            fileName,
+            String.join("|",
+                    IDGenerator.next("APT", fileName),
+                    username,
+                    selectedDoctorName,
+                    selectedDate,
+                    selectedTime,
+                    "PENDING"
+            )
+    );
+
+    refreshTable();
+}    
+    
+    
+   private void handlePatientAddAppointment() {
+        addPatientAppointmentRecord(); 
+    }
+
+    private void handlePatientViewAppointments() {
+        refreshTable(); 
+    }
+  
+    
 }

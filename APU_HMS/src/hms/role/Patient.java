@@ -41,7 +41,6 @@ public class Patient extends User {
             "Profile",
             "Book / View Appointments",
             "View My Assessment Results",
-            "View Medical and Prescription",
             "View My Bills",
             "Comment & Rating"
         };

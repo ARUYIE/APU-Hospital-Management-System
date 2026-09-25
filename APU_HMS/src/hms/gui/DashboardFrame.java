@@ -195,19 +195,22 @@ public class DashboardFrame extends JFrame {
                 //Yong Jun Hong - Patient 
             case "Book / View Appointments":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "Book / View Appointments", "appointments.txt"));
+                        "Book / View Appointments", "appointments.txt"));
                 break;
+
             case "View My Assessment Results":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "View My Assessment Results", "medical_records.txt"));
+                        "View My Assessment Results", "medical_records.txt"));
                 break;
+
             case "View My Bills":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "View My Bills", "bills.txt"));
+                        "View My Bills", "bills.txt"));
                 break;
+
             case "Comment & Rating":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "Comment & Rating", "feedback_records.txt"));
+                        "Comment & Rating", "feedback_records.txt"));
                 break;
 
                     
@@ -221,5 +224,7 @@ public class DashboardFrame extends JFrame {
         contentArea.add(component, BorderLayout.CENTER);
         contentArea.revalidate();
         contentArea.repaint();
+        this.revalidate();
+        this.repaint();
     }
 }
