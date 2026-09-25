@@ -152,8 +152,7 @@ public class DashboardFrame extends JFrame {
                     "View, Edit And Register Users"));
                 break;                
             case "Wards/Clinics":
-                setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Manage Wards and Clinics", "hospital_assets.txt"));
+                setContent(new hms.gui.panels.WardsClinicsMenuPanel(this));
                 break;
             case "Consultation Rates":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
@@ -197,7 +196,7 @@ public class DashboardFrame extends JFrame {
         }
     }
 
-    private void setContent(JComponent component) {
+    public void setContent(JComponent component) {
         contentArea.removeAll();
         contentArea.add(component, BorderLayout.CENTER);
         contentArea.revalidate();

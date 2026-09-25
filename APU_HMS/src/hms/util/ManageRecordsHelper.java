@@ -289,8 +289,8 @@ public final class ManageRecordsHelper {
             String notes = parts.length >= 9 ? parts[8].trim() : "";
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
+                findName(parts[1].trim()),
+                findName(parts[2].trim()),
                 parts[3].trim(),
                 parts[4].trim(),
                 parts[5].trim(),
@@ -302,8 +302,8 @@ public final class ManageRecordsHelper {
         } else if (prescriptionTable && parts.length >= 8) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(), 
-                parts[1].trim(),
-                parts[2].trim(),
+                findName(parts[1].trim()),
+                findName(parts[2].trim()),
                 parts[3].trim(),
                 parts[4].trim(),
                 parts[5].trim(),
@@ -313,16 +313,16 @@ public final class ManageRecordsHelper {
  
         } else if (labRequestTable && parts.length >= 8) {
             tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
+                parts[0].trim(), 
+                findName(parts[1].trim()),
+                findName(parts[2].trim()),
                 parts[3].trim(),
                 parts[4].trim(),
                 parts[5].trim(),
                 parts[6].trim(),
                 parts[7].trim()
             });
-        
+
         } else if (rosterTable && parts.length >= 7) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
