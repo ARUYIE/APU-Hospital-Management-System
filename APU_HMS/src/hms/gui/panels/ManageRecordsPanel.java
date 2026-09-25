@@ -1,25 +1,37 @@
 package hms.gui.panels;
 
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.table.DefaultTableModel;
+
+import hms.role.User;
 import hms.util.FileManager;
 import hms.util.IDGenerator;
 import hms.util.ManageRecordsHelper;
-import hms.util.UserRepository;
-import hms.role.Role;
-import hms.role.User;
-
-import hms.util.RecordsHelperAsset;
-import hms.util.RecordsHelperAppointment;
-import hms.util.RecordsHelperInsurance;
-import hms.util.RecordsHelperConsultation;
-import hms.util.Session;
 import hms.util.ManagerMethods;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
+import hms.util.RecordsHelperAppointment;
+import hms.util.RecordsHelperAsset;
+import hms.util.RecordsHelperConsultation;
+import hms.util.RecordsHelperInsurance;
+import hms.util.Session;
 
 // for wards, department,appontment, consultation rate, insurance
 public class ManageRecordsPanel extends JPanel {
@@ -105,7 +117,26 @@ public class ManageRecordsPanel extends JPanel {
         JButton refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(e -> refreshTable());
 
-        JButton addButton = new JButton("Add Record");
+        String AddLabel = (assetTable)
+            ? "Add Room"
+            : (appointmentTable)
+            ? "Add Appointment"
+            : (insuranceTable)
+            ? "Add Insurance"
+            : (consultationRateTable)
+            ? "Add Consultation Rate"
+            : (rosterTable)
+            ? "Add Roster"
+            : (reportTable)
+            ? "Add Report"
+            : (consultationTable)
+            ? "Add Consultation"
+            : (prescriptionTable)
+            ? "Add Prescription"
+            : (labRequestTable)
+            ? "Add Lab Request"
+            : "Add Record";
+        JButton addButton = new JButton(AddLabel);
         addButton.addActionListener(e -> addRecord());
 
         JButton editButton = new JButton("Edit Selected");
