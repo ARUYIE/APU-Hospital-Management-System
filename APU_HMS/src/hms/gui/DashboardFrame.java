@@ -191,7 +191,26 @@ public class DashboardFrame extends JFrame {
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                     "Request Lab Tests / Imaging", "lab_requests.txt"));
                 break;
-                
+            
+                //Yong Jun Hong - Patient 
+            case "Book / View Appointments":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "Book / View Appointments", "appointments.txt"));
+                break;
+            case "View My Assessment Results":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "View My Assessment Results", "medical_records.txt"));
+                break;
+            case "View My Bills":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "View My Bills", "bills.txt"));
+                break;
+            case "Comment & Rating":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                    "Comment & Rating", "feedback_records.txt"));
+                break;
+
+                    
             default:
                 setContent(new hms.gui.panels.PlaceholderPanel(menuLabel));
         }
