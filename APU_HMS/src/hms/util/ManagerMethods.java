@@ -5,10 +5,8 @@ import hms.role.Role;
 import hms.role.User;
 
 import java.awt.GridLayout;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Date;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -27,7 +25,363 @@ public class ManagerMethods {
         this.fileName = fileName;
     }
 
+    // Clinical Department Methods
+    private boolean departmentNameExists( String departmentName, String currentDeptId) {
+        List<String> departmentRecords =
+                FileManager.readLines("department.txt");
+
+        // Skip header
+        for (int i = 1; i < departmentRecords.size(); i++) {
+
+            String record = departmentRecords.get(i);
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts =
+                    ManageRecordsHelper.splitRecord(record);
+
+            if (parts.length < 4) {
+                continue;
+            }
+
+            String existingDeptId =
+                    parts[0].trim();
+
+            String existingDeptName =
+                    parts[1].trim();
+
+            // Ignore the department currently being edited
+            if (currentDeptId != null
+                    && existingDeptId.equals(currentDeptId)) {
+                continue;
+            }
+
+            if (existingDeptName.equalsIgnoreCase(
+                    departmentName.trim())) {
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
+    public String addDepartmentRow() {
+        JTextField nameField = new JTextField();
+        JTextField descriptionField = new JTextField();
+
+        List<User> managers =
+                UserRepository.loadAll();
+
+        List<User> medicalManagers = managers.stream()
+                .filter(user -> user.getRole() == Role.MEDICAL_MANAGER)
+                .toList();
+
+        if (medicalManagers.isEmpty()) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "No medical managers are available.",
+                    "Cannot Add Department",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        JComboBox<String> managerCombo =
+                new JComboBox<>();
+
+        for (User manager : medicalManagers) {
+            managerCombo.addItem(
+                    manager.getFullName()
+            );
+        }
+
+        JPanel form =
+                new JPanel(
+                        new GridLayout(3, 2, 8, 8)
+                );
+
+        form.add(new JLabel("DEPT_NAME:"));
+        form.add(nameField);
+
+        form.add(new JLabel("HEAD_MANAGER_NAME:"));
+        form.add(managerCombo);
+
+        form.add(new JLabel("DESCRIPTION:"));
+        form.add(descriptionField);
+
+        int choice = JOptionPane.showConfirmDialog(
+                panel,
+                form,
+                "Add Department",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (choice != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        String deptName =
+                nameField.getText().trim();
+
+        String description =
+                descriptionField.getText().trim();
+
+        if (deptName.isEmpty()
+                || description.isEmpty()) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Please fill in all department fields.",
+                    "Invalid Department",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        if (panel.hasIllegalChars(
+                deptName,
+                description)) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Fields cannot contain the '|' character or line breaks.",
+                    "Invalid Department",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+        
+        if (departmentNameExists(deptName, null)) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Department already exists.",
+                    "Duplicate Department",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        int selectedIndex =
+                managerCombo.getSelectedIndex();
+
+        if (selectedIndex < 0) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Please select a medical manager.",
+                    "Invalid Department",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        String selectedManagerId =
+                medicalManagers
+                        .get(selectedIndex)
+                        .getUserId();
+
+        String deptId =
+                IDGenerator.next("D", fileName);
+
+        return String.join(
+                "|",
+                deptId,
+                deptName,
+                description,
+                selectedManagerId
+        );
+    }
+
+    public String editDepartmentRecord(String record) {
+        String[] parts = ManageRecordsHelper.splitRecord(record);
+
+        if (parts.length < 4) {
+            return null;
+        }
+
+        String deptId = parts[0].trim();
+        String deptName = parts[1].trim();
+        String description = parts[2].trim();
+        String existingManagerId = parts[3].trim();
+
+        JTextField idField = new JTextField(deptId);
+        panel.setUneditable(idField);
+
+        JTextField nameField = new JTextField(deptName);
+        JTextField descriptionField = new JTextField(description);
+
+        List<User> managers = UserRepository.loadAll();
+
+        JComboBox<String> managerCombo = new JComboBox<>();
+
+        List<User> headManagers = managers.stream()
+                .filter(user -> user.getRole() == Role.MEDICAL_MANAGER)
+                .toList();
+
+        int selectedManager = -1;
+
+        for (int index = 0; index < headManagers.size(); index++) {
+
+            User manager = headManagers.get(index);
+
+            managerCombo.addItem(manager.getFullName());
+
+            if (manager.getUserId().equals(existingManagerId)) {
+                selectedManager = index;
+            }
+        }
+
+        if (selectedManager >= 0) {
+            managerCombo.setSelectedIndex(selectedManager);
+        }
+
+        JPanel form = new JPanel(new GridLayout(4, 2, 8, 8));
+
+        form.add(new JLabel("DEPT_ID:"));
+        form.add(idField);
+
+        form.add(new JLabel("DEPT_NAME:"));
+        form.add(nameField);
+
+        form.add(new JLabel("HEAD_MANAGER_NAME:"));
+        form.add(managerCombo);
+
+        form.add(new JLabel("DESCRIPTION:"));
+        form.add(descriptionField);
+
+        int choice = JOptionPane.showConfirmDialog(
+                panel,
+                form,
+                "Edit Department",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (choice != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        String updatedDeptName =
+                nameField.getText().trim();
+
+        String updatedDescription =
+                descriptionField.getText().trim();
+
+        if (updatedDeptName.isEmpty()
+                || updatedDescription.isEmpty()) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Department name and description are required.",
+                    "Invalid Department",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        String selectedManagerId = existingManagerId;
+
+        if (managerCombo.getSelectedIndex() >= 0) {
+
+            selectedManagerId =
+                    headManagers
+                            .get(managerCombo.getSelectedIndex())
+                            .getUserId();
+        }
+
+        if (panel.hasIllegalChars(
+                updatedDeptName,
+                updatedDescription)) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Fields cannot contain the '|' character or line breaks.",
+                    "Invalid Department",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+        
+        if (departmentNameExists(
+                updatedDeptName,
+                deptId)) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Department already exists.",
+                    "Duplicate Department",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        return String.join(
+                "|",
+                idField.getText().trim(),
+                updatedDeptName,
+                updatedDescription,
+                selectedManagerId
+        );
+    }
+    
     // Roster Methods
+    private boolean doctorShiftCheck(
+            String doctorName,
+            String date,
+            String currentRosterId) {
+
+        List<String> rosterRecords =
+                FileManager.readLines("roster.txt");
+
+        // Skip header
+        for (int i = 1; i < rosterRecords.size(); i++) {
+
+            String record = rosterRecords.get(i);
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts =
+                    record.split("\\|", -1);
+
+            if (parts.length < 7) {
+                continue;
+            }
+
+            String rosterId = parts[0].trim();
+            String existingDoctor = parts[1].trim();
+            String existingDate = parts[4].trim();
+
+            // Ignore the record currently being edited
+            if (currentRosterId != null
+                    && rosterId.equals(currentRosterId)) {
+                continue;
+            }
+
+            if (existingDoctor.equalsIgnoreCase(doctorName)
+                    && existingDate.equals(date)) {
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public String addRosterRecord() {
         // Get the currently logged-in manager
         User loggedInManager = Session.getCurrentUser();
@@ -233,6 +587,23 @@ public class ManagerMethods {
 
             return null;
         }
+        
+        if (doctorShiftCheck(
+            selectedDoctorName,
+            date,
+            null)) {
+
+        JOptionPane.showMessageDialog(
+                panel,
+                "This doctor already has a shift on "
+                + date
+                + ". A doctor can only have one shift per date.",
+                "Scheduling Conflict",
+                JOptionPane.WARNING_MESSAGE
+        );
+
+        return null;
+    }
 
         // Generate roster ID
         String rosterId = IDGenerator.next("R", fileName);
@@ -414,6 +785,23 @@ public class ManagerMethods {
             return null;
         }
 
+        if (doctorShiftCheck(
+            doctorName,
+            dateField.getText().trim(),
+            rosterId)) {
+
+        JOptionPane.showMessageDialog(
+                panel,
+                "This doctor already has a shift on "
+                + date
+                + ". A doctor can only have one shift per date.",
+                "Scheduling Conflict",
+                JOptionPane.WARNING_MESSAGE
+        );
+
+        return null;
+    }
+        
         return String.join("|",
                 rosterId,
                 doctorName,

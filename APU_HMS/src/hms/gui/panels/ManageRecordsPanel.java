@@ -12,7 +12,6 @@ import hms.util.RecordsHelperAsset;
 import hms.util.RecordsHelperAppointment;
 import hms.util.RecordsHelperInsurance;
 import hms.util.RecordsHelperConsultation;
-import hms.util.ReportData;
 import hms.util.Session;
 import hms.util.ManagerMethods;
 
@@ -279,7 +278,7 @@ public class ManageRecordsPanel extends JPanel {
         int modelRow = recordsTable.convertRowIndexToModel(viewRow);
 
         String updatedRecord = departmentTable
-                ? editDepartmentRecord(records.get(modelRow))
+                ? managerMethods.editDepartmentRecord(records.get(modelRow))
                 : appointmentTable
                 ? RecordsHelperAppointment.editAppointmentRecord(this, records.get(modelRow))
                 : insuranceTable
@@ -328,73 +327,12 @@ public class ManageRecordsPanel extends JPanel {
     }
 
 
-    private void setUneditable(JTextField field) {
+    public void setUneditable(JTextField field) {
         field.setEditable(false);
         field.setFocusable(false);;
         field.setBackground(Color.LIGHT_GRAY);
     }
-    private String editDepartmentRecord(String record) {
-        String[] parts = splitRecord(record);
-        if (parts.length < 4) {
-            return null;
-        }
-
-        String deptId = parts[0].trim();
-        String deptName = parts[1].trim();
-        String description = parts[2].trim();
-        String existingManagerId = parts[3].trim();
-
-        JTextField idField = new JTextField(deptId);
-        setUneditable(idField);
-        JTextField nameField = new JTextField(deptName);
-        JTextField descriptionField = new JTextField(description);
-        List<User> managers = UserRepository.loadAll();
-        JComboBox<String> managerCombo = new JComboBox<>();
-        int selectedManager = -1;
-        for (int index = 0; index < managers.size(); index++) {
-            User manager = managers.get(index);
-            if (manager.getRole() != Role.MEDICAL_MANAGER) {
-                continue;
-            }
-            managerCombo.addItem(manager.getFullName());
-            if (manager.getUserId().equals(existingManagerId)) {
-                selectedManager = managerCombo.getItemCount() - 1;
-            }
-        }
-        if (selectedManager >= 0) {
-            managerCombo.setSelectedIndex(selectedManager);
-        }
-
-        JPanel form = new JPanel(new GridLayout(4, 2, 8, 8));
-        form.add(new JLabel("DEPT_ID:"));
-        form.add(idField);
-        form.add(new JLabel("DEPT_NAME:"));
-        form.add(nameField);
-        form.add(new JLabel("HEAD_MANAGER_NAME:"));
-        form.add(managerCombo);
-        form.add(new JLabel("DESCRIPTION:"));
-        form.add(descriptionField);
-
-        int choice = JOptionPane.showConfirmDialog(this, form,
-                "Edit Department", JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) {
-            return null;
-        }
-
-        List<User> headManagers = managers.stream()
-            .filter(user -> user.getRole() == Role.MEDICAL_MANAGER)
-            .toList();
-        
-        String selectedManagerId = existingManagerId;
-        if (managerCombo.getSelectedIndex() >= 0) {
-            selectedManagerId = headManagers.get(managerCombo.getSelectedIndex()).getUserId();
-        }
-
-        return String.join("|", idField.getText().trim(), nameField.getText().trim(),
-                descriptionField.getText().trim(), selectedManagerId);
-    }
-
+    
     private String editVitalSignRecord(String record) {
         String[] parts = splitRecord(record);
 
@@ -780,21 +718,6 @@ public class ManageRecordsPanel extends JPanel {
         records = recordHelper.getRecords();
     }
 
-
-    private void addDepartmentRow(String line) {
-        String[] parts = splitRecord(line);
-        if (parts.length < 4) {
-            return;
-        }
-
-        tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                findName(parts[3].trim()),
-                parts[2].trim()
-        });
-    }
-
     private void addRecord() {
         if (consultationRateTable) {
             RecordsHelperConsultation.addConsultationRateRecord(this, fileName, this::refreshTable);
@@ -832,62 +755,21 @@ public class ManageRecordsPanel extends JPanel {
         }
         
         if (departmentTable) {
-            JTextField nameField = new JTextField();
-            JTextField descriptionField = new JTextField();
-            List<User> managers = UserRepository.loadAll();
-            JComboBox<String> managerCombo = new JComboBox<>();
+            String newRecord = managerMethods.addDepartmentRow();
 
-            for (User manager : managers) {
-                if (manager.getRole() == Role.MEDICAL_MANAGER) {
-                    managerCombo.addItem(manager.getFullName());
-                }
+            if (newRecord != null) {
+
+                FileManager.appendLine(
+                        fileName,
+                        newRecord
+                );
+
+                refreshTable();
             }
-
-            JPanel form = new JPanel(new GridLayout(3, 2, 8, 8));
-            form.add(new JLabel("DEPT_NAME:"));
-            form.add(nameField);
-            form.add(new JLabel("HEAD_MANAGER_NAME:"));
-            form.add(managerCombo);
-            form.add(new JLabel("DESCRIPTION:"));
-            form.add(descriptionField);
-
-            int choice = JOptionPane.showConfirmDialog(this, form,
-                    "Add Department", JOptionPane.OK_CANCEL_OPTION,
-                    JOptionPane.PLAIN_MESSAGE);
-            if (choice != JOptionPane.OK_OPTION) {
-                return;
-            }
-
-            String deptId = IDGenerator.next("D", fileName);
-            String deptName = nameField.getText().trim();
-            String description = descriptionField.getText().trim();
-            if (deptName.isEmpty() || description.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Please fill in all department fields.",
-                        "Invalid Department", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            List<User> medicalManagers = managers.stream()
-                    .filter(user -> user.getRole() == Role.MEDICAL_MANAGER)
-                    .toList();
-            String selectedManagerId = medicalManagers.get(managerCombo.getSelectedIndex()).getUserId();
-            String normalizedRecord = String.join("|", deptId, deptName, description, selectedManagerId);
-
-            List<String> linesBeforeSave = FileManager.readLines(fileName);
-            FileManager.appendLine(fileName, normalizedRecord);
-            List<String> linesAfterSave = FileManager.readLines(fileName);
-            boolean saved = linesAfterSave.size() == linesBeforeSave.size() + 1
-                    && linesAfterSave.get(linesAfterSave.size() - 1).equals(normalizedRecord);
-            if (!saved) {
-                JOptionPane.showMessageDialog(this,
-                        "The department could not be saved.",
-                        "Save Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            refreshTable();
+            
             return;
         }
+        
         if (appointmentTable) {
             RecordsHelperAppointment.addAppointmentRecord(this, fileName, records, this::refreshTable);
             return;
@@ -963,7 +845,7 @@ public class ManageRecordsPanel extends JPanel {
         }
     }
 
-    private boolean hasIllegalChars(String... values) {
+    public boolean hasIllegalChars(String... values) {
         return ManageRecordsHelper.hasIllegalChars(values);
     }
     
