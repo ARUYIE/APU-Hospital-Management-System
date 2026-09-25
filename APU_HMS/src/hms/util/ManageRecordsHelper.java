@@ -17,6 +17,7 @@ import java.awt.*;
 public final class ManageRecordsHelper {
 
     private final String fileName;
+    private boolean patientAppointmentTable;
     private final boolean departmentTable;
     private final boolean appointmentTable;
     private final boolean assetTable;
@@ -153,7 +154,7 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        JComboBox<String> departmentCombo = new JComboBox<>(departments.toArray(new String[0]));
+        JComboBox<String> departmentCombo = new JComboBox<>(departments.toArray(String[]::new));
         int choice = JOptionPane.showConfirmDialog(comp, departmentCombo,
                 "Select Department Reserving This Asset", JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.PLAIN_MESSAGE);
