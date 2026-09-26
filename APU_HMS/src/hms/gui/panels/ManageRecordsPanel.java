@@ -129,6 +129,8 @@ public class ManageRecordsPanel extends JPanel {
             ? "Add Prescription"
             : (labRequestTable)
             ? "Add Lab Request"
+            : (departmentTable)
+            ? "Add Department"
             : "Add Record";
         JButton addButton = new JButton(AddLabel);
         addButton.addActionListener(e -> addRecord());
