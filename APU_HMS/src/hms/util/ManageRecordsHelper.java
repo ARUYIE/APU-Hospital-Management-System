@@ -296,27 +296,17 @@ public final class ManageRecordsHelper {
         });
 
     } else if (consultationTable && parts.length >= 9) {
-        System.out.println("DEBUG: Read row with 9 parts: " + line);
 
         String patientId = parts[1].trim();
         User currentUser = Session.getCurrentUser();
-
-        if (currentUser != null) {
-            System.out.println("DEBUG: Current User ID/Username: " + currentUser.getUserId() + " / " + currentUser.getUsername());
-            System.out.println("DEBUG: Record Patient ID: " + patientId);
-        } else {
-            System.out.println("DEBUG: Warning! Session.getCurrentUser() is null!");
-        }
-
+        
         if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
             if (!patientId.equalsIgnoreCase(currentUser.getUserId())
                     && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
-                System.out.println("DEBUG: Skipped row - Patient ID mismatch!");
+
                 return; 
             }
         }
-
-        System.out.println("DEBUG: Filter passed, adding row to table model!");
 
         tableModel.addRow(new Object[]{
             parts[0].trim(),           
