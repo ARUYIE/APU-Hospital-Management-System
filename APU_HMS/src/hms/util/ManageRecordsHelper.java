@@ -28,7 +28,6 @@ public final class ManageRecordsHelper {
     private final boolean insuranceTable;
     private final boolean consultationRateTable;
     private final boolean rosterTable;
-    private final boolean reportTable;
     private final boolean consultationTable;
     private final boolean prescriptionTable;
     private final boolean labRequestTable;
@@ -52,7 +51,6 @@ public final class ManageRecordsHelper {
         insuranceTable = "insurance_networks.txt".equalsIgnoreCase(fileName);
         consultationRateTable = "consultation_rates.txt".equalsIgnoreCase(fileName);
         rosterTable = "roster.txt".equalsIgnoreCase(fileName);
-        reportTable = "report.txt".equalsIgnoreCase(fileName);
         this.consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
         this.prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
         this.labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
@@ -282,16 +280,6 @@ public final class ManageRecordsHelper {
                                             parts[3].trim(),
                                             parts[4].trim(),
                                             parts[5].trim()});
-        } else if (reportTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim()
-            });
-           
         } else if (consultationTable && parts.length >= 9) {
             String notes = parts.length >= 9 ? parts[8].trim() : "";
             tableModel.addRow(new Object[]{
@@ -347,14 +335,6 @@ public final class ManageRecordsHelper {
         }
     }
 
-    private static boolean visibleToCurrentDoctor(String doctorId) {
-        User current = Session.getCurrentUser();
-        if (current == null || current.getRole() != Role.DOCTOR) {
-            return true;
-        }
-        return doctorId.equals(current.getUserId());
-    }
-    
     public static String[] splitRecord(String record) {
         return record.split("\\|", -1);
     }

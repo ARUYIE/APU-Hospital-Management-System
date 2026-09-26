@@ -187,8 +187,8 @@ public class DashboardFrame extends JFrame {
                     "Manager Doctor Operational Roster", "roster.txt"));
                 break;
             case "View Analytical Reports":
-                setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "View Hospital Metrics and Revenue Summaries", "report.txt"));
+                setContent(new hms.util.ReportCharts(
+                    "View Hospital Metrics and Revenue Summaries"));
                 break;
                 
             //Low Kai Lun - Doctor

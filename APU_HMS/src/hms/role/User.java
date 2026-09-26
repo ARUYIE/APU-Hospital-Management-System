@@ -5,7 +5,7 @@ public abstract class User {
 
     private String userId;
     private String username;
-    private String password; // NOTE: plain text for assignment scope; a real system must hash this.
+    private String password;
     private String fullName;
     private String email;
     private String phone;
