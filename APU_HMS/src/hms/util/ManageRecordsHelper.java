@@ -22,6 +22,7 @@ import hms.role.User;
 public final class ManageRecordsHelper {
 
     private final String fileName;
+    private boolean patientAppointmentTable;
     private final boolean departmentTable;
     private final boolean appointmentTable;
     private final boolean assetTable;
@@ -39,6 +40,7 @@ public final class ManageRecordsHelper {
     private String headerLine;
     private boolean headerPresent;
     private boolean initialized;
+    
 
     public ManageRecordsHelper(String fileName, DefaultTableModel tableModel, JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox, boolean consultationTable, boolean prescriptionTable, boolean labRequestTable) {
         this.fileName = fileName;
@@ -157,7 +159,7 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        JComboBox<String> departmentCombo = new JComboBox<>(departments.toArray(new String[0]));
+        JComboBox<String> departmentCombo = new JComboBox<>(departments.toArray(String[]::new));
         int choice = JOptionPane.showConfirmDialog(comp, departmentCombo,
                 "Select Department Reserving This Asset", JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.PLAIN_MESSAGE);
@@ -243,82 +245,127 @@ public final class ManageRecordsHelper {
     }
 
     private void addTableRow(String line) {
-        String[] parts = splitRecord(line);
+    String[] parts = splitRecord(line);
 
-        if (departmentTable && parts.length >= 4) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                findName(parts[3].trim()),
-                parts[2].trim()
-            });
+    if (departmentTable && parts.length >= 4) {
+        tableModel.addRow(new Object[]{
+            parts[0].trim(),
+            parts[1].trim(),
+            findName(parts[3].trim()),
+            parts[2].trim()
+        });
 
-        } else if (appointmentTable && parts.length >= 7) {
-            String doctorName = findName(parts[2].trim());
-            String selectedDoctor = (String) doctorSearchBox.getSelectedItem();
+    } else if ((patientAppointmentTable || appointmentTable) && parts.length >= 6) {
+        String doctorName = findName(parts[2].trim());
+        String selectedDoctor = doctorSearchBox != null ? (String) doctorSearchBox.getSelectedItem() : null;
 
-            if (selectedDoctor != null
-                    && !selectedDoctor.equals("All Doctors")
-                    && !selectedDoctor.equals("Doctor Name")
-                    && !doctorName.equals(selectedDoctor)) {
-                return;
+        if (selectedDoctor != null
+                && !selectedDoctor.equals("All Doctors")
+                && !selectedDoctor.equals("Doctor Name")
+                && !doctorName.equalsIgnoreCase(selectedDoctor)) {
+            return;
+        }
+
+        tableModel.addRow(new Object[]{
+            parts[0].trim(),           
+            findName(parts[1].trim()), 
+            doctorName,                
+            parts[3].trim(),           
+            parts[4].trim(),           
+            parts[5].trim()            
+        });
+
+    } else if (assetTable) {
+        RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
+
+    } else if (insuranceTable) {
+        RecordsHelperInsurance.addInsuranceRow(tableModel, line);
+
+    } else if (consultationRateTable && parts.length >= 6) {
+        if (parts[0].trim().equalsIgnoreCase("SPECIALTY")) {
+            return;
+        }
+
+        tableModel.addRow(new Object[]{
+            parts[0].trim(), // Specialty
+            parts[1].trim(), // Base Rate
+            parts[2].trim(), // Min Rate
+            parts[3].trim(), // Max Rate
+            parts[4].trim(), // Currency
+            parts[5].trim()  // Effective Date
+        });
+
+    } else if (consultationTable && parts.length >= 9) {
+        System.out.println("DEBUG: Read row with 9 parts: " + line);
+
+        String patientId = parts[1].trim();
+        User currentUser = Session.getCurrentUser();
+
+        if (currentUser != null) {
+            System.out.println("DEBUG: Current User ID/Username: " + currentUser.getUserId() + " / " + currentUser.getUsername());
+            System.out.println("DEBUG: Record Patient ID: " + patientId);
+        } else {
+            System.out.println("DEBUG: Warning! Session.getCurrentUser() is null!");
+        }
+
+        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+            if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                    && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                System.out.println("DEBUG: Skipped row - Patient ID mismatch!");
+                return; 
             }
-            tableModel.addRow(new Object[]{parts[0].trim(), findName(parts[1].trim()),
-                                                                    doctorName,
-                                                                    parts[3].trim(),
-                                                                    parts[4].trim(),
-                                                                    parts[5].trim(),
-                                                                    parts[6].trim()});
-        } else if (assetTable) {
-            RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
-        } else if (insuranceTable){
-            RecordsHelperInsurance.addInsuranceRow(tableModel, line);
-        } else if (consultationRateTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{parts[0].trim(),
-                                            parts[1].trim(),
-                                            parts[2].trim(),
-                                            parts[3].trim(),
-                                            parts[4].trim(),
-                                            parts[5].trim()});
-        } else if (consultationTable && parts.length >= 9) {
-            String notes = parts.length >= 9 ? parts[8].trim() : "";
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                findName(parts[1].trim()),
-                findName(parts[2].trim()),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim(),
-                notes
-            });
- 
-        } else if (prescriptionTable && parts.length >= 8) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), 
-                findName(parts[1].trim()),
-                findName(parts[2].trim()),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim()
-            });
- 
-        } else if (labRequestTable && parts.length >= 8) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), 
-                findName(parts[1].trim()),
-                findName(parts[2].trim()),
-                parts[3].trim(),
-                findAssetType(parts[4].trim()),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim()
-            });
-        } else if (rosterTable && parts.length >= 7) {
-            tableModel.addRow(new Object[]{
+        }
+
+        System.out.println("DEBUG: Filter passed, adding row to table model!");
+
+        tableModel.addRow(new Object[]{
+            parts[0].trim(),           
+            findName(parts[1].trim()), 
+            findName(parts[2].trim()), 
+            parts[3].trim(),           
+            parts[4].trim(),           
+            parts[5].trim(),          
+            parts[6].trim(),           
+            parts[7].trim(),           
+            parts[8].trim()            
+        });
+
+    } else if (prescriptionTable && parts.length >= 8) {
+        String patientId = parts[1].trim();
+
+        User currentUser = Session.getCurrentUser();
+        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+            if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                    && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                return; 
+            }
+        }
+
+        tableModel.addRow(new Object[]{
+            parts[0].trim(),
+            findName(parts[1].trim()),
+            findName(parts[2].trim()),
+            parts[3].trim(),
+            parts[4].trim(),
+            parts[5].trim(),
+            parts[6].trim(),
+            parts[7].trim()
+        });
+
+    } else if (labRequestTable && parts.length >= 8) {
+        tableModel.addRow(new Object[]{
+            parts[0].trim(), 
+            findName(parts[1].trim()),
+            findName(parts[2].trim()),
+            parts[3].trim(),
+            findAssetType(parts[4].trim()),
+            parts[5].trim(),
+            parts[6].trim(),
+            parts[7].trim()
+        });
+
+    } else if (rosterTable && parts.length >= 7) {
+        tableModel.addRow(new Object[]{
                 parts[0].trim(),
                 parts[1].trim(),
                 parts[2].trim(),
@@ -326,7 +373,15 @@ public final class ManageRecordsHelper {
                 parts[4].trim(),
                 parts[5].trim(),
                 parts[6].trim()
-            });
+        });
+
+    } else {
+        if (parts.length > 1) {
+            Object[] rowData = new Object[parts.length];
+            for (int i = 0; i < parts.length; i++) {
+                rowData[i] = parts[i].trim();
+            }
+            tableModel.addRow(rowData);
         } else {
             tableModel.addRow(new Object[]{
                 tableModel.getRowCount() + 1,
@@ -334,7 +389,16 @@ public final class ManageRecordsHelper {
             });
         }
     }
+}
 
+    private static boolean visibleToCurrentDoctor(String doctorId) {
+        User current = Session.getCurrentUser();
+        if (current == null || current.getRole() != Role.DOCTOR) {
+            return true;
+        }
+        return doctorId.equals(current.getUserId());
+    }
+    
     public static String[] splitRecord(String record) {
         return record.split("\\|", -1);
     }
