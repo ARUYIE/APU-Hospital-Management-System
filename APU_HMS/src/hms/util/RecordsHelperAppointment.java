@@ -26,7 +26,7 @@ public final class RecordsHelperAppointment {
 
     public static String editAppointmentRecord(Component comp, String record) {
         String[] parts = ManageRecordsHelper.splitRecord(record);
-        if (parts.length < 7) {
+        if (parts.length < 6) {
             return null;
         }
 
@@ -325,7 +325,7 @@ public final class RecordsHelperAppointment {
 
     public void addAppointmentRow(DefaultTableModel tableModel, String line,JComboBox<String> doctorSearchBox) {
             String[] parts = ManageRecordsHelper.splitRecord(line);
-            if (parts.length < 7) {
+            if (parts.length < 6) {
                 return;
             }
             
@@ -343,8 +343,7 @@ public final class RecordsHelperAppointment {
                     doctorName,
                     parts[3].trim(),
                     parts[4].trim(),
-                    parts[5].trim(),
-                    parts[6].trim()
+                    parts[5].trim()
             });
         }
     
@@ -354,7 +353,7 @@ public final class RecordsHelperAppointment {
         boolean found = false;
         for (String record : records) {
             String[] parts = ManageRecordsHelper.splitRecord(record);
-            if (parts.length >= 7 && parts[0].trim().equals(appointmentId)) {
+            if (parts.length >= 6 && parts[0].trim().equals(appointmentId)) {
                 found = true;
                 parts[5] = newStatus;
                 updatedLines.add(String.join("|", parts));

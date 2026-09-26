@@ -202,7 +202,12 @@ public class ManageRecordsPanel extends JPanel {
         actions.add(refreshButton);
         //role-dependent button adding
         if (isPatient) {
-
+            if (appointmentTable || patientAppointmentTable) {
+                actions.add(addButton);
+                actions.add(cancelAppointmentButton);
+            } else if (feedbackTable) {
+                actions.add(addButton);
+            }
         } else if (isAdmin) {
             // Admins have custom management buttons for lab requests, standard controls for other tables
             if (labRequestTable) {
@@ -215,35 +220,33 @@ public class ManageRecordsPanel extends JPanel {
                 actions.add(editButton);
                 actions.add(deleteButton);
             }
-        } else {
+        } else if (!isDoctor){
             actions.add(addButton);
             actions.add(editButton);
             actions.add(deleteButton);
         }
         //has two rows since its a bit too long
         if (appointmentTable) {
+            if(isAdmin){
             JPanel appointmentActions = new JPanel();
             appointmentActions.setLayout(new BoxLayout(appointmentActions, BoxLayout.Y_AXIS));
             
             JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
             JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
          
-            if(!isDoctor){
-                searchActions.add(new JLabel("Search Doctor:"));
-                searchActions.add(doctorSearchBox);
-
-                searchActions.add(cancelAppointmentButton);
-
-                recordActions.add(addButton);
-                recordActions.add(editButton);
-                recordActions.add(deleteButton);
-            }
+            searchActions.add(new JLabel("Search Doctor:"));
+            searchActions.add(doctorSearchBox);
             searchActions.add(markCompletedButton);
+            searchActions.add(cancelAppointmentButton);
             recordActions.add(refreshButton);
-
+            recordActions.add(addButton);
+            recordActions.add(editButton);
+            recordActions.add(deleteButton);
+            
             appointmentActions.add(searchActions);
             appointmentActions.add(recordActions);
             actions = appointmentActions;
+        }
         }
 
         JPanel topBar = new JPanel(new BorderLayout());
@@ -303,24 +306,64 @@ public class ManageRecordsPanel extends JPanel {
     }
 
     private void updateSelectedAppointmentStatus(String newStatus) {
-        if (!appointmentTable) {
+        if (!appointmentTable && !patientAppointmentTable) {
             return;
         }
 
-        String appointmentId = getSelectedAssetId();
-        if (appointmentId == null) {
+        int viewRow = recordsTable.getSelectedRow();
+        if (viewRow == -1) {
             JOptionPane.showMessageDialog(this,
                     "Please select an appointment first.",
                     "No Record Selected", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        List<String> updatedLines = RecordsHelperAppointment.updateAppointmentStatus(this, records, appointmentId, newStatus);
-        if (updatedLines == null) {
+        String actionText = newStatus.equals("CANCELLED") ? "cancel this appointment?" : "mark as completed";
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to " + actionText,
+                "Confirm Update",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return; 
+        }
+
+        int modelRow = recordsTable.convertRowIndexToModel(viewRow);
+        String appointmentId = recordsTable.getModel().getValueAt(modelRow, 0).toString().trim();
+
+        records = recordHelper.getRecords();
+        int recordIndex = -1;
+
+        for (int i = 0; i < records.size(); i++) {
+            String record = records.get(i);
+            if (record == null || record.trim().isEmpty()) continue;
+            
+            String[] parts = record.split("\\|");
+            if (parts.length > 0 && parts[0].trim().equals(appointmentId)) {
+                recordIndex = i;
+                break;
+            }
+        }
+
+        if (recordIndex == -1) {
+            JOptionPane.showMessageDialog(this, 
+                    "Appointment record not found in the database.", 
+                    "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        writeRecords(updatedLines, "The appointment status could not be updated.");
+        String[] parts = records.get(recordIndex).split("\\|", -1);
+        
+        if (parts.length >= 6) {
+            parts[5] = newStatus;
+            records.set(recordIndex, String.join("|", parts));
+            writeRecords(records, "The appointment status could not be updated.");
+        } else {
+            JOptionPane.showMessageDialog(this, 
+                    "The record format is invalid.", 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void updateSelectedLabRequestStatus(String newStatus) {
@@ -438,6 +481,7 @@ public class ManageRecordsPanel extends JPanel {
                 .trim();
 
         // Find the actual record in the records list using its ID
+        records = FileManager.readLines(fileName);
         int recordIndex = -1;
 
         for (int i = 0; i < records.size(); i++) {
@@ -468,7 +512,7 @@ public class ManageRecordsPanel extends JPanel {
 
         String updatedRecord = departmentTable
                 ? managerMethods.editDepartmentRecord(originalRecord)
-                : appointmentTable
+                : (appointmentTable || patientAppointmentTable)
                 ? RecordsHelperAppointment.editAppointmentRecord(this, originalRecord)
                 : insuranceTable
                 ? RecordsHelperInsurance.editInsuranceRecord(this, originalRecord)
@@ -1038,6 +1082,7 @@ if (hasLabRequestForRoom(updatedPatientId, updatedRoomId, updatedDateRequested, 
                     "Save Error", JOptionPane.ERROR_MESSAGE);
             refreshTable();
         }
+        refreshTable();
     }
 
     public void refreshTable() {
@@ -1758,8 +1803,31 @@ if (hasLabRequestForRoom(updatedPatientId, updatedRoomId, updatedDateRequested, 
                 java.util.List.of(new javax.swing.RowSorter.SortKey(7, javax.swing.SortOrder.ASCENDING))
             );
         }
-    } else {
+    } else if (appointmentTable || patientAppointmentTable) {
+            recordsTable.setAutoCreateRowSorter(false);
+            // Apply the sorter to column 5 (Status column for appointments)
+            ManageRecordsHelper.applyStatusSorter(recordsTable, 5);
+            
+            // Force the STATUS column (index 5) to sort ASCENDING on refresh
+            if (recordsTable.getRowSorter() != null) {
+                recordsTable.getRowSorter().setSortKeys(
+                    java.util.List.of(new javax.swing.RowSorter.SortKey(5, javax.swing.SortOrder.ASCENDING))
+                );
+            }
+        } else {
         recordsTable.setAutoCreateRowSorter(true);
     }
-}
+    User currentUser = Session.getCurrentUser();
+        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+            if (recordsTable.getRowSorter() instanceof javax.swing.table.TableRowSorter) {
+                @SuppressWarnings("unchecked")
+                javax.swing.table.TableRowSorter<DefaultTableModel> sorter = 
+                    (javax.swing.table.TableRowSorter<DefaultTableModel>) recordsTable.getRowSorter();
+                
+                String regex = "(?i)\\b(" + java.util.regex.Pattern.quote(currentUser.getUserId()) + "|" 
+                               + java.util.regex.Pattern.quote(currentUser.getFullName()) + ")\\b";
+                sorter.setRowFilter(javax.swing.RowFilter.regexFilter(regex));
+            }
+        }
+    }
 }

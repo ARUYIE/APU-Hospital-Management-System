@@ -192,7 +192,7 @@ public class DashboardFrame extends JFrame {
                 break;
                 
             //Low Kai Lun - Doctor
-            case "MyAppointments":
+            case "My Appointments":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                         "Manage Appointments", "bookings.txt"));
                 break;

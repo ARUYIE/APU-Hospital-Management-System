@@ -260,6 +260,15 @@ public final class ManageRecordsHelper {
         if (!visibleToCurrentDoctor(doctorId)) {
             return;
         }
+        //patient can only see their own appointment
+        String patientId = parts[1].trim();
+        User currentUser = Session.getCurrentUser();
+        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+            if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                    && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                return; 
+            }
+        }
         String doctorName = findName(doctorId);
         String selectedDoctor = doctorSearchBox != null ? (String) doctorSearchBox.getSelectedItem() : null;
 
@@ -465,6 +474,8 @@ public final class ManageRecordsHelper {
         "PENDING", 
         "APPROVED", 
         "DENIED", 
+        "SCHEDULED",
+        "CANCELLED",
         "COMPLETED"
     );
 
