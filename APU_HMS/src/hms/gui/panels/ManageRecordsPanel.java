@@ -1,11 +1,34 @@
 package hms.gui.panels;
 
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.table.DefaultTableModel;
+
+import hms.role.Role;
+import hms.role.User;
 import hms.util.FileManager;
 import hms.util.ManageRecordsHelper;
-import hms.util.RecordsHelperAsset;
+import hms.util.ManagerMethods;
 import hms.util.RecordsHelperAppointment;
-import hms.util.RecordsHelperInsurance;
+import hms.util.RecordsHelperAsset;
 import hms.util.RecordsHelperConsultation;
 import hms.util.DoctorRosterMethods;
 import hms.util.DoctorMethods;
@@ -73,11 +96,11 @@ public class ManageRecordsPanel extends JPanel {
                 : rosterTable
                 ? new String[]{"ROSTER_ID", "DOCTOR_NAME", "MANAGED_BY", "DEPARTMENT", "DATE", "SHIFT", "STATUS"}
                 : consultationTable
-                ? new String[]{"VITAL_SIGN_ID", "PATIENT_ID", "DOCTOR_NAME", "CONSULTATION_ID", "BP", "HEART_RATE", "TEMPERATURE", "DATE", "NOTES"}
+                ? new String[]{"VITAL_SIGN_ID", "PATIENT_NAME", "DOCTOR_NAME", "CONSULTATION_ID", "BP", "HEART_RATE", "TEMPERATURE", "DATE", "NOTES"}
                 : prescriptionTable
-                ? new String[]{"PRESCRIPTION_ID", "PATIENT_ID", "DOCTOR_NAME", "MEDICATION", "DOSAGE", "DURATION", "DATE_ISSUED", "STATUS"}
+                ? new String[]{"PRESCRIPTION_ID", "PATIENT_NAME", "DOCTOR_NAME", "MEDICATION", "DOSAGE", "DURATION", "DATE_ISSUED", "STATUS"}
                 : labRequestTable       
-                ? new String[]{"REQUEST_ID", "PATIENT_ID", "DOCTOR_Name", "TEST_TYPE", "ROOM_ID", "DATE_REQUESTED", "DATE_COMPLETED", "STATUS"}
+                ? new String[]{"REQUEST_ID", "PATIENT_NAME", "DOCTOR_NAME", "TEST_TYPE", "ROOM_ID", "DATE_REQUESTED", "DATE_COMPLETED", "STATUS"}
                 : new String[]{"#", "Record"}, 0) {
                    
         @Override
@@ -86,7 +109,7 @@ public class ManageRecordsPanel extends JPanel {
         }
     };
         recordsTable = new JTable(tableModel);
-        recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox, assetSearchBox, false, false, false);
+        recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox, assetSearchBox, consultationTable, prescriptionTable, labRequestTable);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -97,7 +120,26 @@ public class ManageRecordsPanel extends JPanel {
         JButton refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(e -> refreshTable());
 
-        JButton addButton = new JButton("Add Record");
+        String AddLabel = (assetTable)
+            ? "Add Room"
+            : (appointmentTable)
+            ? "Add Appointment"
+            : (insuranceTable)
+            ? "Add Insurance"
+            : (consultationRateTable)
+            ? "Add Consultation Rate"
+            : (rosterTable)
+            ? "Add Roster"
+            : (consultationTable)
+            ? "Add Consultation"
+            : (prescriptionTable)
+            ? "Add Prescription"
+            : (labRequestTable)
+            ? "Add Lab Request"
+            : (departmentTable)
+            ? "Add Department"
+            : "Add Record";
+        JButton addButton = new JButton(AddLabel);
         addButton.addActionListener(e -> addRecord());
 
         JButton editButton = new JButton("Edit Selected");
@@ -127,34 +169,63 @@ public class ManageRecordsPanel extends JPanel {
             RecordsHelperAppointment.populateDoctorSearchBox(doctorSearchBox);
             doctorSearchBox.addActionListener(e -> refreshTable());
         } 
+        User currentUser = Session.getCurrentUser();
+        boolean isDoctor = currentUser != null && currentUser.getRole() == Role.DOCTOR;
+        boolean isAdmin = currentUser != null && currentUser.getRole() == Role.ADMIN_STAFF;
+        
+        JButton approveLabRequestBtn = new JButton("Approve Request");
+        approveLabRequestBtn.addActionListener(e -> updateSelectedLabRequestStatus("APPROVED"));
+        
+        JButton denyLabRequestBtn = new JButton("Deny Request");
+        denyLabRequestBtn.addActionListener(e -> updateSelectedLabRequestStatus("DENIED"));
+
+        JButton markLabCompletedBtn = new JButton("Mark Completed");
+        markLabCompletedBtn.addActionListener(e -> markLabRequestCompleted());
+
         
         actions.add(refreshButton);
-        actions.add(addButton);
-        actions.add(editButton);
-        actions.add(deleteButton);
+            if (labRequestTable) {
+                if (isDoctor) {
+                actions.add(addButton);
+                actions.add(editButton);
+                actions.add(deleteButton);
+                } else if (isAdmin) {
+                    actions.add(approveLabRequestBtn);
+                    actions.add(denyLabRequestBtn);
+                    actions.add(markLabCompletedBtn);
+                    actions.add(editButton); 
+                } else if (assetTable) {
+                    actions.add(assetSearchBox);
+                }
+
+            } else {
+                actions.add(addButton);
+                actions.add(editButton);
+                actions.add(deleteButton);
+            }
 
 
-        // Has two rows for action buttons
-        if (assetTable) {
-            JPanel wardActions = new JPanel();
-            wardActions.setLayout(new BoxLayout(wardActions, BoxLayout.Y_AXIS));
+        //has two rows since its a bit too long
+        // if (assetTable) {
+        //     JPanel wardActions = new JPanel();
+        //     wardActions.setLayout(new BoxLayout(wardActions, BoxLayout.Y_AXIS));
 
-            JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-            searchActions.add(new JLabel("Search Wards/Clinics:"));
-            searchActions.add(assetSearchBox);
-            searchActions.add(reserveButton);
-            searchActions.add(finishButton);
+        //     JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        //     searchActions.add(new JLabel("Search Wards/Clinics:"));
+        //     searchActions.add(assetSearchBox);
+        //     searchActions.add(reserveButton);
+        //     searchActions.add(finishButton);
 
-            JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-            recordActions.add(refreshButton);
-            recordActions.add(addButton);
-            recordActions.add(editButton);
-            recordActions.add(deleteButton);
+        //     JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        //     recordActions.add(refreshButton);
+        //     recordActions.add(addButton);
+        //     recordActions.add(editButton);
+        //     recordActions.add(deleteButton);
 
-            wardActions.add(searchActions);
-            wardActions.add(recordActions);
-            actions = wardActions;
-        }
+        //     wardActions.add(searchActions);
+        //     wardActions.add(recordActions);
+        //     actions = wardActions;
+        // }
         if (appointmentTable) {
             JPanel appointmentActions = new JPanel();
             appointmentActions.setLayout(new BoxLayout(appointmentActions, BoxLayout.Y_AXIS));
@@ -180,8 +251,16 @@ public class ManageRecordsPanel extends JPanel {
         topBar.add(heading, BorderLayout.WEST);
         topBar.add(actions, BorderLayout.EAST);
 
-        recordsTable.setAutoCreateRowSorter(true);
+
         recordsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // if (labRequestTable) {
+        //     recordsTable.setAutoCreateRowSorter(false);
+        //     ManageRecordsHelper.applyStatusSorter(recordsTable, 7);
+        // } else  {
+        //     recordsTable.setAutoCreateRowSorter(true);
+        // }
+
         add(topBar, BorderLayout.NORTH);
         add(new JScrollPane(recordsTable), BorderLayout.CENTER);
         refreshTable();
@@ -251,6 +330,100 @@ public class ManageRecordsPanel extends JPanel {
         writeRecords(updatedLines, "The appointment status could not be updated.");
     }
 
+    private void updateSelectedLabRequestStatus(String newStatus) {
+        if (!labRequestTable) {
+            return;
+        }
+
+        int viewRow = recordsTable.getSelectedRow();
+        if (viewRow == -1) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select a request first.",
+                    "No Record Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+
+        int modelRow = recordsTable.convertRowIndexToModel(viewRow);
+        String record = records.get(modelRow);
+        String[] parts = splitRecord(record);
+
+        if (newStatus.equals("DENIED")) {
+        parts[6] =java.time.LocalDate.now().toString();
+
+        }
+
+        if (parts.length >= 8) {
+            if(parts[7].equals("COMPLETED")){
+                JOptionPane.showMessageDialog(this,
+                    "This reservation is Already Completed",
+                    "Already Completed", JOptionPane.WARNING_MESSAGE);
+                return;
+            }else{
+            parts[7] = newStatus;
+            String updatedRecord = String.join("|", parts);
+
+            List<String> updatedLines = new ArrayList<>(records);
+            updatedLines.set(modelRow, updatedRecord);
+
+            writeRecords(updatedLines, "The status could not be updated.");
+            }
+        }
+        refreshTable();
+    }
+
+    private void markLabRequestCompleted() {
+    if (!labRequestTable) {
+        return;
+    }
+
+    int viewRow = recordsTable.getSelectedRow();
+    if (viewRow == -1) {
+        JOptionPane.showMessageDialog(this,
+                "Please select a request first.",
+                "No Record Selected", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    int modelRow = recordsTable.convertRowIndexToModel(viewRow);
+    String record = records.get(modelRow);
+    String[] parts = splitRecord(record);
+
+    if (parts.length < 8) {
+        return;
+    }
+
+    String dateCompleted = JOptionPane.showInputDialog(
+            this,
+            "Enter the date completed (YYYY-MM-DD):",
+            java.time.LocalDate.now().toString()
+    );
+
+    if (dateCompleted == null) {
+        return; // User clicked Cancel
+    }
+
+    dateCompleted = dateCompleted.trim();
+
+    try {
+        java.time.LocalDate.parse(dateCompleted);
+    } catch (java.time.format.DateTimeParseException ex) {
+        JOptionPane.showMessageDialog(this,
+                "Date must be in YYYY-MM-DD format.",
+                "Invalid Date", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    parts[6] = dateCompleted; // DATE_COMPLETED
+    parts[7] = "COMPLETED";   // STATUS
+    String updatedRecord = String.join("|", parts);
+
+    List<String> updatedLines = new ArrayList<>(records);
+    updatedLines.set(modelRow, updatedRecord);
+
+    writeRecords(updatedLines, "The record could not be updated.");
+    refreshTable();
+}
     private void editSelectedRecord() {
         int viewRow = recordsTable.getSelectedRow();
 
@@ -390,6 +563,7 @@ public class ManageRecordsPanel extends JPanel {
     public void refreshTable() {
         recordHelper.refreshTable();
         records = recordHelper.getRecords();
+        setupTableSorter();
     }
 
     private void addRecord() {
@@ -569,3 +743,4 @@ public class ManageRecordsPanel extends JPanel {
         return recordsTable;
     }
 }
+    

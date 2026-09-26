@@ -1,14 +1,28 @@
 package hms.gui;
 
-import hms.role.User;
-import hms.util.UIUtil;
-import hms.util.Session;
-
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+
+import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.ListSelectionModel;
+
+import hms.role.User;
+import hms.util.Session;
+import hms.util.UIUtil;
 
 public class DashboardFrame extends JFrame {
 
@@ -23,7 +37,7 @@ public class DashboardFrame extends JFrame {
         setLocationRelativeTo(null);
         getContentPane().setBackground(UIUtil.DASHBOARD_BLUE);
 
-        JPanel root = new JPanel(new BorderLayout());
+        JPanel root = UIUtil.createPatternPanel();
         root.setBackground(UIUtil.DASHBOARD_BLUE);
         root.setLayout(new BorderLayout());
         root.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
@@ -37,9 +51,9 @@ public class DashboardFrame extends JFrame {
     }
 
     private JComponent buildHeader(User user) {
-        JPanel header = UIUtil.createPatternPanel();
+        JPanel header = new JPanel();
         header.setLayout(new BorderLayout());
-        header.setBackground(UIUtil.DASHBOARD_BLUE);
+        header.setOpaque(false);
         header.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
 
         JLabel welcome = new JLabel("Welcome Back, " + user.getFullName()
@@ -152,8 +166,7 @@ public class DashboardFrame extends JFrame {
                     "View, Edit And Register Users"));
                 break;                
             case "Wards/Clinics":
-                setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Manage Wards and Clinics", "hospital_assets.txt"));
+                setContent(new hms.gui.panels.WardsClinicsMenuPanel(this));
                 break;
             case "Consultation Rates":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
@@ -197,7 +210,7 @@ public class DashboardFrame extends JFrame {
         }
     }
 
-    private void setContent(JComponent component) {
+    public void setContent(JComponent component) {
         contentArea.removeAll();
         contentArea.add(component, BorderLayout.CENTER);
         contentArea.revalidate();

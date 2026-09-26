@@ -1,10 +1,15 @@
 package hms.util;
 
-import javax.swing.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.GridLayout;
+
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /** Asset-specific record forms and persistence operations for record panels. */
 public final class RecordsHelperAsset {
@@ -88,6 +93,9 @@ public final class RecordsHelperAsset {
 
         JComboBox<String> roomTypeCombo = createAssetTypeCombo();
         JTextField roomNameField = new JTextField();
+        JTextField locationField = new JTextField();
+        JComboBox<String> statusCombo = new JComboBox<>(new String[]{"AVAILABLE", "UNAVAILABLE"});
+        JTextField reservedByField = new JTextField();
         JComboBox<String> locationCombo = new JComboBox<>(
             new String[]{"1st Floor", "2nd Floor", "3rd Floor"}
         );
