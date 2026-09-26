@@ -2,17 +2,11 @@ package hms.gui.panels;
 
 
 import hms.util.FileManager;
-import hms.util.IDGenerator;
 import hms.util.ManageRecordsHelper;
-import hms.util.UserRepository;
-import hms.role.Role;
-import hms.role.User;
-
 import hms.util.RecordsHelperAsset;
 import hms.util.RecordsHelperAppointment;
 import hms.util.RecordsHelperInsurance;
 import hms.util.RecordsHelperConsultation;
-import hms.util.Session;
 import hms.util.DoctorRosterMethods;
 import hms.util.DoctorMethods;
 
