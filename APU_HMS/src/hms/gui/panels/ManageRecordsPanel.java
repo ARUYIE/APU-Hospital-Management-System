@@ -980,7 +980,7 @@ public class ManageRecordsPanel extends JPanel {
         List<String> records =
                 new ArrayList<>();
 
-        // Skip the first line because it is the header
+        
         for (int i = 1; i < reportRecords.size(); i++) {
 
             String record = reportRecords.get(i);
@@ -999,7 +999,7 @@ public class ManageRecordsPanel extends JPanel {
             records.add(record);
         }
 
-        // Latest month first
+       
         if (selected.equals("Latest Records")) {
 
             records.sort((a, b) -> {
@@ -1014,7 +1014,7 @@ public class ManageRecordsPanel extends JPanel {
             });
         }
 
-        // Highest revenue first
+        
         else if (selected.equals("Highest Revenue")) {
 
             records.sort((a, b) -> {
@@ -1029,10 +1029,10 @@ public class ManageRecordsPanel extends JPanel {
             });
         }
 
-        // Clear current table
+        
         tableModel.setRowCount(0);
 
-        // Add sorted records to table
+        
         for (String record : records) {
 
             String[] parts =
@@ -1066,7 +1066,7 @@ public class ManageRecordsPanel extends JPanel {
     }
     
     private void handlePatientAppointmentRecord() {
-        // Calls existing appointment helper safely under your own method name
+        
         RecordsHelperAppointment.addAppointmentRecord(this, fileName, records, this::refreshTable);
     }
 
@@ -1143,7 +1143,7 @@ public class ManageRecordsPanel extends JPanel {
         String time = (String) timeSlotCombo.getSelectedItem();
         String status = (String) statusCombo.getSelectedItem();
 
-        // Validation
+        
         if (username.isEmpty() || doctor.isEmpty() || date.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Patient Username, Doctor, and Date are required.", "Invalid Input", JOptionPane.WARNING_MESSAGE);
             return;
@@ -1180,7 +1180,7 @@ public class ManageRecordsPanel extends JPanel {
     private void addPatientAppointmentRecord() {
     User currentPatient = Session.getCurrentUser();
 
-    // 1. Read doctors from users.txt
+   
     List<String> userLines = FileManager.readLines("users.txt");
     List<String[]> doctorRows = new ArrayList<>();
 
@@ -1190,7 +1190,7 @@ public class ManageRecordsPanel extends JPanel {
                 continue;
             }
             String[] parts = line.split("\\|");
-            // ID|ROLE|NAME|PW|FULLNAME|EMAIL|PHONE|SPECIALIZATION
+            
             if (parts.length >= 5 && "DOCTOR".equalsIgnoreCase(parts[1].trim())) {
                 String id = parts[0].trim();
                 String name = parts[4].trim();
@@ -1206,12 +1206,12 @@ public class ManageRecordsPanel extends JPanel {
         doctorRows.add(new String[]{"U010", "Sammy Liu", "Surgeon", "01238591942"});
     }
 
-    // 2. Build Doctor Selection Table
+    
     String[] columns = {"ID", "Doctor Name", "Specialization", "Phone"};
     String[][] data = doctorRows.toArray(new String[0][0]);
     JTable doctorTable = new JTable(data, columns);
     doctorTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-    doctorTable.setRowSelectionInterval(0, 0); // Select first row by default
+    doctorTable.setRowSelectionInterval(0, 0); 
 
     JScrollPane scrollPane = new JScrollPane(doctorTable);
     scrollPane.setPreferredSize(new java.awt.Dimension(500, 150));
@@ -1255,7 +1255,7 @@ public class ManageRecordsPanel extends JPanel {
     String selectedTime = (String) timeSlotCombo.getSelectedItem();
     String username = currentPatient != null ? currentPatient.getUserId() : "";
 
-    // 3. Validation: Date parsing
+    
     try {
         java.time.LocalDate.parse(selectedDate);
     } catch (java.time.format.DateTimeParseException exception) {
@@ -1263,12 +1263,12 @@ public class ManageRecordsPanel extends JPanel {
         return;
     }
 
-    // 4. Availability Check: Check existing appointments in fileName
+   
     List<String> existingAppts = FileManager.readLines(fileName);
     if (existingAppts != null) {
         for (String line : existingAppts) {
             String[] parts = line.split("\\|");
-            // Format: APT_ID|PATIENT|DOCTOR|DATE|TIME|STATUS
+           
             if (parts.length >= 6) {
                 String doc = parts[2].trim();
                 String dt = parts[3].trim();
@@ -1288,7 +1288,7 @@ public class ManageRecordsPanel extends JPanel {
         }
     }
 
-    // 5. Save Valid Appointment
+    
     FileManager.appendLine(
             fileName,
             String.join("|",
@@ -1316,6 +1316,104 @@ public class ManageRecordsPanel extends JPanel {
         refreshTable(); 
     }
   
+   private void patientrefreshTable() {
+    
+    String[] columns = {
+        "Vital Sign ID", "Patient", "Doctor", "Consultation ID", 
+        "Blood Pressure", "Heart Rate", "Temp (°C)", "Date", "Notes"
+    };
+    
+    DefaultTableModel tableModel = new DefaultTableModel(columns, 0);
+    
+    
+    recordsTable.setModel(tableModel);
+
    
+    ManageRecordsHelper helper = new ManageRecordsHelper(
+        "vital_signs.txt", // Update to "data/vital_signs.txt" if stored in a subfolder
+        tableModel,
+        null,
+        null,
+        true,  // consultationTable = true (Enables 9-column Vital Signs processing)
+        false, // appointmentTable = false
+        false  // other flags = false
+    );
+
+    
+    helper.refreshTable();
+}
   
+   private void refreshBillingTable() {
+    
+    String[] columns = {
+        "Bill ID", "Patient", "Doctor", "Amount", "Status", "Date"
+    };
+
+    DefaultTableModel tableModel = new DefaultTableModel(columns, 0);
+    recordsTable.setModel(tableModel); // Ensure 'recordsTable' is your actual JTable name
+
+    
+    ManageRecordsHelper helper = new ManageRecordsHelper(
+        "billing.txt", // Update path to "data/billing.txt" if inside a subfolder
+        tableModel,
+        null,
+        null,
+        false, 
+        false, 
+        true   
+    );
+
+    helper.refreshTable();
+}
+   
+   private void refreshConsultationRatesTable() {
+    
+    String[] columns = {
+        "Specialty", "Base Rate", "Min Rate", "Max Rate", "Currency", "Effective Date"
+    };
+
+    DefaultTableModel tableModel = new DefaultTableModel(columns, 0);
+    recordsTable.setModel(tableModel); 
+
+    
+    ManageRecordsHelper helper = new ManageRecordsHelper(
+        "data/consultation_rates.txt",
+        tableModel,
+        null,
+        null,
+        false, 
+        false, 
+        true   
+    );
+
+    helper.refreshTable();
+}
+   
+   private void refreshConsultationRatesView() {
+    // 1. 设置 Consultation Rates 的 6 列表头
+    String[] columns = {
+        "Specialty", "Base Rate", "Min Rate", "Max Rate", "Currency", "Effective Date"
+    };
+
+    DefaultTableModel tableModel = new DefaultTableModel(columns, 0);
+    
+   
+    recordsTable.setModel(tableModel);
+
+    
+    ManageRecordsHelper helper = new ManageRecordsHelper(
+        "data/consultation_rates.txt", 
+        tableModel,
+        null,
+        null,
+        false, 
+        false, 
+        true   
+    );
+
+    
+    helper.refreshTable();
+}
+   
+   
 }

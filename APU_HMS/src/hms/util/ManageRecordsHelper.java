@@ -277,9 +277,18 @@ public final class ManageRecordsHelper {
         RecordsHelperInsurance.addInsuranceRow(tableModel, line);
 
     } else if (consultationRateTable && parts.length >= 6) {
+        // Skip header line if present
+        if (parts[0].trim().equalsIgnoreCase("SPECIALTY")) {
+            return;
+        }
+
         tableModel.addRow(new Object[]{
-            parts[0].trim(), parts[1].trim(), parts[2].trim(),
-            parts[3].trim(), parts[4].trim(), parts[5].trim()
+            parts[0].trim(), // Specialty
+            parts[1].trim(), // Base Rate
+            parts[2].trim(), // Min Rate
+            parts[3].trim(), // Max Rate
+            parts[4].trim(), // Currency
+            parts[5].trim()  // Effective Date
         });
 
     } else if (reportTable && parts.length >= 6) {
@@ -289,6 +298,45 @@ public final class ManageRecordsHelper {
         });
 
     } else if (consultationTable && parts.length >= 9) {
+        // --- 1. Debug Log: File reading verification ---
+        System.out.println("DEBUG: Read row with 9 parts: " + line);
+
+        String patientId = parts[1].trim();
+        User currentUser = Session.getCurrentUser();
+
+        // --- 2. Debug Log: Check current logged-in user and record ID ---
+        if (currentUser != null) {
+            System.out.println("DEBUG: Current User ID/Username: " + currentUser.getUserId() + " / " + currentUser.getUsername());
+            System.out.println("DEBUG: Record Patient ID: " + patientId);
+        } else {
+            System.out.println("DEBUG: Warning! Session.getCurrentUser() is null!");
+        }
+
+        // --- 3. Patient role filter ---
+        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+            if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                    && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                System.out.println("DEBUG: Skipped row - Patient ID mismatch!");
+                return; 
+            }
+        }
+
+        System.out.println("DEBUG: Filter passed, adding row to table model!");
+
+        // --- 4. Add 9-field data to table ---
+        tableModel.addRow(new Object[]{
+            parts[0].trim(),           
+            findName(parts[1].trim()), 
+            findName(parts[2].trim()), 
+            parts[3].trim(),           
+            parts[4].trim(),           
+            parts[5].trim(),          
+            parts[6].trim(),           
+            parts[7].trim(),           
+            parts[8].trim()            
+        });
+
+    } else if (prescriptionTable && parts.length >= 8) {
         String patientId = parts[1].trim();
 
         User currentUser = Session.getCurrentUser();
@@ -300,22 +348,14 @@ public final class ManageRecordsHelper {
         }
 
         tableModel.addRow(new Object[]{
-            parts[0].trim(),           
-            findName(parts[1].trim()), 
-            findName(parts[2].trim()), 
-            parts[3].trim(),           
-            parts[4].trim(),           
-            parts[5].trim(),           
-            parts[6].trim(),           
-            parts[7].trim(),           
-            parts[8].trim()           
-        });
-
-    } else if (prescriptionTable && parts.length >= 8) {
-        tableModel.addRow(new Object[]{
-            parts[0].trim(), parts[1].trim(), parts[2].trim(),
-            parts[3].trim(), parts[4].trim(), parts[5].trim(),
-            parts[6].trim(), parts[7].trim()
+            parts[0].trim(),
+            findName(parts[1].trim()),
+            findName(parts[2].trim()),
+            parts[3].trim(),
+            parts[4].trim(),
+            parts[5].trim(),
+            parts[6].trim(),
+            parts[7].trim()
         });
 
     } else if (labRequestTable && parts.length >= 8) {
@@ -416,20 +456,20 @@ public final class ManageRecordsHelper {
                     return;
                 }
 
-                // Add each value to its own separate column
+                
                 tableModel.addRow(new Object[]{
-                    parts[0].trim(),           // APPOINTMENT_ID box
-                    findName(parts[1].trim()), // PATIENT_USERNAME box (who booked)
-                    doctorName,                // DOCTOR box (doctor booked)
-                    parts[3].trim(),           // DATE box
-                    parts[4].trim(),           // TIME box
-                    parts[5].trim()            // STATUS box
+                    parts[0].trim(),           
+                    findName(parts[1].trim()), 
+                    doctorName,                
+                    parts[3].trim(),           
+                    parts[4].trim(),          
+                    parts[5].trim()            
                 });
                 return;
             }
         }
 
-        // Department Table
+        
         if (departmentTable && parts.length >= 4) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
@@ -440,19 +480,19 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        // Asset Table
+        
         if (assetTable) {
             RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
             return;
         }
 
-        // Insurance Table
+        
         if (insuranceTable) {
             RecordsHelperInsurance.addInsuranceRow(tableModel, line);
             return;
         }
 
-        // Consultation Rates
+        
         if (consultationRateTable && parts.length >= 6) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(), parts[1].trim(), parts[2].trim(),
@@ -461,7 +501,7 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        // Reports
+        
         if (reportTable && parts.length >= 6) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(), parts[1].trim(), parts[2].trim(),
@@ -470,7 +510,7 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        // Vital Signs / Consultation
+        
         if (consultationTable && parts.length >= 9) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(), parts[1].trim(), parts[2].trim(),
@@ -480,7 +520,7 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        // Prescriptions
+        
         if (prescriptionTable && parts.length >= 8) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(), parts[1].trim(), parts[2].trim(),
@@ -490,7 +530,7 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        // Lab Requests
+        
         if (labRequestTable && parts.length >= 8) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(), parts[1].trim(), parts[2].trim(),
@@ -500,7 +540,7 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        // Roster Table
+       
         if (rosterTable && parts.length >= 7) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(), parts[1].trim(), parts[2].trim(),
@@ -510,7 +550,7 @@ public final class ManageRecordsHelper {
             return;
         }
 
-        // Fallback: If line contains '|', split and populate as many cells as possible
+        
         if (parts.length > 1) {
             Object[] rowData = new Object[parts.length];
             for (int i = 0; i < parts.length; i++) {
