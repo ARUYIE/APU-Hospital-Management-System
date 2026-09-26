@@ -957,54 +957,39 @@ public class DoctorMethods {
 
         roomCombo.addItem("No room needed");
 
-        List<String> assetLines =
-                FileManager.readLines(
-                        "hospital_assets.txt"
-                );
+        List<String> assetLines = FileManager.readLines("hospital_assets.txt");
 
         for (int i = 1; i < assetLines.size(); i++) {
 
-            String assetLine =
-                    assetLines.get(i);
+            String assetLine = assetLines.get(i);
 
-            if (assetLine == null
-                    || assetLine.trim().isEmpty()) {
+            if (assetLine == null || assetLine.trim().isEmpty()) {
                 continue;
             }
 
-            String[] assetParts =
-                    ManageRecordsHelper.splitRecord(
-                            assetLine
-                    );
+            String[] assetParts = assetLine.split("\\|", -1);
 
             if (assetParts.length < 5) {
                 continue;
             }
 
-            String assetId =
-                    assetParts[0].trim();
+            String assetId = assetParts[0].trim();
+            String assetRoomType = assetParts[1].trim();
+            String assetRoomName = assetParts[2].trim();
+            String assetStatus = assetParts[4].trim();
 
-            String assetRoomType =
-                    assetParts[1].trim();
+            boolean isEligibleRoomType =
+                    "IMAGING_ROOM".equalsIgnoreCase(assetRoomType)
+                    || "LAB".equalsIgnoreCase(assetRoomType)
+                    || "OPERATION_THEATRE".equalsIgnoreCase(assetRoomType);
 
-            String assetRoomName =
-                    assetParts[2].trim();
-
-            String assetStatus =
-                    assetParts[4].trim();
-
-            if ("IMAGING_ROOM".equalsIgnoreCase(
-                        assetRoomType)
-                    && "AVAILABLE".equalsIgnoreCase(
-                        assetStatus)) {
+            if (isEligibleRoomType
+                    && "AVAILABLE".equalsIgnoreCase(assetStatus)) {
 
                 roomIds.add(assetId);
 
                 roomCombo.addItem(
-                        assetRoomName
-                        + " ("
-                        + assetId
-                        + ")"
+                        assetRoomName + " (" + assetId + ")"
                 );
             }
         }
