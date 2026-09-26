@@ -1302,7 +1302,10 @@ public class ManageRecordsPanel extends JPanel {
     );
 
     refreshTable();
-}    
+} 
+    
+    
+    
     
     
    private void handlePatientAddAppointment() {
@@ -1313,5 +1316,6 @@ public class ManageRecordsPanel extends JPanel {
         refreshTable(); 
     }
   
-    
+   
+  
 }

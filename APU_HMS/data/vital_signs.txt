@@ -1,4 +1,5 @@
 VITAL_SIGN_ID|PATIENT_ID|DOCTOR_ID|CONSULTATION_ID|BP|HEART_RATE|TEMPERATURE|DATE|NOTES
-VS001|asda|U003|123ea|2eq2|ada|213|2026-09-23|1
+VS001|Patient0|U003|C100|120/80|72 bpm|36.6 C|2026-09-26|Patient in good health
 VS002|asdadasd|U003|adasdad|asdadada|asdadad|adadsda|2026-09-23|bea
 VS003|w|U003|a|d|da|wa|2026-09-23|adada
+

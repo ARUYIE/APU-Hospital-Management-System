@@ -240,124 +240,113 @@ public final class ManageRecordsHelper {
     }
 
     private void addTableRow(String line) {
-        String[] parts = splitRecord(line);
+    String[] parts = splitRecord(line);
 
-        
-        if (departmentTable && parts.length >= 4) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                findName(parts[3].trim()),
-                parts[2].trim()
-            });
+    if (departmentTable && parts.length >= 4) {
+        tableModel.addRow(new Object[]{
+            parts[0].trim(),
+            parts[1].trim(),
+            findName(parts[3].trim()),
+            parts[2].trim()
+        });
 
-        
-        } else if ((patientAppointmentTable || appointmentTable) && parts.length >= 6) {
-            String doctorName = findName(parts[2].trim());
-            String selectedDoctor = doctorSearchBox != null ? (String) doctorSearchBox.getSelectedItem() : null;
+    } else if ((patientAppointmentTable || appointmentTable) && parts.length >= 6) {
+        String doctorName = findName(parts[2].trim());
+        String selectedDoctor = doctorSearchBox != null ? (String) doctorSearchBox.getSelectedItem() : null;
 
-            if (selectedDoctor != null
-                    && !selectedDoctor.equals("All Doctors")
-                    && !selectedDoctor.equals("Doctor Name")
-                    && !doctorName.equalsIgnoreCase(selectedDoctor)) {
-                return;
-            }
+        if (selectedDoctor != null
+                && !selectedDoctor.equals("All Doctors")
+                && !selectedDoctor.equals("Doctor Name")
+                && !doctorName.equalsIgnoreCase(selectedDoctor)) {
+            return;
+        }
 
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),           
-                findName(parts[1].trim()), 
-                doctorName,                
-                parts[3].trim(),           
-                parts[4].trim(),           
-                parts[5].trim()            
-            });
+        tableModel.addRow(new Object[]{
+            parts[0].trim(),           
+            findName(parts[1].trim()), 
+            doctorName,                
+            parts[3].trim(),           
+            parts[4].trim(),           
+            parts[5].trim()            
+        });
 
-       
-        } else if (assetTable) {
-            RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
+    } else if (assetTable) {
+        RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
 
-        
-        } else if (insuranceTable) {
-            RecordsHelperInsurance.addInsuranceRow(tableModel, line);
+    } else if (insuranceTable) {
+        RecordsHelperInsurance.addInsuranceRow(tableModel, line);
 
-       
-        } else if (consultationRateTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                parts[3].trim(), parts[4].trim(), parts[5].trim()
-            });
+    } else if (consultationRateTable && parts.length >= 6) {
+        tableModel.addRow(new Object[]{
+            parts[0].trim(), parts[1].trim(), parts[2].trim(),
+            parts[3].trim(), parts[4].trim(), parts[5].trim()
+        });
 
-        
-        } else if (reportTable && parts.length >= 6) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                parts[3].trim(), parts[4].trim(), parts[5].trim()
-            });
+    } else if (reportTable && parts.length >= 6) {
+        tableModel.addRow(new Object[]{
+            parts[0].trim(), parts[1].trim(), parts[2].trim(),
+            parts[3].trim(), parts[4].trim(), parts[5].trim()
+        });
 
-       
-        } else if (consultationTable && parts.length >= 9) {
-            String patientId = parts[1].trim();
+    } else if (consultationTable && parts.length >= 9) {
+        String patientId = parts[1].trim();
 
-            
-            User currentUser = Session.getCurrentUser();
-            if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
-                if (!patientId.equalsIgnoreCase(currentUser.getUserId())
-                        && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
-                    return; 
-                }
-            }
-
-            tableModel.addRow(new Object[]{
-                parts[0].trim(),           
-                findName(parts[1].trim()), 
-                findName(parts[2].trim()), 
-                parts[3].trim(),           
-                parts[4].trim(),           
-                parts[5].trim(),           
-                parts[6].trim(),           
-                parts[7].trim(),           
-                parts[8].trim()            
-            });
-
-       
-        } else if (prescriptionTable && parts.length >= 8) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                parts[3].trim(), parts[4].trim(), parts[5].trim(),
-                parts[6].trim(), parts[7].trim()
-            });
-
-       
-        } else if (labRequestTable && parts.length >= 8) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                parts[3].trim(), parts[4].trim(), parts[5].trim(),
-                parts[6].trim(), parts[7].trim()
-            });
-
-        
-        } else if (rosterTable && parts.length >= 7) {
-            tableModel.addRow(new Object[]{
-                parts[0].trim(), parts[1].trim(), parts[2].trim(),
-                parts[3].trim(), parts[4].trim(), parts[5].trim(),
-                parts[6].trim()
-            });
-
-        } else {
-            if (parts.length > 1) {
-                Object[] rowData = new Object[parts.length];
-                for (int i = 0; i < parts.length; i++) {
-                    rowData[i] = parts[i].trim();
-                }
-                tableModel.addRow(rowData);
-            } else {
-                tableModel.addRow(new Object[]{
-                    tableModel.getRowCount() + 1,
-                    line
-                });
+        User currentUser = Session.getCurrentUser();
+        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+            if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                    && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                return; 
             }
         }
+
+        tableModel.addRow(new Object[]{
+            parts[0].trim(),           
+            findName(parts[1].trim()), 
+            findName(parts[2].trim()), 
+            parts[3].trim(),           
+            parts[4].trim(),           
+            parts[5].trim(),           
+            parts[6].trim(),           
+            parts[7].trim(),           
+            parts[8].trim()           
+        });
+
+    } else if (prescriptionTable && parts.length >= 8) {
+        tableModel.addRow(new Object[]{
+            parts[0].trim(), parts[1].trim(), parts[2].trim(),
+            parts[3].trim(), parts[4].trim(), parts[5].trim(),
+            parts[6].trim(), parts[7].trim()
+        });
+
+    } else if (labRequestTable && parts.length >= 8) {
+        tableModel.addRow(new Object[]{
+            parts[0].trim(), parts[1].trim(), parts[2].trim(),
+            parts[3].trim(), parts[4].trim(), parts[5].trim(),
+            parts[6].trim(), parts[7].trim()
+        });
+
+    } else if (rosterTable && parts.length >= 7) {
+        tableModel.addRow(new Object[]{
+            parts[0].trim(), parts[1].trim(), parts[2].trim(),
+            parts[3].trim(), parts[4].trim(), parts[5].trim(),
+            parts[6].trim()
+        });
+
+    } else {
+        if (parts.length > 1) {
+            Object[] rowData = new Object[parts.length];
+            for (int i = 0; i < parts.length; i++) {
+                rowData[i] = parts[i].trim();
+            }
+            tableModel.addRow(rowData);
+        } else {
+            tableModel.addRow(new Object[]{
+                tableModel.getRowCount() + 1,
+                line
+            });
+        }
     }
+}
 
     private static boolean visibleToCurrentDoctor(String doctorId) {
         User current = Session.getCurrentUser();
