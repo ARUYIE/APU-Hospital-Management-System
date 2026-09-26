@@ -192,6 +192,10 @@ public class DashboardFrame extends JFrame {
                 break;
                 
             //Low Kai Lun - Doctor
+            case "MyAppointments":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Manage Appointments", "bookings.txt"));
+                break;
             case "Patient Vitals & Consultation Notes":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                     "Log Vitals & Consultation Notes", "vital_signs.txt"));
@@ -208,7 +212,7 @@ public class DashboardFrame extends JFrame {
                 //Yong Jun Hong - Patient 
             case "Book / View Appointments":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Book / View Appointments", "appointments.txt"));
+                        "Book / View Appointments", "bookings.txt"));
                 break;
 
             case "View My Assessment Results":

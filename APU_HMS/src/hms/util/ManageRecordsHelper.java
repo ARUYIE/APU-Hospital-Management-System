@@ -256,7 +256,11 @@ public final class ManageRecordsHelper {
         });
 
     } else if ((patientAppointmentTable || appointmentTable) && parts.length >= 6) {
-        String doctorName = findName(parts[2].trim());
+        String doctorId = parts[2].trim();
+        if (!visibleToCurrentDoctor(doctorId)) {
+            return;
+        }
+        String doctorName = findName(doctorId);
         String selectedDoctor = doctorSearchBox != null ? (String) doctorSearchBox.getSelectedItem() : null;
 
         if (selectedDoctor != null
@@ -393,9 +397,10 @@ public final class ManageRecordsHelper {
     private static boolean visibleToCurrentDoctor(String doctorId) {
         User current = Session.getCurrentUser();
         if (current == null || current.getRole() != Role.DOCTOR) {
-            return true;
+            return true; 
         }
-        return doctorId.equals(current.getUserId());
+        return doctorId.equalsIgnoreCase(current.getUserId()) 
+            || doctorId.equalsIgnoreCase(current.getFullName());
     }
     
     public static String[] splitRecord(String record) {

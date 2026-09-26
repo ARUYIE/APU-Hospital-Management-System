@@ -26,6 +26,7 @@ public class Doctor extends User {
     public String[] getMenuOptions() {
         return new String[] {
             "Profile",
+            "MyAppointments",
             "Patient Vitals & Consultation Notes",
             "Prescriptions",
             "Lab & Imaging Requests"

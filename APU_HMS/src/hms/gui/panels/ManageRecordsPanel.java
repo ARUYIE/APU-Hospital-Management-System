@@ -34,7 +34,7 @@ import hms.util.RecordsHelperConsultation;
 import hms.util.RecordsHelperInsurance;
 import hms.util.Session;
 import hms.util.UserRepository;
-// for wards, department,appontment, consultation rate, insurance
+
 public class ManageRecordsPanel extends JPanel {
 
     private final String fileName;
@@ -91,7 +91,7 @@ public class ManageRecordsPanel extends JPanel {
                 departmentTable
                 ? new String[]{"DEPTARTMENT_ID", "DEPTARTMENT_NAME", "HEAD_MANAGER_NAME", "DESCRIPTION"}
                 : appointmentTable
-                ? new String[]{"APPOINTMENT_ID", "PATIENT_NAME", "DOCTOR_NAME", "DATE", "TIME", "STATUS", "SERVICE_TYPE"}
+                ? new String[]{"APPOINTMENT_ID", "PATIENT_NAME", "DOCTOR_NAME", "DATE", "TIME", "STATUS"}
                 : assetTable
                 ? new String[]{"ASSET_ID", "ROOM_TYPE", "ROOM_NAME", "LOCATION", "STATUS", "RESERVED_BY"}
                 : insuranceTable
@@ -198,70 +198,48 @@ public class ManageRecordsPanel extends JPanel {
         markLabCompletedBtn.addActionListener(e -> markLabRequestCompleted());
 
         
+        //button adding 
+        actions.add(refreshButton);
+        //role-dependent button adding
+        if (isPatient) {
 
-            actions.add(refreshButton);
-
-            if (isPatient) {
-                if (appointmentTable) {
-                    actions.add(addButton);               
-                    actions.add(cancelAppointmentButton); 
-                }
-
-            } else if (labRequestTable) {
-                if (isDoctor) {
-                    actions.add(addButton);
-                    actions.add(editButton);
-                    actions.add(deleteButton);
-                } else if (isAdmin) {
-                    actions.add(approveLabRequestBtn);
-                    actions.add(denyLabRequestBtn);
-                    actions.add(markLabCompletedBtn);
-                    actions.add(editButton); 
-                }
+        } else if (isAdmin) {
+            // Admins have custom management buttons for lab requests, standard controls for other tables
+            if (labRequestTable) {
+                actions.add(approveLabRequestBtn);
+                actions.add(denyLabRequestBtn);
+                actions.add(markLabCompletedBtn);
+                actions.add(editButton);
             } else {
                 actions.add(addButton);
                 actions.add(editButton);
                 actions.add(deleteButton);
             }
-        
-
-
+        } else {
+            actions.add(addButton);
+            actions.add(editButton);
+            actions.add(deleteButton);
+        }
         //has two rows since its a bit too long
-        // if (assetTable) {
-        //     JPanel wardActions = new JPanel();
-        //     wardActions.setLayout(new BoxLayout(wardActions, BoxLayout.Y_AXIS));
-
-        //     JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        //     searchActions.add(new JLabel("Search Wards/Clinics:"));
-        //     searchActions.add(assetSearchBox);
-        //     searchActions.add(reserveButton);
-        //     searchActions.add(finishButton);
-
-        //     JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        //     recordActions.add(refreshButton);
-        //     recordActions.add(addButton);
-        //     recordActions.add(editButton);
-        //     recordActions.add(deleteButton);
-
-        //     wardActions.add(searchActions);
-        //     wardActions.add(recordActions);
-        //     actions = wardActions;
-        // }
         if (appointmentTable) {
             JPanel appointmentActions = new JPanel();
             appointmentActions.setLayout(new BoxLayout(appointmentActions, BoxLayout.Y_AXIS));
-
+            
             JPanel searchActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-            searchActions.add(new JLabel("Search Doctor:"));
-            searchActions.add(doctorSearchBox);
-            searchActions.add(markCompletedButton);
-            searchActions.add(cancelAppointmentButton);
-
             JPanel recordActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+         
+            if(!isDoctor){
+                searchActions.add(new JLabel("Search Doctor:"));
+                searchActions.add(doctorSearchBox);
+
+                searchActions.add(cancelAppointmentButton);
+
+                recordActions.add(addButton);
+                recordActions.add(editButton);
+                recordActions.add(deleteButton);
+            }
+            searchActions.add(markCompletedButton);
             recordActions.add(refreshButton);
-            recordActions.add(addButton);
-            recordActions.add(editButton);
-            recordActions.add(deleteButton);
 
             appointmentActions.add(searchActions);
             appointmentActions.add(recordActions);
@@ -275,17 +253,11 @@ public class ManageRecordsPanel extends JPanel {
 
         recordsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // if (labRequestTable) {
-        //     recordsTable.setAutoCreateRowSorter(false);
-        //     ManageRecordsHelper.applyStatusSorter(recordsTable, 7);
-        // } else  {
-        //     recordsTable.setAutoCreateRowSorter(true);
-        // }
-
         add(topBar, BorderLayout.NORTH);
         add(new JScrollPane(recordsTable), BorderLayout.CENTER);
         refreshTable();
     }
+    
     
     private String getSelectedAssetId() {
         int viewRow = recordsTable.getSelectedRow();
