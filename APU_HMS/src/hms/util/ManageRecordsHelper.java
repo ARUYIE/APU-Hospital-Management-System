@@ -296,6 +296,9 @@ public final class ManageRecordsHelper {
         });
 
     } else if (consultationTable && parts.length >= 9) {
+            if (!visibleToCurrentDoctor(parts[2].trim())) {
+                return;
+            }
 
         String patientId = parts[1].trim();
         User currentUser = Session.getCurrentUser();
@@ -331,6 +334,9 @@ public final class ManageRecordsHelper {
             }
         }
 
+            if (!visibleToCurrentDoctor(parts[2].trim())) {
+                return;
+            }
         tableModel.addRow(new Object[]{
             parts[0].trim(),
             findName(parts[1].trim()),
@@ -343,6 +349,9 @@ public final class ManageRecordsHelper {
         });
 
     } else if (labRequestTable && parts.length >= 8) {
+            if (!visibleToCurrentDoctor(parts[2].trim())) {
+                return;
+            }
         tableModel.addRow(new Object[]{
             parts[0].trim(), 
             findName(parts[1].trim()),
