@@ -9,5 +9,8 @@
             </source-roots>
             <test-roots/>
         </data>
+        <libraries xmlns="http://www.netbeans.org/ns/ant-project-libraries/1">
+            <definitions>C:\Users\User\Downloads\OpenPDF-3.0.5\OpenPDF-3.0.5\nblibraries.properties</definitions>
+        </libraries>
     </configuration>
 </project>
