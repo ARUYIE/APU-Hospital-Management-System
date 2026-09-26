@@ -94,11 +94,11 @@ public class ManageRecordsPanel extends JPanel {
                 : reportTable
                 ? new String[]{"REPORT_PERIOD", "TOTAL_PATIENTS", "APPOINTMENTS", "COMPLETED_APPOINTMENTS", "CANCELLED_APPOINTMENTS", "TOTAL_REVENUE"}
                 : consultationTable
-                ? new String[]{"VITAL_SIGN_ID", "PATIENT_ID", "DOCTOR_NAME", "CONSULTATION_ID", "BP", "HEART_RATE", "TEMPERATURE", "DATE", "NOTES"}
+                ? new String[]{"VITAL_SIGN_ID", "PATIENT_NAME", "DOCTOR_NAME", "CONSULTATION_ID", "BP", "HEART_RATE", "TEMPERATURE", "DATE", "NOTES"}
                 : prescriptionTable
-                ? new String[]{"PRESCRIPTION_ID", "PATIENT_ID", "DOCTOR_NAME", "MEDICATION", "DOSAGE", "DURATION", "DATE_ISSUED", "STATUS"}
+                ? new String[]{"PRESCRIPTION_ID", "PATIENT_NAME", "DOCTOR_NAME", "MEDICATION", "DOSAGE", "DURATION", "DATE_ISSUED", "STATUS"}
                 : labRequestTable       
-                ? new String[]{"REQUEST_ID", "PATIENT_ID", "DOCTOR_Name", "TEST_TYPE", "ROOM_ID", "DATE_REQUESTED", "DATE_COMPLETED", "STATUS"}
+                ? new String[]{"REQUEST_ID", "PATIENT_NAME", "DOCTOR_NAME", "TEST_TYPE", "ROOM_ID", "DATE_REQUESTED", "DATE_COMPLETED", "STATUS"}
                 : new String[]{"#", "Record"}, 0) {
                    
         @Override
@@ -107,7 +107,7 @@ public class ManageRecordsPanel extends JPanel {
         }
     };
         recordsTable = new JTable(tableModel);
-        recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox, assetSearchBox, false, false, false);
+        recordHelper = new ManageRecordsHelper(fileName, tableModel, doctorSearchBox, assetSearchBox, consultationTable, prescriptionTable, labRequestTable);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -200,6 +200,7 @@ public class ManageRecordsPanel extends JPanel {
                 } else if (assetTable) {
                     actions.add(assetSearchBox);
                 }
+
             } else {
                 actions.add(addButton);
                 actions.add(editButton);
@@ -254,8 +255,15 @@ public class ManageRecordsPanel extends JPanel {
         topBar.add(heading, BorderLayout.WEST);
         topBar.add(actions, BorderLayout.EAST);
 
-        recordsTable.setAutoCreateRowSorter(true);
+
         recordsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // if (labRequestTable) {
+        //     recordsTable.setAutoCreateRowSorter(false);
+        //     ManageRecordsHelper.applyStatusSorter(recordsTable, 7);
+        // } else  {
+        //     recordsTable.setAutoCreateRowSorter(true);
+        // }
 
         add(topBar, BorderLayout.NORTH);
         add(new JScrollPane(recordsTable), BorderLayout.CENTER);
@@ -339,9 +347,15 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
 
+
         int modelRow = recordsTable.convertRowIndexToModel(viewRow);
         String record = records.get(modelRow);
         String[] parts = splitRecord(record);
+
+        if (newStatus.equals("DENIED")) {
+        parts[6] =java.time.LocalDate.now().toString();
+
+        }
 
         if (parts.length >= 8) {
             if(parts[7].equals("COMPLETED")){
@@ -363,65 +377,57 @@ public class ManageRecordsPanel extends JPanel {
     }
 
     private void markLabRequestCompleted() {
-        if (!labRequestTable) {
-            return;
-        }
-
-        int viewRow = recordsTable.getSelectedRow();
-        int modelRow = recordsTable.convertRowIndexToModel(viewRow);
-        String record = records.get(modelRow);
-        String[] parts = splitRecord(record);
-        if (viewRow == -1) {
-            JOptionPane.showMessageDialog(this,
-                    "Please select a request first.",
-                    "No Record Selected", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        String dateCompleted;
-        if (parts[7].equals("COMPLETED")) {
-            JOptionPane.showMessageDialog(this,
-                "This reservation is Already Completed",
-                "Already Completed", JOptionPane.WARNING_MESSAGE);
-            return;
-        } else {
-            dateCompleted = JOptionPane.showInputDialog(
-                this,
-                "Enter the date completed (YYYY-MM-DD):",
-                java.time.LocalDate.now().toString()
-            );
-        }
-
-        if (dateCompleted == null) {
-            return; // cancelled
-        }
-
-        dateCompleted = dateCompleted.trim();
-
-        try {
-            java.time.LocalDate.parse(dateCompleted);
-        } catch (java.time.format.DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Date must be in YYYY-MM-DD format.",
-                    "Invalid Date", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-
-
-        if (parts.length >= 8) {
-            parts[6] = dateCompleted; // DATE_COMPLETED
-            parts[7] = "COMPLETED";   // STATUS
-            String updatedRecord = String.join("|", parts);
-
-            List<String> updatedLines = new ArrayList<>(records);
-            updatedLines.set(modelRow, updatedRecord);
-
-            writeRecords(updatedLines, "The record could not be updated.");
-        }
-        refreshTable();
+    if (!labRequestTable) {
+        return;
     }
 
+    int viewRow = recordsTable.getSelectedRow();
+    if (viewRow == -1) {
+        JOptionPane.showMessageDialog(this,
+                "Please select a request first.",
+                "No Record Selected", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    int modelRow = recordsTable.convertRowIndexToModel(viewRow);
+    String record = records.get(modelRow);
+    String[] parts = splitRecord(record);
+
+    if (parts.length < 8) {
+        return;
+    }
+
+    String dateCompleted = JOptionPane.showInputDialog(
+            this,
+            "Enter the date completed (YYYY-MM-DD):",
+            java.time.LocalDate.now().toString()
+    );
+
+    if (dateCompleted == null) {
+        return; // User clicked Cancel
+    }
+
+    dateCompleted = dateCompleted.trim();
+
+    try {
+        java.time.LocalDate.parse(dateCompleted);
+    } catch (java.time.format.DateTimeParseException ex) {
+        JOptionPane.showMessageDialog(this,
+                "Date must be in YYYY-MM-DD format.",
+                "Invalid Date", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    parts[6] = dateCompleted; // DATE_COMPLETED
+    parts[7] = "COMPLETED";   // STATUS
+    String updatedRecord = String.join("|", parts);
+
+    List<String> updatedLines = new ArrayList<>(records);
+    updatedLines.set(modelRow, updatedRecord);
+
+    writeRecords(updatedLines, "The record could not be updated.");
+    refreshTable();
+}
     private void editSelectedRecord() {
         int viewRow = recordsTable.getSelectedRow();
 
@@ -925,10 +931,12 @@ public class ManageRecordsPanel extends JPanel {
             ? (selectedRoomIndex > 0 ? roomIds.get(selectedRoomIndex - 1) : "")
             : roomId;
 
-    if (hasLabRequestForRoom(updatedPatientId, updatedRoomId, updatedDateRequested, requestId)) {
+if (hasLabRequestForRoom(updatedPatientId, updatedRoomId, updatedDateRequested, requestId)) {
+        String roomName = ManageRecordsHelper.findAssetType(updatedRoomId);
+
         JOptionPane.showMessageDialog(
                 this,
-                "This patient already has a request for room " + updatedRoomId + " on " + updatedDateRequested + ".",
+                "This patient already has a request for room " + roomName + " on " + updatedDateRequested + ".",
                 "Duplicate Request",
                 JOptionPane.WARNING_MESSAGE
         );
@@ -972,7 +980,7 @@ public class ManageRecordsPanel extends JPanel {
         );
         return null;
     }
-
+    refreshTable();
     return String.join("|",
             requestIdField.getText().trim(),
             updatedPatientId,
@@ -983,7 +991,8 @@ public class ManageRecordsPanel extends JPanel {
             updatedDateCompleted,
             updatedStatus
     );
-    }
+
+}
     
     private boolean isValidRecord(String record) {
         return ManageRecordsHelper.isValidRecord(record);
@@ -1000,6 +1009,7 @@ public class ManageRecordsPanel extends JPanel {
     public void refreshTable() {
         recordHelper.refreshTable();
         records = recordHelper.getRecords();
+        setupTableSorter();
     }
 
     private void addRecord() {
@@ -1638,10 +1648,13 @@ public class ManageRecordsPanel extends JPanel {
 
     String patientId = patients.get(patientCombo.getSelectedIndex()).getUserId();
 
+    // Check for duplicate lab requests using the raw roomId
     if (hasLabRequestForRoom(patientId, roomId, dateRequested, null)) {
+        String roomName = ManageRecordsHelper.findAssetType(roomId);
+
         JOptionPane.showMessageDialog(
                 this,
-                "This patient already has a request for room " + roomId + " on " + dateRequested + ".",
+                "This patient already has a request for room " + roomName + " on " + dateRequested + ".",
                 "Duplicate Request",
                 JOptionPane.WARNING_MESSAGE
         );
@@ -1649,17 +1662,17 @@ public class ManageRecordsPanel extends JPanel {
     }
 
     FileManager.appendLine(
-    fileName,
-    String.join("|",
-            IDGenerator.next("LR", fileName),
-            patientId,
-            currentDoctor.getUserId(),
-            testType,
-            roomId,
-            dateRequested,
-            "",
-            "PENDING"
-            )
+        fileName,
+        String.join("|",
+                IDGenerator.next("LR", fileName),
+                patientId,
+                currentDoctor.getUserId(),
+                testType,
+                roomId, 
+                dateRequested,
+                "",
+                "PENDING"
+        )
     );
 
     refreshTable();
@@ -1809,4 +1822,20 @@ public class ManageRecordsPanel extends JPanel {
             }
         }
     }
+    private void setupTableSorter() {
+    if (labRequestTable) {
+        recordsTable.setAutoCreateRowSorter(false);
+        ManageRecordsHelper.applyStatusSorter(recordsTable, 7);
+        
+        // Force the STATUS column (index 7) to sort ASCENDING on refresh
+        if (recordsTable.getRowSorter() != null) {
+            recordsTable.getRowSorter().setSortKeys(
+                java.util.List.of(new javax.swing.RowSorter.SortKey(7, javax.swing.SortOrder.ASCENDING))
+            );
+        }
+    } else {
+        recordsTable.setAutoCreateRowSorter(true);
+    }
+    }       
+
 }

@@ -1,17 +1,22 @@
 package hms.util;
 
-import hms.role.Role;
-import hms.role.User;
-import hms.util.Session;
-import hms.util.UserRepository;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
+import java.awt.Component;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.awt.*;
+
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JComboBox;
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
+
+import hms.role.Role;
+import hms.role.User;
 
 /** Shared data and table operations for record-management panels. */
 public final class ManageRecordsHelper {
@@ -73,6 +78,8 @@ public final class ManageRecordsHelper {
 
         refreshAssetFilterOptions();
         tableModel.setRowCount(0);
+
+
 
         for (String record : records) {
 
@@ -317,12 +324,11 @@ public final class ManageRecordsHelper {
                 findName(parts[1].trim()),
                 findName(parts[2].trim()),
                 parts[3].trim(),
-                parts[4].trim(),
+                findAssetType(parts[4].trim()),
                 parts[5].trim(),
                 parts[6].trim(),
                 parts[7].trim()
             });
-
         } else if (rosterTable && parts.length >= 7) {
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
@@ -365,6 +371,21 @@ public final class ManageRecordsHelper {
         return userId;
     }
 
+    public static String findAssetType(String assetId) {
+        if (assetId == null || assetId.trim().isEmpty()) {
+            return "N/A";
+        }
+        
+        List<String> assetLines = FileManager.readLines("hospital_assets.txt");
+        for (String line : assetLines) {
+            String[] parts = splitRecord(line);
+            if (parts.length >= 3 && parts[0].trim().equalsIgnoreCase(assetId.trim())) {
+                return parts[2].trim(); 
+            }
+        }
+        return assetId;
+    }
+
     public static boolean validRateFields(String baseRate, String minRate, String maxRate) {
         try {
             double base = Double.parseDouble(baseRate.trim());
@@ -391,5 +412,36 @@ public final class ManageRecordsHelper {
     }
 
 
+
+    private static final List<String> STATUS_ORDER = Arrays.asList(
+        "PENDING", 
+        "APPROVED", 
+        "DENIED", 
+        "COMPLETED"
+    );
+
+    public static void applyStatusSorter(JTable table, int statusColumnIndex) {
+        if (table == null || table.getModel() == null) return;
+
+        DefaultTableModel model = (DefaultTableModel) table.getModel();
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+
+        Comparator<String> statusComparator = (s1, s2) -> {
+            if (s1 == null && s2 == null) return 0;
+            if (s1 == null) return 1;
+            if (s2 == null) return -1;
+
+            int index1 = STATUS_ORDER.indexOf(s1.trim().toUpperCase());
+            int index2 = STATUS_ORDER.indexOf(s2.trim().toUpperCase());
+
+            if (index1 == -1) index1 = Integer.MAX_VALUE;
+            if (index2 == -1) index2 = Integer.MAX_VALUE;
+
+            return Integer.compare(index1, index2);
+        };
+
+        sorter.setComparator(statusColumnIndex, statusComparator);
+        table.setRowSorter(sorter);
+    }
 }
 

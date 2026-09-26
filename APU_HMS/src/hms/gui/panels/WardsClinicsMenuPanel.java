@@ -19,7 +19,7 @@ public class WardsClinicsMenuPanel extends JPanel {
 
     public WardsClinicsMenuPanel(DashboardFrame dashboard) {
         setLayout(new BorderLayout());
-        setBackground(UIUtil.DASHBOARD_BLUE);
+        setOpaque(false);
 
         JLabel titleLabel = new JLabel("Wards and Clinics Management", JLabel.CENTER);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
@@ -28,11 +28,11 @@ public class WardsClinicsMenuPanel extends JPanel {
         add(titleLabel, BorderLayout.NORTH);
 
         JPanel buttonPanel = new JPanel(new GridBagLayout());
-        buttonPanel.setBackground(UIUtil.DASHBOARD_BLUE);
+        buttonPanel.setOpaque(false);
 
         JButton btnRequest = new JButton("Wards/Clinics Request");
-        UIUtil.styleButton(btnRequest, Color.BLUE);
-        btnRequest.setPreferredSize(new Dimension(250, 50));
+        UIUtil.styleButton(btnRequest, Color.RED);
+        btnRequest.setPreferredSize(new Dimension(550, 150));
         btnRequest.setFont(new Font("Segoe UI", Font.BOLD, 16));
         btnRequest.addActionListener(e -> {
             ManageRecordsPanel panel = new ManageRecordsPanel("Lab & Imaging Requests", "lab_requests.txt");
@@ -42,7 +42,7 @@ public class WardsClinicsMenuPanel extends JPanel {
 
         JButton btnAll = new JButton("All Wards/Clinics");
         UIUtil.styleButton(btnAll, Color.BLUE);
-        btnAll.setPreferredSize(new Dimension(250, 50));
+        btnAll.setPreferredSize(new Dimension(550, 150));
         btnAll.setFont(new Font("Segoe UI", Font.BOLD, 16));
         btnAll.addActionListener(e -> {
             ManageRecordsPanel panel = new ManageRecordsPanel("Manage Wards and Clinics", "hospital_assets.txt");
