@@ -286,6 +286,9 @@ public final class ManageRecordsHelper {
             });
            
         } else if (consultationTable && parts.length >= 9) {
+            if (!visibleToCurrentDoctor(parts[2].trim())) {
+                return;
+            }
             String notes = parts.length >= 9 ? parts[8].trim() : "";
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
@@ -300,6 +303,9 @@ public final class ManageRecordsHelper {
             });
  
         } else if (prescriptionTable && parts.length >= 8) {
+            if (!visibleToCurrentDoctor(parts[2].trim())) {
+                return;
+            }
             tableModel.addRow(new Object[]{
                 parts[0].trim(), 
                 findName(parts[1].trim()),
@@ -312,6 +318,9 @@ public final class ManageRecordsHelper {
             });
  
         } else if (labRequestTable && parts.length >= 8) {
+            if (!visibleToCurrentDoctor(parts[2].trim())) {
+                return;
+            }
             tableModel.addRow(new Object[]{
                 parts[0].trim(), 
                 findName(parts[1].trim()),
