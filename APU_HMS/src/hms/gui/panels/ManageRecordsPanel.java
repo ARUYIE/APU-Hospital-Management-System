@@ -26,12 +26,13 @@ import hms.role.Role;
 import hms.role.User;
 import hms.util.FileManager;
 import hms.util.ManageRecordsHelper;
-import hms.util.ManagerMethods;
 import hms.util.RecordsHelperAppointment;
 import hms.util.RecordsHelperAsset;
 import hms.util.RecordsHelperConsultation;
+import hms.util.RecordsHelperInsurance;
 import hms.util.DoctorRosterMethods;
 import hms.util.DoctorMethods;
+import hms.util.Session;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -563,7 +564,6 @@ public class ManageRecordsPanel extends JPanel {
     public void refreshTable() {
         recordHelper.refreshTable();
         records = recordHelper.getRecords();
-        setupTableSorter();
     }
 
     private void addRecord() {
@@ -741,6 +741,21 @@ public class ManageRecordsPanel extends JPanel {
     
     public JTable getRecordsTable() {
         return recordsTable;
+    }
+    
+    public void addBackButton(Runnable action) {
+        JButton backButton = new JButton("Back");
+
+        backButton.addActionListener(e -> action.run());
+
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        backPanel.setOpaque(false);
+        backPanel.add(backButton);
+
+        add(backPanel, BorderLayout.SOUTH);
+
+        revalidate();
+        repaint();
     }
 }
     
