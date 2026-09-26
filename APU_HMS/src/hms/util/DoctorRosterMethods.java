@@ -15,12 +15,12 @@ import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
 
-public class ManagerMethods {
+public class DoctorRosterMethods {
 
     private final ManageRecordsPanel panel;
     private final String fileName;
 
-    public ManagerMethods(ManageRecordsPanel panel, String fileName) {
+    public DoctorRosterMethods(ManageRecordsPanel panel, String fileName) {
         this.panel = panel;
         this.fileName = fileName;
     }

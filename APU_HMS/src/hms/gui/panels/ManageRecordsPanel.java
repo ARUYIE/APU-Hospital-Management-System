@@ -13,7 +13,8 @@ import hms.util.RecordsHelperAppointment;
 import hms.util.RecordsHelperInsurance;
 import hms.util.RecordsHelperConsultation;
 import hms.util.Session;
-import hms.util.ManagerMethods;
+import hms.util.DoctorRosterMethods;
+import hms.util.DoctorMethods;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -41,11 +42,13 @@ public class ManageRecordsPanel extends JPanel {
     private final JTable recordsTable;
     private final ManageRecordsHelper recordHelper;
     private List<String> records = new ArrayList<>();
-    private final ManagerMethods managerMethods;
+    private final DoctorRosterMethods rosterMethods;
+    private final DoctorMethods doctorMethods;
 
     public ManageRecordsPanel(String title, String fileName) {
         this.fileName = fileName;
-        this.managerMethods = new ManagerMethods(this, fileName);
+        this.rosterMethods = new DoctorRosterMethods(this, fileName);
+        this.doctorMethods = new DoctorMethods();
         
         // Tan Rui En - Admin
         assetTable = "hospital_assets.txt".equalsIgnoreCase(fileName);
@@ -304,7 +307,7 @@ public class ManageRecordsPanel extends JPanel {
         String originalRecord = records.get(recordIndex);
 
         String updatedRecord = departmentTable
-                ? managerMethods.editDepartmentRecord(originalRecord)
+                ? rosterMethods.editDepartmentRecord(originalRecord)
                 : appointmentTable
                 ? RecordsHelperAppointment.editAppointmentRecord(this, originalRecord)
                 : insuranceTable
@@ -314,13 +317,25 @@ public class ManageRecordsPanel extends JPanel {
                 : assetTable
                 ? RecordsHelperAsset.editAssetRecord(this, originalRecord)
                 : rosterTable
-                ? managerMethods.editRosterRecord(originalRecord)
+                ? rosterMethods.editRosterRecord(originalRecord)
                 : consultationTable
-                ? editVitalSignRecord(originalRecord)
+                ? doctorMethods.editVitalSignRecord(
+                        this,
+                        originalRecord,
+                        fileName
+                )
                 : prescriptionTable
-                ? editPrescriptionRecord(originalRecord)
+                ? doctorMethods.editPrescriptionRecord(
+                        this,
+                        originalRecord,
+                        fileName
+                )
                 : labRequestTable
-                ? editLabRequestRecord(originalRecord)
+                ? doctorMethods.editLabRequestRecord(
+                        this,
+                        originalRecord,
+                        fileName
+                )
                 : (String) JOptionPane.showInputDialog(
                         this,
                         "Edit record:",
@@ -366,490 +381,6 @@ public class ManageRecordsPanel extends JPanel {
         field.setBackground(Color.LIGHT_GRAY);
     }
     
-    private String editVitalSignRecord(String record) {
-    String[] parts = splitRecord(record);
-
-    if (parts.length < 9) {
-        return null;
-    }
-
-    String vitalSignId = parts[0].trim();
-    String patientId = parts[1].trim();
-    String doctorId = parts[2].trim();
-    String consultationId = parts[3].trim();
-    String bp = parts[4].trim();
-    String heartRate = parts[5].trim();
-    String temperature = parts[6].trim();
-    String date = parts[7].trim();
-    String notes = parts[8].trim();
-
-    JTextField vitalSignIdField = new JTextField(vitalSignId);
-    setUneditable(vitalSignIdField);
-
-    List<User> patients = UserRepository.loadAll().stream()
-            .filter(user -> user.getRole() == Role.PATIENT)
-            .toList();
-
-    JComboBox<String> patientCombo = new JComboBox<>();
-    for (User patient : patients) {
-        patientCombo.addItem(patient.getFullName());
-    }
-    patientCombo.setSelectedItem(findName(patientId));
-
-    JTextField doctorIdField = new JTextField(findName(doctorId));
-    setUneditable(doctorIdField);
-
-    List<String> specialties = new ArrayList<>();
-    List<String> consultationRateLines = FileManager.readLines("consultation_rates.txt");
-    for (int lineIndex = 0; lineIndex < consultationRateLines.size(); lineIndex++) {
-        String rateLine = consultationRateLines.get(lineIndex);
-        if (lineIndex == 0 && rateLine.trim().startsWith("SPECIALTY")) {
-            continue; // 跳过表头行
-        }
-        String[] rateParts = rateLine.split("\\|", -1);
-        if (rateParts.length >= 1 && !rateParts[0].trim().isEmpty()) {
-            specialties.add(rateParts[0].trim());
-        }
-    }
-    JComboBox<String> consultationIdCombo = new JComboBox<>(specialties.toArray(new String[0]));
-    consultationIdCombo.setSelectedItem(consultationId);
-    JTextField bpField = new JTextField(bp);
-    JTextField heartRateField = new JTextField(heartRate);
-    JTextField temperatureField = new JTextField(temperature);
-    JTextField dateField = new JTextField(date);
-    JTextField notesField = new JTextField(notes);
-
-    JPanel form = new JPanel(new GridLayout(9, 2, 8, 8));
-
-    form.add(new JLabel("VITAL_SIGN_ID:"));
-    form.add(vitalSignIdField);
-
-    form.add(new JLabel("PATIENT:"));
-    form.add(patientCombo);
-
-    form.add(new JLabel("DOCTOR:"));
-    form.add(doctorIdField);
-
-    form.add(new JLabel("CONSULTATION_ID (specialty):"));
-    form.add(consultationIdCombo);
-
-    form.add(new JLabel("BP:"));
-    form.add(bpField);
-
-    form.add(new JLabel("HEART_RATE:"));
-    form.add(heartRateField);
-
-    form.add(new JLabel("TEMPERATURE:"));
-    form.add(temperatureField);
-
-    form.add(new JLabel("DATE:"));
-    form.add(dateField);
-
-    form.add(new JLabel("NOTES (symptoms / observations / diagnosis):"));
-    form.add(notesField);
-
-    int choice = JOptionPane.showConfirmDialog(
-            this,
-            form,
-            "Edit Vital Sign Record",
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE
-        );
-
-    if (choice != JOptionPane.OK_OPTION) {
-        return null;
-    }
-
-    int selectedPatientIndex = patientCombo.getSelectedIndex();
-    String updatedPatientId = selectedPatientIndex >= 0
-            ? patients.get(selectedPatientIndex).getUserId()
-            : patientId;
-
-    String updatedConsultationId = (String) consultationIdCombo.getSelectedItem();
-    String updatedBp = bpField.getText().trim();
-    String updatedHeartRate = heartRateField.getText().trim();
-    String updatedTemperature = temperatureField.getText().trim();
-    String updatedDate = dateField.getText().trim();
-    String updatedNotes = notesField.getText().trim();
-
-    if (updatedBp.isEmpty()
-            || updatedHeartRate.isEmpty()
-            || updatedTemperature.isEmpty()
-            || updatedDate.isEmpty()
-            || updatedNotes.isEmpty()) {
-
-        JOptionPane.showMessageDialog(
-                this,
-                "BP, heart rate, temperature, date and notes are required.",
-                "Invalid Vital Sign Record",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return null;
-        }
-
-    if (hasIllegalChars(updatedConsultationId, updatedBp,
-            updatedHeartRate, updatedTemperature, updatedDate, updatedNotes)) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Fields cannot contain the '|' character or line breaks.",
-                "Invalid Vital Sign Record",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return null;
-        }
-
-    if (hasVitalSignOnDate(updatedPatientId, updatedDate, vitalSignId)) {
-        JOptionPane.showMessageDialog(
-                this,
-                "This patient already has a vital sign record for " + updatedDate + ". Only one record per day is allowed.",
-                "Duplicate Record",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return null;
-        }
-
-    return String.join("|",
-            vitalSignIdField.getText().trim(),
-            updatedPatientId,
-            doctorId,
-            updatedConsultationId,
-            updatedBp,
-            updatedHeartRate,
-            updatedTemperature,
-            updatedDate,
-            updatedNotes
-        );
-    }
-    
-    private String editPrescriptionRecord(String record) {
-    String[] parts = splitRecord(record);
-
-    if (parts.length < 8) {
-        return null;
-    }
-
-    String prescriptionId = parts[0].trim();
-    String patientId = parts[1].trim();
-    String doctorId = parts[2].trim();
-    String medication = parts[3].trim();
-    String dosage = parts[4].trim();
-    String duration = parts[5].trim();
-    String dateIssued = parts[6].trim();
-    String status = parts[7].trim();
-
-    JTextField prescriptionIdField = new JTextField(prescriptionId);
-    setUneditable(prescriptionIdField);
-
-    List<User> patients = UserRepository.loadAll().stream()
-            .filter(user -> user.getRole() == Role.PATIENT)
-            .toList();
-
-    JComboBox<String> patientCombo = new JComboBox<>();
-    for (User patient : patients) {
-        patientCombo.addItem(patient.getFullName());
-    }
-    patientCombo.setSelectedItem(findName(patientId));
-
-    JTextField doctorIdField = new JTextField(findName(doctorId));
-    setUneditable(doctorIdField);
-
-    JTextField medicationField = new JTextField(medication);
-    JComboBox<String> dosageCombo = new JComboBox<>(new String[]{"100mg", "200mg", "300mg", "400mg", "500mg"});
-    dosageCombo.setSelectedItem(dosage);
-    JComboBox<String> durationCombo = new JComboBox<>(new String[]{
-        "1 day", "2 days", "3 days", "4 days", "5 days", "6 days", "7 days"});
-    durationCombo.setSelectedItem(duration);
-    JTextField dateIssuedField = new JTextField(dateIssued);
-    JComboBox<String> statusCombo = new JComboBox<>(new String[]{"ACTIVE", "COMPLETED", "CANCELLED"});
-    statusCombo.setSelectedItem(status);
-
-    JPanel form = new JPanel(new GridLayout(8, 2, 8, 8));
-
-    form.add(new JLabel("PRESCRIPTION_ID:"));
-    form.add(prescriptionIdField);
-
-    form.add(new JLabel("PATIENT:"));
-    form.add(patientCombo);
-
-    form.add(new JLabel("DOCTOR:"));
-    form.add(doctorIdField);
-
-    form.add(new JLabel("MEDICATION:"));
-    form.add(medicationField);
-
-    form.add(new JLabel("DOSAGE:"));
-    form.add(dosageCombo);
-
-    form.add(new JLabel("DURATION:"));
-    form.add(durationCombo);
-
-    form.add(new JLabel("DATE_ISSUED:"));
-    form.add(dateIssuedField);
-
-    form.add(new JLabel("STATUS:"));
-    form.add(statusCombo);
-
-    int choice = JOptionPane.showConfirmDialog(
-        this,
-        form,
-        "Edit Prescription",
-        JOptionPane.OK_CANCEL_OPTION,
-        JOptionPane.PLAIN_MESSAGE
-        );
-
-    if (choice != JOptionPane.OK_OPTION) {
-        return null;
-        }
-
-    int selectedPatientIndex = patientCombo.getSelectedIndex();
-    String updatedPatientId = selectedPatientIndex >= 0
-            ? patients.get(selectedPatientIndex).getUserId()
-            : patientId;
-
-    String updatedMedication = medicationField.getText().trim();
-    String updatedDosage = (String) dosageCombo.getSelectedItem();
-    String updatedDuration = (String) durationCombo.getSelectedItem();
-    String updatedDateIssued = dateIssuedField.getText().trim();
-
-    if (updatedMedication.isEmpty() || updatedDateIssued.isEmpty()) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Medication and date issued are required.",
-                "Invalid Prescription",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return null;
-        }
-    
-    if (hasIllegalChars(updatedMedication, updatedDosage, updatedDuration, updatedDateIssued)) {
-        JOptionPane.showMessageDialog(
-                    this,
-                    "Fields cannot contain the '|' character or line breaks.",
-                    "Invalid Prescription",
-                    JOptionPane.WARNING_MESSAGE
-                );
-            return null;
-        }
-    
-    if (hasPrescriptionForMedication(updatedPatientId, updatedMedication, prescriptionId)) {
-    JOptionPane.showMessageDialog(
-                    this,
-                    "This patient already has a prescription for " + updatedMedication + ".",
-                    "Duplicate Medication",
-                    JOptionPane.WARNING_MESSAGE
-                );
-            return null;
-        }
-
-    return String.join("|",
-            prescriptionIdField.getText().trim(),
-            updatedPatientId,
-            doctorId,
-            updatedMedication,
-            updatedDosage,
-            updatedDuration,
-            updatedDateIssued,
-            (String) statusCombo.getSelectedItem()
-        );
-    }
-    
-    private String editLabRequestRecord(String record) {
-    String[] parts = splitRecord(record);
-
-    if (parts.length < 8) {
-        return null;
-    }
-
-    String requestId = parts[0].trim();
-    String patientId = parts[1].trim();
-    String doctorId = parts[2].trim();
-    String testType = parts[3].trim();
-    String roomId = parts[4].trim();
-    String dateRequested = parts[5].trim();
-    String dateCompleted = parts[6].trim();
-    String status = parts[7].trim();
-
-    User currentUser = Session.getCurrentUser();
-    boolean isDoctor = currentUser != null && currentUser.getRole() == Role.DOCTOR;
-
-    JTextField requestIdField = new JTextField(requestId);
-    setUneditable(requestIdField);
-
-    List<User> patients = UserRepository.loadAll().stream()
-            .filter(user -> user.getRole() == Role.PATIENT)
-            .toList();
-
-    JComboBox<String> patientCombo = new JComboBox<>();
-    for (User patient : patients) {
-        patientCombo.addItem(patient.getFullName());
-    }
-    patientCombo.setSelectedItem(findName(patientId));
-    if (!isDoctor) {
-        patientCombo.setEnabled(false);
-    }
-
-    JTextField doctorIdField = new JTextField(findName(doctorId));
-    setUneditable(doctorIdField);
-
-    JComboBox<String> testTypeCombo = new JComboBox<>(new String[]{
-            "Blood Test", "X-Ray", "MRI", "CT Scan", "Ultrasound", "Other Specialized Imaging"});
-    testTypeCombo.setSelectedItem(testType);
-    if (!isDoctor) {
-        testTypeCombo.setEnabled(false);
-    }
-
-    List<String> roomIds = new ArrayList<>();
-    JComboBox<String> roomCombo = new JComboBox<>();
-    roomCombo.addItem("No room needed");
-    boolean currentRoomStillListed = false;
-    for (String assetLine : FileManager.readLines("hospital_assets.txt")) {
-        String[] assetParts = assetLine.split("\\|", -1);
-        if (assetParts.length < 5) {
-            continue;
-        }
-        String assetId = assetParts[0].trim();
-        String assetRoomType = assetParts[1].trim();
-        String assetRoomName = assetParts[2].trim();
-        String assetStatus = assetParts[4].trim();
-
-        boolean isThisRequestsCurrentRoom = assetId.equals(roomId);
-        boolean isEligibleRoomType = "IMAGING_ROOM".equalsIgnoreCase(assetRoomType)
-                || "LAB".equalsIgnoreCase(assetRoomType)
-                || "OPERATION_THEATRE".equalsIgnoreCase(assetRoomType);
-        boolean isAvailableEligibleRoom = isEligibleRoomType && "AVAILABLE".equalsIgnoreCase(assetStatus);
-
-        if (isAvailableEligibleRoom || isThisRequestsCurrentRoom) {
-            roomIds.add(assetId);
-            roomCombo.addItem(assetRoomName + " (" + assetId + ")");
-            if (isThisRequestsCurrentRoom) {
-                currentRoomStillListed = true;
-            }
-        }
-    }
-    if (!roomId.isEmpty() && currentRoomStillListed) {
-        roomCombo.setSelectedIndex(roomIds.indexOf(roomId) + 1);
-    }
-    if (!isDoctor) {
-        roomCombo.setEnabled(false);
-    }
-
-    JTextField dateRequestedField = new JTextField(dateRequested);
-    if (!isDoctor) {
-        setUneditable(dateRequestedField);
-    }
-
-    JComboBox<String> statusCombo = new JComboBox<>(new String[]{"PENDING", "IN_PROGRESS", "COMPLETED"});
-    statusCombo.setSelectedItem(status);
-    if (isDoctor) {
-        statusCombo.setEnabled(false);
-    }
-
-    JTextField dateCompletedField = new JTextField(dateCompleted);
-    if (isDoctor) {
-        setUneditable(dateCompletedField);
-    }
-
-    JPanel form = new JPanel(new GridLayout(8, 2, 8, 8));
-
-    form.add(new JLabel("REQUEST_ID:"));
-    form.add(requestIdField);
-
-    form.add(new JLabel("PATIENT:"));
-    form.add(patientCombo);
-
-    form.add(new JLabel("DOCTOR:"));
-    form.add(doctorIdField);
-
-    form.add(new JLabel("TEST_TYPE:"));
-    form.add(testTypeCombo);
-
-    form.add(new JLabel("ROOM (if needed):"));
-    form.add(roomCombo);
-
-    form.add(new JLabel(isDoctor ? "DATE_REQUESTED:" : "DATE_REQUESTED (set by doctor):"));
-    form.add(dateRequestedField);
-
-    form.add(new JLabel(isDoctor ? "DATE_COMPLETED (set by admin):" : "DATE_COMPLETED:"));
-    form.add(dateCompletedField);
-
-    form.add(new JLabel(isDoctor ? "STATUS (set by admin):" : "STATUS:"));
-    form.add(statusCombo);
-
-    int choice = JOptionPane.showConfirmDialog(
-            this,
-            form,
-            "Edit Lab / Imaging Request",
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE
-    );
-
-    if (choice != JOptionPane.OK_OPTION) {
-        return null;
-    }
-
-    int selectedPatientIndex = patientCombo.getSelectedIndex();
-    String updatedPatientId = (isDoctor && selectedPatientIndex >= 0)
-            ? patients.get(selectedPatientIndex).getUserId()
-            : patientId;
-
-    String updatedTestType = isDoctor ? (String) testTypeCombo.getSelectedItem() : testType;
-    String updatedDateRequested = isDoctor ? dateRequestedField.getText().trim() : dateRequested;
-
-    int selectedRoomIndex = roomCombo.getSelectedIndex();
-    String updatedRoomId = isDoctor
-            ? (selectedRoomIndex > 0 ? roomIds.get(selectedRoomIndex - 1) : "")
-            : roomId;
-
-    String updatedStatus = !isDoctor ? (String) statusCombo.getSelectedItem() : status;
-    String updatedDateCompleted = !isDoctor ? dateCompletedField.getText().trim() : dateCompleted;
-
-    if (isDoctor) {
-        if (updatedDateRequested.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Date requested is required.",
-                    "Invalid Request",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return null;
-        }
-
-        try {
-            java.time.LocalDate.parse(updatedDateRequested);
-        } catch (java.time.format.DateTimeParseException exception) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Date requested must be in YYYY-MM-DD format.",
-                    "Invalid Request",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return null;
-        }
-    }
-
-    if (hasIllegalChars(updatedTestType, updatedRoomId, updatedDateRequested,
-            updatedDateCompleted, updatedStatus)) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Fields cannot contain the '|' character or line breaks.",
-                "Invalid Request",
-                JOptionPane.WARNING_MESSAGE
-        );
-        return null;
-    }
-
-    return String.join("|",
-            requestIdField.getText().trim(),
-            updatedPatientId,
-            doctorId,
-            updatedTestType,
-            updatedRoomId,
-            updatedDateRequested,
-            updatedDateCompleted,
-            updatedStatus
-    );
-    }
-    
     private boolean isValidRecord(String record) {
         return ManageRecordsHelper.isValidRecord(record);
     }
@@ -873,7 +404,7 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
         if (rosterTable) {
-            String newRecord = managerMethods.addRosterRecord();
+            String newRecord = rosterMethods.addRosterRecord();
 
             if (newRecord == null) {
                 return;
@@ -891,20 +422,62 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
         if (consultationTable) {
-            addVitalSignRecord();
+            String record =
+                    DoctorMethods.addPrescriptionRecord(
+                            this,
+                            fileName
+                    );
+
+            if (record != null) {
+                FileManager.appendLine(
+                        fileName,
+                        record
+                );
+
+                refreshTable();
+            }
+
             return;
         }
         if (prescriptionTable) {
-            addPrescriptionRecord();
+            String record =
+                    DoctorMethods.addPrescriptionRecord(
+                            this,
+                            fileName
+                    );
+
+            if (record != null) {
+                FileManager.appendLine(
+                        fileName,
+                        record
+                );
+
+                refreshTable();
+            }
+
             return;
         }
         if (labRequestTable) {
-        addLabRequestRecord();
-        return;
+            String record =
+                    DoctorMethods.addPrescriptionRecord(
+                            this,
+                            fileName
+                    );
+
+            if (record != null) {
+                FileManager.appendLine(
+                        fileName,
+                        record
+                );
+
+                refreshTable();
+            }
+
+            return;
         }
         
         if (departmentTable) {
-            String newRecord = managerMethods.addDepartmentRow();
+            String newRecord = rosterMethods.addDepartmentRow();
 
             if (newRecord != null) {
 
@@ -1000,497 +573,5 @@ public class ManageRecordsPanel extends JPanel {
     
     public JTable getRecordsTable() {
         return recordsTable;
-    }
-    
-    private boolean hasVitalSignOnDate(String patientId, String date, String excludeVitalSignId) {
-    for (String existingRecord : records) {
-        String[] existingParts = splitRecord(existingRecord);
-        if (existingParts.length < 8) {
-            continue;
-            }
-            String existingId = existingParts[0].trim();
-            String existingPatientId = existingParts[1].trim();
-            String existingDate = existingParts[7].trim();
-
-        if (excludeVitalSignId != null && existingId.equals(excludeVitalSignId)) {
-                continue; 
-            }
-
-        if (existingPatientId.equals(patientId) && existingDate.equals(date)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    private boolean hasPrescriptionOnDate(String patientId, String date, String excludePrescriptionId) {
-    for (String existingRecord : records) {
-        String[] existingParts = splitRecord(existingRecord);
-        if (existingParts.length < 8) {
-            continue;
-            }
-        String existingId = existingParts[0].trim();
-        String existingPatientId = existingParts[1].trim();
-        String existingDate = existingParts[6].trim();
-
-        if (excludePrescriptionId != null && existingId.equals(excludePrescriptionId)) {
-            continue; 
-            }
-
-        if (existingPatientId.equals(patientId) && existingDate.equals(date)) {
-            return true;
-            }
-        }
-        return false;
-    }
-    
-    private boolean hasPrescriptionForMedication(String patientId, String medication, String excludePrescriptionId) {
-    for (String existingRecord : records) {
-        String[] existingParts = splitRecord(existingRecord);
-        if (existingParts.length < 8) {
-            continue;
-            }
-        String existingId = existingParts[0].trim();
-        String existingPatientId = existingParts[1].trim();
-        String existingMedication = existingParts[3].trim();
-
-        if (excludePrescriptionId != null && existingId.equals(excludePrescriptionId)) {
-            continue; 
-            }
-
-        if (existingPatientId.equals(patientId) && existingMedication.equalsIgnoreCase(medication)) {
-            return true;
-            }
-        }
-        return false;
-    }
-        
-    private void addVitalSignRecord() {
-    User currentDoctor = Session.getCurrentUser();
-
-    List<User> patients = UserRepository.loadAll().stream()
-            .filter(user -> user.getRole() == Role.PATIENT)
-            .toList();
-
-    if (patients.isEmpty()) {
-        JOptionPane.showMessageDialog(
-                this,
-                "There are no patients to log vitals for.",
-                "Cannot Add Vital Sign Record",
-                JOptionPane.WARNING_MESSAGE
-        );
-        return;
-    }
-
-    JComboBox<String> patientCombo = new JComboBox<>();
-    for (User patient : patients) {
-        patientCombo.addItem(patient.getFullName());
-    }
-
-    JTextField doctorIdField = new JTextField(currentDoctor.getFullName());
-    setUneditable(doctorIdField);
-    List<String> specialties = new ArrayList<>();
-    List<String> consultationRateLines = FileManager.readLines("consultation_rates.txt");
-    for (int lineIndex = 0; lineIndex < consultationRateLines.size(); lineIndex++) {
-        String rateLine = consultationRateLines.get(lineIndex);
-        if (lineIndex == 0 && rateLine.trim().startsWith("SPECIALTY")) {
-            continue; 
-        }
-        String[] rateParts = rateLine.split("\\|", -1);
-        if (rateParts.length >= 1 && !rateParts[0].trim().isEmpty()) {
-            specialties.add(rateParts[0].trim());
-        }
-    }
-    if (specialties.isEmpty()) {
-        JOptionPane.showMessageDialog(
-                this,
-                "No specialties are configured yet. Ask an Admin to add one under Consultation Rates first.",
-                "Cannot Add Vital Sign Record",
-                JOptionPane.WARNING_MESSAGE
-        );
-        return;
-    }
-    JComboBox<String> consultationIdCombo = new JComboBox<>(specialties.toArray(new String[0]));
-    JTextField bpField = new JTextField();
-    JTextField heartRateField = new JTextField();
-    JTextField temperatureField = new JTextField();
-    JTextField dateField = new JTextField(java.time.LocalDate.now().toString());
-    JTextField notesField = new JTextField();
-
-    JPanel form = new JPanel(new GridLayout(8, 2, 8, 8));
-
-    form.add(new JLabel("PATIENT:"));
-    form.add(patientCombo);
-
-    form.add(new JLabel("DOCTOR:"));
-    form.add(doctorIdField);
-
-    form.add(new JLabel("CONSULTATION_ID (specialty):"));
-    form.add(consultationIdCombo);
-
-    form.add(new JLabel("BP:"));
-    form.add(bpField);
-
-    form.add(new JLabel("HEART_RATE:"));
-    form.add(heartRateField);
-
-    form.add(new JLabel("TEMPERATURE:"));
-    form.add(temperatureField);
-
-    form.add(new JLabel("DATE:"));
-    form.add(dateField);
-
-    form.add(new JLabel("NOTES (symptoms / observations / diagnosis):"));
-    form.add(notesField);
-
-    int choice = JOptionPane.showConfirmDialog(
-            this,
-            form,
-            "Add Vital Sign Record",
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE
-    );
-
-    if (choice != JOptionPane.OK_OPTION) {
-        return;
-    }
-
-    String consultationId = (String) consultationIdCombo.getSelectedItem();
-    String bp = bpField.getText().trim();
-    String heartRate = heartRateField.getText().trim();
-    String temperature = temperatureField.getText().trim();
-    String date = dateField.getText().trim();
-    String notes = notesField.getText().trim();
-
-    if (consultationId.isEmpty()
-            || bp.isEmpty()
-            || heartRate.isEmpty()
-            || temperature.isEmpty()
-            || date.isEmpty()
-            || notes.isEmpty()) {
-
-        JOptionPane.showMessageDialog(
-                this,
-                "All fields, including consultation notes, are required.",
-                "Invalid Vital Sign Record",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-
-    if (hasIllegalChars(consultationId, bp, heartRate, temperature, date, notes)) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Fields cannot contain the '|' character or line breaks.",
-                "Invalid Vital Sign Record",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-
-    String patientId = patients.get(patientCombo.getSelectedIndex()).getUserId();
-
-    if (hasVitalSignOnDate(patientId, date, null)) {
-        JOptionPane.showMessageDialog(
-                this,
-                "This patient already has a vital sign record for " + date + ". Only one record per day is allowed.",
-                "Duplicate Record",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-
-    FileManager.appendLine(
-            fileName,
-            String.join("|",
-                    IDGenerator.next("VS", fileName),
-                    patientId,
-                    currentDoctor.getUserId(),
-                    consultationId,
-                    bp,
-                    heartRate,
-                    temperature,
-                    date,
-                    notes
-                )
-        );
-
-        refreshTable();
-    }
-    
-    private void addPrescriptionRecord() {
-    User currentDoctor = Session.getCurrentUser();
-
-    List<User> patients = UserRepository.loadAll().stream()
-            .filter(user -> user.getRole() == Role.PATIENT)
-            .toList();
-
-    if (patients.isEmpty()) {
-        JOptionPane.showMessageDialog(
-                this,
-                "There are no patients to prescribe medication for.",
-                "Cannot Add Prescription",
-                JOptionPane.WARNING_MESSAGE
-        );
-        return;
-    }
-
-    JComboBox<String> patientCombo = new JComboBox<>();
-    for (User patient : patients) {
-        patientCombo.addItem(patient.getFullName());
-    }
-
-    JTextField doctorIdField = new JTextField(currentDoctor.getFullName());
-    setUneditable(doctorIdField);
-    JTextField medicationField = new JTextField();
-    JComboBox<String> dosageCombo = new JComboBox<>(new String[]{"100mg", "200mg", "300mg", "400mg", "500mg"});
-    JComboBox<String> durationCombo = new JComboBox<>(new String[]{
-        "1 day", "2 days", "3 days", "4 days", "5 days", "6 days", "7 days"});
-    JTextField dateIssuedField = new JTextField(java.time.LocalDate.now().toString());
-    JComboBox<String> statusCombo = new JComboBox<>(new String[]{"ACTIVE", "COMPLETED", "CANCELLED"});
-
-    JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
-
-    form.add(new JLabel("PATIENT:"));
-    form.add(patientCombo);
-
-    form.add(new JLabel("DOCTOR:"));
-    form.add(doctorIdField);
-
-    form.add(new JLabel("MEDICATION:"));
-    form.add(medicationField);
-
-    form.add(new JLabel("DOSAGE:"));
-    form.add(dosageCombo);
-
-    form.add(new JLabel("DURATION:"));
-    form.add(durationCombo);
-
-    form.add(new JLabel("DATE_ISSUED (YYYY-MM-DD):"));
-    form.add(dateIssuedField);
-
-    form.add(new JLabel("STATUS:"));
-    form.add(statusCombo);
-
-    int choice = JOptionPane.showConfirmDialog(
-            this,
-            form,
-            "Issue Prescription",
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE
-        );
-
-    if (choice != JOptionPane.OK_OPTION) {
-        return;
-        }
-
-    String medication = medicationField.getText().trim();
-    String dosage = (String) dosageCombo.getSelectedItem();
-    String duration = (String) durationCombo.getSelectedItem();
-    String dateIssued = dateIssuedField.getText().trim();
-    String status = (String) statusCombo.getSelectedItem();
-
-    if (medication.isEmpty() || dateIssued.isEmpty()) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Medication and date issued are required.",
-                "Invalid Prescription",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-
-    try {
-        java.time.LocalDate.parse(dateIssued);
-    } catch (java.time.format.DateTimeParseException exception) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Date issued must be in YYYY-MM-DD format.",
-                "Invalid Prescription",
-                JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-
-    if (hasIllegalChars(medication, dosage, duration, dateIssued)) {
-        JOptionPane.showMessageDialog(
-                    this,
-                    "Fields cannot contain the '|' character or line breaks.",
-                    "Invalid Prescription",
-                    JOptionPane.WARNING_MESSAGE
-                );
-            return;
-        }
-    
-    String patientId = patients.get(patientCombo.getSelectedIndex()).getUserId();
-    
-    if (hasPrescriptionForMedication(patientId, medication, null)) {
-    JOptionPane.showMessageDialog(
-                    this,
-                    "This patient already has a prescription for " + medication + ".",
-                    "Duplicate Medication",
-                    JOptionPane.WARNING_MESSAGE
-                );
-            return;
-        }
-
-    FileManager.appendLine(
-            fileName,
-            String.join("|",
-                    IDGenerator.next("RX", fileName),
-                    patientId,
-                    currentDoctor.getUserId(),
-                    medication,
-                    dosage,
-                    duration,
-                    dateIssued,
-                    status
-                )
-        );
-
-        refreshTable();
-    }
-    
-    
-    private void addLabRequestRecord() {
-    User currentDoctor = Session.getCurrentUser();
-
-    List<User> patients = UserRepository.loadAll().stream()
-            .filter(user -> user.getRole() == Role.PATIENT)
-            .toList();
-
-    if (patients.isEmpty()) {
-        JOptionPane.showMessageDialog(
-                this,
-                "There are no patients to request tests for.",
-                "Cannot Add Request",
-                JOptionPane.WARNING_MESSAGE
-        );
-        return;
-    }
-
-    JComboBox<String> patientCombo = new JComboBox<>();
-    for (User patient : patients) {
-        patientCombo.addItem(patient.getFullName());
-    }
-
-    JTextField doctorIdField = new JTextField(currentDoctor.getFullName());
-    setUneditable(doctorIdField);
-    JComboBox<String> testTypeCombo = new JComboBox<>(new String[]{
-            "Blood Test", "X-Ray", "MRI", "CT Scan", "Ultrasound", "Other Specialized Imaging"});
-
-    List<String> roomIds = new ArrayList<>();
-    JComboBox<String> roomCombo = new JComboBox<>();
-    roomCombo.addItem("No room needed");
-    for (String assetLine : FileManager.readLines("hospital_assets.txt")) {
-        String[] assetParts = assetLine.split("\\|", -1);
-        if (assetParts.length < 5) {
-            continue;
-        }
-        String assetId = assetParts[0].trim();
-        String assetRoomType = assetParts[1].trim();
-        String assetRoomName = assetParts[2].trim();
-        String assetStatus = assetParts[4].trim();
-
-        if ("IMAGING_ROOM".equalsIgnoreCase(assetRoomType) && "AVAILABLE".equalsIgnoreCase(assetStatus)) {
-            roomIds.add(assetId);
-            roomCombo.addItem(assetRoomName + " (" + assetId + ")");
-        }
-    }
-
-    JTextField statusField = new JTextField("PENDING");
-    setUneditable(statusField);
-    JTextField dateRequestedField = new JTextField(java.time.LocalDate.now().toString());
-
-    JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
-
-    form.add(new JLabel("PATIENT:"));
-    form.add(patientCombo);
-
-    form.add(new JLabel("DOCTOR:"));
-    form.add(doctorIdField);
-
-    form.add(new JLabel("TEST_TYPE:"));
-    form.add(testTypeCombo);
-
-    form.add(new JLabel("ROOM (if imaging needed):"));
-    form.add(roomCombo);
-
-    form.add(new JLabel("STATUS:"));
-    form.add(statusField);
-
-    form.add(new JLabel("DATE_REQUESTED (YYYY-MM-DD):"));
-    form.add(dateRequestedField);
-
-    int choice = JOptionPane.showConfirmDialog(
-            this,
-            form,
-            "Request Lab Test / Imaging",
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE
-    );
-
-    if (choice != JOptionPane.OK_OPTION) {
-        return;
-    }
-
-    String testType = (String) testTypeCombo.getSelectedItem();
-    String dateRequested = dateRequestedField.getText().trim();
-
-    if (dateRequested.isEmpty()) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Date requested is required.",
-                "Invalid Request",
-                JOptionPane.WARNING_MESSAGE
-        );
-        return;
-    }
-
-    try {
-        java.time.LocalDate.parse(dateRequested);
-    } catch (java.time.format.DateTimeParseException exception) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Date requested must be in YYYY-MM-DD format.",
-                "Invalid Request",
-                JOptionPane.WARNING_MESSAGE
-        );
-        return;
-    }
-
-    int selectedRoomIndex = roomCombo.getSelectedIndex();
-    String roomId = selectedRoomIndex > 0 ? roomIds.get(selectedRoomIndex - 1) : "";
-
-    if (hasIllegalChars(testType, dateRequested, roomId)) {
-        JOptionPane.showMessageDialog(
-                this,
-                "Fields cannot contain the '|' character or line breaks.",
-                "Invalid Request",
-                JOptionPane.WARNING_MESSAGE
-        );
-        return;
-    }
-    String patientId = patients.get(patientCombo.getSelectedIndex()).getUserId();
-
-    FileManager.appendLine(
-    fileName,
-    String.join("|",
-            IDGenerator.next("LR", fileName),
-            patientId,
-            currentDoctor.getUserId(),
-            testType,
-            roomId,
-            dateRequested,
-            "",
-            "PENDING"
-            )
-    );
-
-    refreshTable();
-}
-  
-    private String findName(String userId) {
-        return ManageRecordsHelper.findName(userId);
     }
 }

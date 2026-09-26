@@ -32,8 +32,8 @@ public final class ManageRecordsHelper {
     private boolean updatingAssetFilter;
     private final List<String> records = new ArrayList<>();
     private String headerLine;
-    private boolean headerPresent;
-    private boolean initialized;
+    
+    private final DoctorMethods doctorMethods;
 
     public ManageRecordsHelper(String fileName, DefaultTableModel tableModel, JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox, boolean consultationTable, boolean prescriptionTable, boolean labRequestTable) {
         this.fileName = fileName;
@@ -49,6 +49,7 @@ public final class ManageRecordsHelper {
         this.consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
         this.prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
         this.labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
+        this.doctorMethods = new DoctorMethods();
     }
 
     public List<String> getRecords() {
@@ -274,7 +275,10 @@ public final class ManageRecordsHelper {
                                             parts[4].trim(),
                                             parts[5].trim()});
         } else if (consultationTable && parts.length >= 9) {
-            String notes = parts.length >= 9 ? parts[8].trim() : "";
+        if (!doctorMethods.visibleToCurrentDoctor(parts[2].trim())) {
+            return;
+        }
+        String notes = parts.length >= 9 ? parts[8].trim() : "";
             tableModel.addRow(new Object[]{
                 parts[0].trim(),
                 findName(parts[1].trim()),
@@ -288,6 +292,9 @@ public final class ManageRecordsHelper {
             });
  
         } else if (prescriptionTable && parts.length >= 8) {
+            if (!doctorMethods.visibleToCurrentDoctor(parts[2].trim())) {
+                return;
+            }
             tableModel.addRow(new Object[]{
                 parts[0].trim(), 
                 findName(parts[1].trim()),
@@ -300,6 +307,9 @@ public final class ManageRecordsHelper {
             });
  
         } else if (labRequestTable && parts.length >= 8) {
+            if (!doctorMethods.visibleToCurrentDoctor(parts[2].trim())) {
+                return;
+            }
             tableModel.addRow(new Object[]{
                 parts[0].trim(), 
                 findName(parts[1].trim()),
