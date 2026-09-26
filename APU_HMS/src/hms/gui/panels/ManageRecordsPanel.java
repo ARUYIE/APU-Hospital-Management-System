@@ -591,7 +591,7 @@ public class ManageRecordsPanel extends JPanel {
         }
         if (consultationTable) {
             String record =
-                    DoctorMethods.addPrescriptionRecord(
+                    DoctorMethods.addVitalSignRecord(
                             this,
                             fileName
                     );
@@ -627,7 +627,7 @@ public class ManageRecordsPanel extends JPanel {
         }
         if (labRequestTable) {
             String record =
-                    DoctorMethods.addPrescriptionRecord(
+                    DoctorMethods.addLabRequestRecord(
                             this,
                             fileName
                     );
