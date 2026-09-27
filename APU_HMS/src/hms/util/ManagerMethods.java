@@ -430,16 +430,6 @@ public class ManagerMethods {
             return null;
         }
 
-        String selectedManagerId = existingManagerId;
-
-        if (managerCombo.getSelectedIndex() >= 0) {
-
-            selectedManagerId
-                    = headManagers
-                            .get(managerCombo.getSelectedIndex())
-                            .getUserId();
-        }
-
         if (panel.hasIllegalChars(
                 updatedDeptName,
                 updatedDescription)) {
@@ -559,7 +549,6 @@ public class ManagerMethods {
     }
 
     public String addRosterRecord() {
-        // Get the currently logged-in manager
         User loggedInManager
                 = Session.getCurrentUser();
 
@@ -578,7 +567,6 @@ public class ManagerMethods {
         String loggedInManagerId
                 = loggedInManager.getUserId();
 
-        // Read doctor-manager assignments
         List<String> assignments
                 = FileManager.readLines(
                         "doctor_manager_assignments.txt"
@@ -615,7 +603,6 @@ public class ManagerMethods {
             }
         }
 
-        // Load users
         List<User> users
                 = UserRepository.loadAll();
 
@@ -626,7 +613,6 @@ public class ManagerMethods {
                         == Role.DOCTOR)
                         .toList();
 
-        // Doctor selection
         JComboBox<String> doctorCombo
                 = new JComboBox<>();
 
@@ -659,8 +645,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Find the department assigned to
-        // the logged-in medical manager.
         String department = null;
 
         List<String> departments
@@ -668,7 +652,6 @@ public class ManagerMethods {
                         "department.txt"
                 );
 
-        // Skip the header
         for (int i = 1;
                 i < departments.size();
                 i++) {
@@ -704,8 +687,6 @@ public class ManagerMethods {
             }
         }
 
-        // The logged-in manager must have
-        // an assigned department.
         if (department == null
                 || department.isEmpty()) {
 
@@ -719,7 +700,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Department display field
         JTextField departmentField
                 = new JTextField(department);
 
@@ -727,7 +707,6 @@ public class ManagerMethods {
                 departmentField
         );
 
-        // Date
         SpinnerDateModel dateModel
                 = new SpinnerDateModel();
 
@@ -741,7 +720,6 @@ public class ManagerMethods {
                 dateEditor
         );
 
-        // Shift start time
         SpinnerDateModel startTimeModel
                 = new SpinnerDateModel();
 
@@ -758,7 +736,6 @@ public class ManagerMethods {
                 startTimeEditor
         );
 
-        // Shift end time
         SpinnerDateModel endTimeModel
                 = new SpinnerDateModel();
 
@@ -775,14 +752,12 @@ public class ManagerMethods {
                 endTimeEditor
         );
 
-        // Status
         JComboBox<String> statusCombo
                 = new JComboBox<>();
 
         statusCombo.addItem("Active");
         statusCombo.addItem("Inactive");
 
-        // Form
         JPanel form
                 = new JPanel(
                         new GridLayout(6, 2, 8, 8)
@@ -843,12 +818,11 @@ public class ManagerMethods {
             return null;
         }
 
-        // Get selected values
         String selectedDoctorName
                 = (String) doctorCombo.getSelectedItem();
 
-        String department
-                = (String) departmentCombo.getSelectedItem();
+        String selectedDepartment
+                = departmentField.getText().trim();
 
         java.util.Date selectedDate
                 = (java.util.Date) dateSpinner.getValue();
@@ -891,10 +865,9 @@ public class ManagerMethods {
         String status
                 = (String) statusCombo.getSelectedItem();
 
-        // Validate required fields
         if (selectedDoctorName == null
                 || selectedDoctorName.isEmpty()
-                || department.isEmpty()
+                || selectedDepartment.isEmpty()
                 || date.isEmpty()
                 || shift.isEmpty()
                 || status == null
@@ -910,7 +883,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Find selected doctor's ID
         String selectedDoctorId = "";
 
         for (User doctor : doctors) {
@@ -939,8 +911,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Check whether doctor already has
-        // a roster on this date.
         if (doctorShiftCheck(
                 selectedDoctorName,
                 date,
@@ -958,25 +928,19 @@ public class ManagerMethods {
             return null;
         }
 
-        // Generate roster ID
         String rosterId
                 = IDGenerator.next("R", fileName);
 
-        // Create the roster record
-        String normalizedRecord
-                = String.join(
-                        "|",
-                        rosterId,
-                        selectedDoctorName,
-                        loggedInManager.getFullName(),
-                        department,
-                        date,
-                        shift,
-                        status
-                );
-
-        // Return the record to ManageRecordsPanel
-        return normalizedRecord;
+        return String.join(
+                "|",
+                rosterId,
+                selectedDoctorName,
+                loggedInManager.getFullName(),
+                selectedDepartment,
+                date,
+                shift,
+                status
+        );
     }
 
     public String editRosterRecord(String record) {
@@ -1014,9 +978,6 @@ public class ManagerMethods {
         String managerName
                 = parts[2].trim();
 
-        String existingDepartment
-                = parts[3].trim();
-
         String date
                 = parts[4].trim();
 
@@ -1026,8 +987,6 @@ public class ManagerMethods {
         String status
                 = parts[6].trim();
 
-        // Check that this roster is managed by
-        // the currently logged-in manager.
         if (!managerName.equalsIgnoreCase(
                 loggedInManager.getFullName().trim())) {
 
@@ -1041,8 +1000,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Find the department assigned to the
-        // currently logged-in medical manager.
         String department = null;
 
         List<String> departments
@@ -1050,7 +1007,6 @@ public class ManagerMethods {
                         "department.txt"
                 );
 
-        // Skip the header
         for (int i = 1;
                 i < departments.size();
                 i++) {
@@ -1086,8 +1042,6 @@ public class ManagerMethods {
             }
         }
 
-        // The logged-in manager must have
-        // an assigned department.
         if (department == null
                 || department.isEmpty()) {
 
@@ -1101,7 +1055,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Department display field
         JTextField departmentField
                 = new JTextField(department);
 
@@ -1126,7 +1079,6 @@ public class ManagerMethods {
         JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
         JDatePickerImpl effectiveDatePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
 
-        // Shift start time
         SpinnerDateModel startTimeModel
                 = new SpinnerDateModel();
 
@@ -1143,7 +1095,6 @@ public class ManagerMethods {
                 startTimeEditor
         );
 
-        // Shift end time
         SpinnerDateModel endTimeModel
                 = new SpinnerDateModel();
 
@@ -1160,7 +1111,6 @@ public class ManagerMethods {
                 endTimeEditor
         );
 
-        // Load the existing shift time
         try {
 
             if (shift.contains(" - ")) {
@@ -1207,7 +1157,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Status
         JComboBox<String> statusField
                 = new JComboBox<>(
                         new String[]{
@@ -1317,9 +1266,7 @@ public class ManagerMethods {
         }
 
         java.text.SimpleDateFormat timeFormat
-                = new java.text.SimpleDateFormat("HH:mm");
-        java.text.SimpleDateFormat timeFormat =
-                new java.text.SimpleDateFormat(
+                = new java.text.SimpleDateFormat(
                         "HH:mm"
                 );
 
@@ -1336,9 +1283,8 @@ public class ManagerMethods {
                 = statusField
                         .getSelectedItem()
                         .toString()
-                        .trim
-                 for scheduling conflict using
-        // the NEW date.
+                        .trim();
+
         if (doctorShiftCheck(
                 doctorName,
                 updatedDate,

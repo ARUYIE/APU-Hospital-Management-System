@@ -36,6 +36,7 @@ public class DashboardFrame extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1280, 720);
         setLocationRelativeTo(null);
+        setResizable(false);
         getContentPane().setBackground(UIUtil.DASHBOARD_BLUE);
 
         JPanel root = UIUtil.createPatternPanel();
