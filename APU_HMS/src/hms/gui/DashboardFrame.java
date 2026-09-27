@@ -216,8 +216,8 @@ public class DashboardFrame extends JFrame {
                 break;
 
             case "View My Assessment Results":
-                setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "View My Assessment Results", "medical_records.txt"));
+                setContent(new hms.gui.panels.ViewAssessmentResultsPanel(
+                            "View My Assessment Results"));
                 break;
 
             case "View My Bills":

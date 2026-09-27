@@ -10,8 +10,10 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
@@ -154,44 +156,106 @@ public final class RecordsHelperAppointment {
             doctorCombo.addItem(doctor.getFullName());
         }
 
-        // Load existing departments
-        List<String> departmentRecords = FileManager.readLines("department.txt");
-        List<String> departments = new ArrayList<>();
+        JTextField dateField = new JTextField(java.time.LocalDate.now().toString());
+        JComboBox<String> timeCombo = new JComboBox<>();
+        Runnable updateTimeSlots = () -> {
+            timeCombo.removeAllItems();
+            String selectedDoctorName = (String) doctorCombo.getSelectedItem();
+            String selectedDate = dateField.getText().trim();
 
-        for (int i = 1; i < departmentRecords.size(); i++) {
-            String departmentRecord = departmentRecords.get(i);
+            if (selectedDoctorName == null || selectedDate.isEmpty()) return;
 
-            if (departmentRecord == null || departmentRecord.trim().isEmpty()) {
-                continue;
+            String shiftRange = null;
+            List<String> rosterLines = FileManager.readLines("roster.txt");
+            for (int i = 1; i < rosterLines.size(); i++) {
+                String line = rosterLines.get(i);
+                if (line == null || line.trim().isEmpty()) continue;
+                String[] parts = ManageRecordsHelper.splitRecord(line);
+                if (parts.length >= 6) {
+                    String docName = parts[1].trim();
+                    String rosterDate = parts[4].trim();
+                    String shift = parts[5].trim(); // e.g., "09:30 - 17:00"
+
+                    if ((docName.equalsIgnoreCase(selectedDoctorName) || ManageRecordsHelper.findName(docName).equalsIgnoreCase(selectedDoctorName))
+                            && rosterDate.equals(selectedDate)) {
+                        shiftRange = shift;
+                        break;
+                    }
+                }
             }
 
-            String[] departmentParts =
-                    ManageRecordsHelper.splitRecord(departmentRecord);
-
-            if (departmentParts.length < 2) {
-                continue;
+            if (shiftRange == null || !shiftRange.contains("-")) {
+                timeCombo.addItem("No shift scheduled");
+                return;
             }
 
-            String departmentName = departmentParts[1].trim();
+            // Parse shift hours
+            try {
+                String[] times = shiftRange.split("-");
+                LocalTime startTime = LocalTime.parse(times[0].trim(), DateTimeFormatter.ofPattern("HH:mm"));
+                LocalTime endTime = LocalTime.parse(times[1].trim(), DateTimeFormatter.ofPattern("HH:mm"));
 
-            if (!departmentName.isEmpty()) {
-                departments.add(departmentName);
+                // Find already booked times from records (bookings.txt)
+                List<String> bookedTimes = new ArrayList<>();
+                for (String rec : records) {
+                    String[] p = ManageRecordsHelper.splitRecord(rec);
+                    if (p.length >= 6) {
+                        String bDoc = p[2].trim();
+                        String bDate = p[3].trim();
+                        String bTime = p[4].trim();
+                        String bStatus = p[5].trim();
+
+                        if ((bDoc.equalsIgnoreCase(selectedDoctorName) || ManageRecordsHelper.findName(bDoc).equalsIgnoreCase(selectedDoctorName))
+                                && bDate.equals(selectedDate)
+                                && !bStatus.equalsIgnoreCase("CANCELLED")) {
+                            bookedTimes.add(bTime);
+                        }
+                    }
+                }
+
+                // Generate 30-minute slots
+                LocalTime current = startTime;
+                while (current.plusMinutes(30).compareTo(endTime) <= 0) {
+                    String slotStr = current.format(DateTimeFormatter.ofPattern("HH:mm"));
+                    if (bookedTimes.contains(slotStr)) {
+                        timeCombo.addItem(slotStr + " (Booked)");
+                    } else {
+                        timeCombo.addItem(slotStr);
+                    }
+                    current = current.plusMinutes(30);
+                }
+
+            } catch (Exception ex) {
+                timeCombo.addItem("Invalid Shift Format");
             }
-        }
+        };
 
-        if (departments.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    comp,
-                    "At least one department must exist before adding an appointment.",
-                    "Cannot Add Appointment",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-        JTextField dateField =
-                new JTextField(java.time.LocalDate.now().toString());
+        // Custom Renderer to Grey out Booked slots
+        timeCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value != null && value.toString().contains("(Booked)")) {
+                    if (!isSelected) {
+                        c.setBackground(Color.LIGHT_GRAY);
+                        c.setForeground(Color.DARK_GRAY);
+                    }
+                    setEnabled(false);
+                } else {
+                    if (!isSelected) {
+                        c.setBackground(Color.WHITE);
+                        c.setForeground(Color.BLACK);
+                    }
+                    setEnabled(true);
+                }
+                return c;
+            }
+        });
 
-        JTextField timeField = new JTextField("09:00");
+        // Trigger updates when doctor or date changes
+        doctorCombo.addActionListener(e -> updateTimeSlots.run());
+        dateField.addActionListener(e -> updateTimeSlots.run());
+        updateTimeSlots.run(); // Initial population
 
         JComboBox<String> statusCombo = new JComboBox<>(
                 new String[]{"SCHEDULED", "COMPLETED", "CANCELLED"}
@@ -208,8 +272,8 @@ public final class RecordsHelperAppointment {
         form.add(new JLabel("DATE (YYYY-MM-DD):"));
         form.add(dateField);
 
-        form.add(new JLabel("TIME (HH:mm):"));
-        form.add(timeField);
+        form.add(new JLabel("TIME (30-min slot):"));
+        form.add(timeCombo);
 
         form.add(new JLabel("STATUS:"));
         form.add(statusCombo);
@@ -228,7 +292,14 @@ public final class RecordsHelperAppointment {
 
         String appointmentId = IDGenerator.next("B", fileName);
         String date = dateField.getText().trim();
-        String time = timeField.getText().trim();
+        
+        // Clean up time string if it contains " (Booked)" label
+        String rawTimeSelection = (String) timeCombo.getSelectedItem();
+        if (rawTimeSelection == null || rawTimeSelection.contains("Booked") || rawTimeSelection.contains("Shift")) {
+            JOptionPane.showMessageDialog(comp, "Please select a valid available time slot.", "Invalid Time", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        String time = rawTimeSelection.trim();
 
         String status = (String) statusCombo.getSelectedItem();
         if (ManageRecordsHelper.hasIllegalChars(
@@ -258,21 +329,6 @@ public final class RecordsHelperAppointment {
             return;
         }
 
-        try {
-            LocalTime.parse(
-                    time,
-                    DateTimeFormatter.ofPattern("HH:mm")
-            );
-        } catch (DateTimeParseException exception) {
-            JOptionPane.showMessageDialog(
-                    comp,
-                    "Time must be in HH:mm format (e.g. 09:30).",
-                    "Invalid Appointment",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return;
-        }
-
         int patientIndex = patientCombo.getSelectedIndex();
         int doctorIndex = doctorCombo.getSelectedIndex();
 
@@ -280,18 +336,12 @@ public final class RecordsHelperAppointment {
             return;
         }
 
-        String patientId =
-                patients.get(patientIndex).getUserId();
-
-        String doctorId =
-                doctors.get(doctorIndex).getUserId();
+        String patientId = patients.get(patientIndex).getUserId();
+        String doctorId = doctors.get(doctorIndex).getUserId();
 
         // Prevent double-booking the same doctor at the same date/time
         for (String record : records) {
-
-            String[] parts =
-                    ManageRecordsHelper.splitRecord(record);
-
+            String[] parts = ManageRecordsHelper.splitRecord(record);
             if (parts.length >= 6
                     && parts[2].trim().equals(doctorId)
                     && parts[3].trim().equals(date)
@@ -323,29 +373,29 @@ public final class RecordsHelperAppointment {
         refreshAction.run();
     }
 
-    public void addAppointmentRow(DefaultTableModel tableModel, String line,JComboBox<String> doctorSearchBox) {
-            String[] parts = ManageRecordsHelper.splitRecord(line);
-            if (parts.length < 6) {
+    public void addAppointmentRow(DefaultTableModel tableModel, String line, JComboBox<String> doctorSearchBox) {
+        String[] parts = ManageRecordsHelper.splitRecord(line);
+        if (parts.length < 6) {
+            return;
+        }
+        
+        String doctorName = ManageRecordsHelper.findName(parts[2].trim());
+        String selectedDoctor = (String) doctorSearchBox.getSelectedItem();
+        if (selectedDoctor != null && !selectedDoctor.equals("All Doctors") && !selectedDoctor.equals("Doctor Name")) {
+            if (!doctorName.equals(selectedDoctor)) {
                 return;
             }
-            
-            String doctorName = ManageRecordsHelper.findName(parts[2].trim());
-            String selectedDoctor = (String) doctorSearchBox.getSelectedItem();
-            if (selectedDoctor != null && !selectedDoctor.equals("All Doctors") && !selectedDoctor.equals("Doctor Name")) {
-                if (!doctorName.equals(selectedDoctor)) {
-                    return;
-                }
-            }
-
-            tableModel.addRow(new Object[]{
-                    parts[0].trim(),
-                    ManageRecordsHelper.findName(parts[1].trim()),
-                    doctorName,
-                    parts[3].trim(),
-                    parts[4].trim(),
-                    parts[5].trim()
-            });
         }
+
+        tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                ManageRecordsHelper.findName(parts[1].trim()),
+                doctorName,
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim()
+        });
+    }
     
     public static List<String> updateAppointmentStatus(Component comp, List<String> records,
             String appointmentId, String newStatus) {

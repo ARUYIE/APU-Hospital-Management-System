@@ -472,6 +472,7 @@ public final class ManageRecordsHelper {
 
     private static final List<String> STATUS_ORDER = Arrays.asList(
         "PENDING", 
+        "IN_PROGRESS",
         "APPROVED", 
         "DENIED", 
         "SCHEDULED",
@@ -502,5 +503,58 @@ public final class ManageRecordsHelper {
         sorter.setComparator(statusColumnIndex, statusComparator);
         table.setRowSorter(sorter);
     }
+    public static void applyStatusColorCoding(JTable table, int statusColumnIndex) {
+        if (table == null) return;
+
+        javax.swing.table.TableCellRenderer defaultRenderer = table.getDefaultRenderer(Object.class);
+
+        table.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable jTable, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                
+                Component c = super.getTableCellRendererComponent(jTable, value, isSelected, hasFocus, row, column);
+
+                if (!isSelected) {
+                    int modelRow = jTable.convertRowIndexToModel(row);
+                    Object statusObj = jTable.getModel().getValueAt(modelRow, statusColumnIndex);
+
+                    if (statusObj != null) {
+                        String status = statusObj.toString().trim().toUpperCase();
+                        switch (status) {
+                            case "COMPLETED":
+                                c.setBackground(java.awt.Color.LIGHT_GRAY); 
+                                c.setForeground(java.awt.Color.BLACK);
+                                break;
+                            case "SCHEDULED":
+                            case "APPROVED":
+                                c.setBackground(new java.awt.Color(220, 248, 220)); // Light Green
+                                c.setForeground(java.awt.Color.BLACK);
+                                break;
+                            case "CANCELLED":
+                            case "DENIED":
+                                c.setBackground(new java.awt.Color(255, 225, 225)); // Light Red/Pink
+                                c.setForeground(java.awt.Color.BLACK);
+                                break;
+                            case "PENDING":
+                                c.setBackground(new java.awt.Color(255, 255, 210)); // Light Yellow
+                                c.setForeground(java.awt.Color.BLACK);
+                                break;
+                            case "IN_PROGRESS":                                
+                            default:
+                                c.setBackground(java.awt.Color.WHITE);
+                                c.setForeground(java.awt.Color.BLACK);
+                                break;
+                        }
+                    } else {
+                        c.setBackground(java.awt.Color.WHITE);
+                        c.setForeground(java.awt.Color.BLACK);
+                    }
+                }
+                return c;
+            }
+        });
+    }
+
 }
 

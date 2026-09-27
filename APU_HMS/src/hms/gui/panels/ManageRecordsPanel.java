@@ -5,7 +5,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,21 +23,16 @@ import javax.swing.table.DefaultTableModel;
 
 import hms.role.Role;
 import hms.role.User;
+import hms.util.DoctorMethods;
 import hms.util.FileManager;
 import hms.util.ManageRecordsHelper;
+import hms.util.ManagerMethods;
+import hms.util.RecordDetailDialog;
 import hms.util.RecordsHelperAppointment;
 import hms.util.RecordsHelperAsset;
 import hms.util.RecordsHelperConsultation;
 import hms.util.RecordsHelperInsurance;
-import hms.util.ManagerMethods;
-import hms.util.DoctorMethods;
 import hms.util.Session;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 
 // for wards, department,appontment, consultation rate, insurance
 public class ManageRecordsPanel extends JPanel {
@@ -96,9 +90,9 @@ public class ManageRecordsPanel extends JPanel {
         
         tableModel = new DefaultTableModel(
                 departmentTable
-                ? new String[]{"DEPTARTMENT_ID", "DEPTARTMENT_NAME", "HEAD_MANAGER_NAME", "DESCRIPTION"}
+                ? new String[]{"DEPARTMENT_ID", "DEPARTMENT_NAME", "HEAD_MANAGER_NAME", "DESCRIPTION"}
                 : appointmentTable
-                ? new String[]{"APPOINTMENT_ID", "PATIENT_NAME", "DOCTOR_NAME", "DATE", "TIME", "STATUS"}
+                ? new String[]{"APPOINTMENT_ID", "PATIENT_NAME", "DOCTOR_NAME", "DATE", "TIME (30MIN SLOTS)", "STATUS"}
                 : assetTable
                 ? new String[]{"ASSET_ID", "ROOM_TYPE", "ROOM_NAME", "LOCATION", "STATUS", "RESERVED_BY"}
                 : insuranceTable
@@ -181,6 +175,10 @@ public class ManageRecordsPanel extends JPanel {
         JButton cancelAppointmentButton = new JButton("Cancel Appointment");
         cancelAppointmentButton.addActionListener(e -> updateSelectedAppointmentStatus("CANCELLED"));
 
+        JButton detailsButton = new JButton("View Full Details");
+        detailsButton.addActionListener(e -> showSelectedRecordDetails());
+
+
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         
         if (assetTable) {
@@ -227,11 +225,15 @@ public class ManageRecordsPanel extends JPanel {
                 actions.add(editButton);
                 actions.add(deleteButton);
             }
-        } else if (!isDoctor){
+        } else if (!isDoctor || !appointmentTable){
             actions.add(addButton);
             actions.add(editButton);
             actions.add(deleteButton);
         }
+        if(medicalRecordTable){
+            actions.add(detailsButton);
+        }
+               
         //has two rows since its a bit too long
         if (appointmentTable) {
             if(isAdmin){
@@ -312,7 +314,7 @@ public class ManageRecordsPanel extends JPanel {
         recordHelper.finishAsset(this, assetId);
     }
 
-    private void updateSelectedAppointmentStatus(String newStatus) {
+private void updateSelectedAppointmentStatus(String newStatus) {
         if (!appointmentTable && !patientAppointmentTable) {
             return;
         }
@@ -323,17 +325,6 @@ public class ManageRecordsPanel extends JPanel {
                     "Please select an appointment first.",
                     "No Record Selected", JOptionPane.WARNING_MESSAGE);
             return;
-        }
-
-        String actionText = newStatus.equals("CANCELLED") ? "cancel this appointment?" : "mark as completed";
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to " + actionText,
-                "Confirm Update",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
-
-        if (confirm != JOptionPane.YES_OPTION) {
-            return; 
         }
 
         int modelRow = recordsTable.convertRowIndexToModel(viewRow);
@@ -362,6 +353,27 @@ public class ManageRecordsPanel extends JPanel {
 
         String[] parts = records.get(recordIndex).split("\\|", -1);
         
+        if (parts.length >= 6) {
+            String currentStatus = parts[5].trim();
+            if ("COMPLETED".equalsIgnoreCase(currentStatus)) {
+                JOptionPane.showMessageDialog(this,
+                        "This appointment has already been completed and cannot be modified.",
+                        "Action Denied", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
+        String actionText = newStatus.equals("CANCELLED") ? "cancel this appointment?" : "mark as completed";
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to " + actionText,
+                "Confirm Update",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return; 
+        }
+
         if (parts.length >= 6) {
             parts[5] = newStatus;
             records.set(recordIndex, String.join("|", parts));
@@ -411,6 +423,26 @@ public class ManageRecordsPanel extends JPanel {
 
             writeRecords(updatedLines, "The status could not be updated.");
             }
+        }
+        if (parts.length >= 6) {
+            String currentStatus = parts[5].trim();
+            if ("COMPLETED".equalsIgnoreCase(currentStatus)) {
+                JOptionPane.showMessageDialog(this,
+                        "This appointment has already been completed and cannot be modified.",
+                        "Action Denied", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
+        String actionText = newStatus.equals("CANCELLED") ? "cancel this appointment?" : "mark as completed";
+        int confirm = JOptionPane.showConfirmDialog(this,
+            "Are you sure you want to " + actionText,
+            "Confirm Update",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE);
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return; 
         }
         refreshTable();
     }
@@ -565,19 +597,19 @@ public class ManageRecordsPanel extends JPanel {
                 : rosterTable
                 ? managerMethods.editRosterRecord(originalRecord)
                 : consultationTable
-                ? doctorMethods.editVitalSignRecord(
+                ? DoctorMethods.editVitalSignRecord(
                         this,
                         originalRecord,
                         fileName
                 )
                 : prescriptionTable
-                ? doctorMethods.editPrescriptionRecord(
+                ? DoctorMethods.editPrescriptionRecord(
                         this,
                         originalRecord,
                         fileName
                 )
                 : labRequestTable
-                ? doctorMethods.editLabRequestRecord(
+                ? DoctorMethods.editLabRequestRecord(
                         this,
                         originalRecord,
                         fileName
@@ -972,7 +1004,7 @@ public class ManageRecordsPanel extends JPanel {
     public JTable getRecordsTable() {
         return recordsTable;
     }
-    
+
     public void addBackButton(Runnable onBack) {
         JButton backButton = new JButton("Back");
         backButton.setBackground(Color.BLACK);
@@ -1007,8 +1039,9 @@ public class ManageRecordsPanel extends JPanel {
     if (labRequestTable) {
         recordsTable.setAutoCreateRowSorter(false);
         ManageRecordsHelper.applyStatusSorter(recordsTable, 7);
+        ManageRecordsHelper.applyStatusColorCoding(recordsTable, 7);
         
-        // Force the STATUS column (index 7) to sort ASCENDING on refresh
+        // Force the STATUS column to sort ASCENDING on refresh
         if (recordsTable.getRowSorter() != null) {
             recordsTable.getRowSorter().setSortKeys(
                 java.util.List.of(new javax.swing.RowSorter.SortKey(7, javax.swing.SortOrder.ASCENDING))
@@ -1016,10 +1049,11 @@ public class ManageRecordsPanel extends JPanel {
         }
     } else if (appointmentTable || patientAppointmentTable) {
             recordsTable.setAutoCreateRowSorter(false);
-            // Apply the sorter to column 5 (Status column for appointments)
+            // Apply the sorter & coloring to column 5
             ManageRecordsHelper.applyStatusSorter(recordsTable, 5);
+            ManageRecordsHelper.applyStatusColorCoding(recordsTable, 5);
             
-            // Force the STATUS column (index 5) to sort ASCENDING on refresh
+            // Force the STATUS column to sort ASCENDING on refresh
             if (recordsTable.getRowSorter() != null) {
                 recordsTable.getRowSorter().setSortKeys(
                     java.util.List.of(new javax.swing.RowSorter.SortKey(5, javax.swing.SortOrder.ASCENDING))
@@ -1041,4 +1075,40 @@ public class ManageRecordsPanel extends JPanel {
             }
         }
     }
+        private void showSelectedRecordDetails() {
+    int viewRow = recordsTable.getSelectedRow();
+    if (viewRow == -1) {
+        JOptionPane.showMessageDialog(this,
+                "Please select a record to expand.",
+                "No Record Selected", JOptionPane.WARNING_MESSAGE);
+        return;
+    }
+
+    int modelRow = recordsTable.convertRowIndexToModel(viewRow);
+    String rawRecord = recordHelper.getRecord(modelRow);
+    if (rawRecord == null) return;
+
+    String[] parts = rawRecord.split("\\|", -1);
+
+    if (consultationTable) { // vital_signs.txt
+        String[] labels = {"VITAL_SIGN_ID", "PATIENT", "DOCTOR", "CONSULTATION_ID", "BP", "HEART_RATE", "TEMPERATURE", "DATE", "NOTES"};
+        // Resolve IDs to friendly names for better readability
+        parts[1] = ManageRecordsHelper.findName(parts[1]);
+        parts[2] = ManageRecordsHelper.findName(parts[2]);
+        RecordDetailDialog.showDetails(this, "Vital Sign & Consultation Details", labels, parts);
+        
+    } else if (prescriptionTable) { // prescriptions.txt
+        String[] labels = {"PRESCRIPTION_ID", "PATIENT", "DOCTOR", "MEDICATION", "DOSAGE", "DURATION", "DATE_ISSUED", "STATUS"};
+        parts[1] = ManageRecordsHelper.findName(parts[1]);
+        parts[2] = ManageRecordsHelper.findName(parts[2]);
+        RecordDetailDialog.showDetails(this, "Prescription Details", labels, parts);
+        
+    } else if (labRequestTable) { // lab_requests.txt
+        String[] labels = {"REQUEST_ID", "PATIENT", "DOCTOR", "TEST_TYPE", "ROOM", "DATE_REQUESTED", "DATE_COMPLETED", "STATUS"};
+        parts[1] = ManageRecordsHelper.findName(parts[1]);
+        parts[2] = ManageRecordsHelper.findName(parts[2]);
+        parts[4] = ManageRecordsHelper.findAssetType(parts[4]);
+        RecordDetailDialog.showDetails(this, "Lab Request Details", labels, parts);
+    }
+}
 }
