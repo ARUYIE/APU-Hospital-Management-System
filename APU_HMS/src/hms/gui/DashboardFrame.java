@@ -192,6 +192,10 @@ public class DashboardFrame extends JFrame {
                 break;
                 
             //Low Kai Lun - Doctor
+            case "My Appointments":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Manage Appointments", "bookings.txt"));
+                break;
             case "Patient Vitals & Consultation Notes":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                     "Log Vitals & Consultation Notes", "vital_signs.txt"));
@@ -204,7 +208,29 @@ public class DashboardFrame extends JFrame {
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                     "Request Lab Tests / Imaging", "lab_requests.txt"));
                 break;
-                
+            
+                //Yong Jun Hong - Patient 
+            case "Book / View Appointments":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Book / View Appointments", "bookings.txt"));
+                break;
+
+            case "View My Assessment Results":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "View My Assessment Results", "medical_records.txt"));
+                break;
+
+            case "View My Bills":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "View My Bills", "bills.txt"));
+                break;
+
+            case "Comment & Rating":
+                setContent(new hms.gui.panels.ManageRecordsPanel(
+                        "Comment & Rating", "feedback_records.txt"));
+                break;
+
+                    
             default:
                 setContent(new hms.gui.panels.PlaceholderPanel(menuLabel));
         }
@@ -215,5 +241,7 @@ public class DashboardFrame extends JFrame {
         contentArea.add(component, BorderLayout.CENTER);
         contentArea.revalidate();
         contentArea.repaint();
+        this.revalidate();
+        this.repaint();
     }
 }

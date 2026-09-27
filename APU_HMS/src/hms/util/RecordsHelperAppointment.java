@@ -1,16 +1,24 @@
 package hms.util;
 
-import java.awt.*;
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.GridLayout;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
+
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.table.DefaultTableModel;
+
 import hms.role.Role;
 import hms.role.User;
-import java.util.ArrayList;
 
 public final class RecordsHelperAppointment {
     private RecordsHelperAppointment() {
@@ -18,7 +26,7 @@ public final class RecordsHelperAppointment {
 
     public static String editAppointmentRecord(Component comp, String record) {
         String[] parts = ManageRecordsHelper.splitRecord(record);
-        if (parts.length < 7) {
+        if (parts.length < 6) {
             return null;
         }
 
@@ -28,7 +36,6 @@ public final class RecordsHelperAppointment {
         String date = parts[3].trim();
         String time = parts[4].trim();
         String status = parts[5].trim();
-        String serviceType = parts[6].trim();
 
         JTextField appointmentIdField = new JTextField(appointmentId);
         setUneditable(appointmentIdField);
@@ -69,13 +76,6 @@ public final class RecordsHelperAppointment {
             }
         }
 
-        JComboBox<String> serviceTypeField =
-                new JComboBox<>(departments.toArray(new String[0]));
-
-        if (departments.contains(serviceType)) {
-            serviceTypeField.setSelectedItem(serviceType);
-        }
-
         JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
 
         form.add(new JLabel("APPOINTMENT_ID:"));
@@ -96,9 +96,6 @@ public final class RecordsHelperAppointment {
         form.add(new JLabel("STATUS:"));
         form.add(statusField);
 
-        form.add(new JLabel("SERVICE_TYPE:"));
-        form.add(serviceTypeField);
-
         int choice = JOptionPane.showConfirmDialog(
                 comp,
                 form,
@@ -111,19 +108,13 @@ public final class RecordsHelperAppointment {
             return null;
         }
 
-        String selectedServiceType =
-                serviceTypeField.getSelectedItem() == null
-                        ? ""
-                        : serviceTypeField.getSelectedItem().toString().trim();
-
         return String.join("|",
                 appointmentIdField.getText().trim(),
                 patientIdField.getText().trim(),
                 doctorIdField.getText().trim(),
                 dateField.getText().trim(),
                 timeField.getText().trim(),
-                statusField.getSelectedItem().toString().trim(),
-                selectedServiceType
+                statusField.getSelectedItem().toString().trim()
         );
     }
 
@@ -197,10 +188,6 @@ public final class RecordsHelperAppointment {
             );
             return;
         }
-
-        JComboBox<String> serviceTypeCombo =
-                new JComboBox<>(departments.toArray(new String[0]));
-
         JTextField dateField =
                 new JTextField(java.time.LocalDate.now().toString());
 
@@ -227,9 +214,6 @@ public final class RecordsHelperAppointment {
         form.add(new JLabel("STATUS:"));
         form.add(statusCombo);
 
-        form.add(new JLabel("SERVICE_TYPE:"));
-        form.add(serviceTypeCombo);
-
         int choice = JOptionPane.showConfirmDialog(
                 comp,
                 form,
@@ -247,16 +231,11 @@ public final class RecordsHelperAppointment {
         String time = timeField.getText().trim();
 
         String status = (String) statusCombo.getSelectedItem();
-
-        String serviceType = serviceTypeCombo.getSelectedItem() == null
-                ? ""
-                : serviceTypeCombo.getSelectedItem().toString().trim();
-
         if (ManageRecordsHelper.hasIllegalChars(
                 appointmentId,
                 date,
                 time,
-                serviceType)) {
+                status)) {
 
             JOptionPane.showMessageDialog(
                     comp,
@@ -337,8 +316,7 @@ public final class RecordsHelperAppointment {
                         doctorId,
                         date,
                         time,
-                        status,
-                        serviceType
+                        status
                 )
         );
 
@@ -347,7 +325,7 @@ public final class RecordsHelperAppointment {
 
     public void addAppointmentRow(DefaultTableModel tableModel, String line,JComboBox<String> doctorSearchBox) {
             String[] parts = ManageRecordsHelper.splitRecord(line);
-            if (parts.length < 7) {
+            if (parts.length < 6) {
                 return;
             }
             
@@ -365,8 +343,7 @@ public final class RecordsHelperAppointment {
                     doctorName,
                     parts[3].trim(),
                     parts[4].trim(),
-                    parts[5].trim(),
-                    parts[6].trim()
+                    parts[5].trim()
             });
         }
     
@@ -376,7 +353,7 @@ public final class RecordsHelperAppointment {
         boolean found = false;
         for (String record : records) {
             String[] parts = ManageRecordsHelper.splitRecord(record);
-            if (parts.length >= 7 && parts[0].trim().equals(appointmentId)) {
+            if (parts.length >= 6 && parts[0].trim().equals(appointmentId)) {
                 found = true;
                 parts[5] = newStatus;
                 updatedLines.add(String.join("|", parts));
