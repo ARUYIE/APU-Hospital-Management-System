@@ -1,5 +1,5 @@
 DEPT_ID|DEPT_NAME|DESCRIPTION|HEAD_MANAGER_ID
-DEPT_ID|DEPT_NAME|DESCRIPTION|HEAD_MANAGER_ID
-D001|CARDIOLOGY|Heart and Cardiovascular Diseases|U002
-D002|NEUROLOGY|Nervous System Disorders|
-D003|GENERAL_SURGERY|General Surgical Procedures|
+D001|Cardiology|Heart and Cardiovascular Diseases|U002
+D002|Neurology|Nervous System Disorders|U008
+D003|General_Surgery|General Surgical Procedures|U002
+D004|Physiotherapy|Physical Recovery Treatment|U008

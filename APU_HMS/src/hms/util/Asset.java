@@ -12,9 +12,9 @@ public class Asset {
     private AssetType assetType;
     private String name;
     private String location;
-    private int capacity; // legacy field retained for compatibility, no longer persisted
-    private String status; // AVAILABLE, OCCUPIED, MAINTENANCE, OUT_OF_SERVICE
-    private String department; // legacy field retained for compatibility, no longer persisted
+    private int capacity; // legacy field 
+    private String status; // AVAILABLE, UNAVAILABLE
+    private String department; // legacy field 
     private String description;
     private LocalDateTime createdDate;
     

@@ -1,8 +1,9 @@
 package hms;
 
-import hms.gui.LoginFrame;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
-import javax.swing.*;
+import hms.gui.LoginFrame;
 
 
 public class Main {
@@ -17,6 +18,7 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             LoginFrame loginFrame = new LoginFrame();
             loginFrame.setVisible(true);
+            loginFrame.setResizable(false);
         });
     }
 }

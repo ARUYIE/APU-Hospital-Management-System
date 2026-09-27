@@ -137,19 +137,6 @@ public final class FileManager {
                  if (!fileExists) {
 
                     switch (fileName.toLowerCase()) {
-
-                        case "report.txt":
-                            writer.write(
-                                    "REPORT_PERIOD|"
-                                    + "TOTAL_PATIENTS|"
-                                    + "APPOINTMENTS|"
-                                    + "COMPLETED|"
-                                    + "CANCELLED|"
-                                    + "TOTAL_REVENUE"
-                            );
-                            writer.newLine();
-                            break;
-
                         case "roster.txt":
                             writer.write(
                                     "ROSTER_ID|"

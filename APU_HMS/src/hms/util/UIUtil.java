@@ -1,7 +1,13 @@
 package hms.util;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagLayout;
+import java.awt.RenderingHints;
+
+import javax.swing.JButton;
+import javax.swing.JPanel;
 
 public final class UIUtil {
     public static final Color DASHBOARD_BLUE = new Color(216, 229, 244);
@@ -44,5 +50,11 @@ public final class UIUtil {
                         loopSize / 2.0, loopSize / 2.0, 215, 220, java.awt.geom.Arc2D.OPEN));
             }
         }
+    }
+
+    public static void styleButton(JButton button, Color backgroundColor) {
+        button.setBackground(backgroundColor);
+        button.setForeground(Color.black);
+        button.setFocusPainted(false);
     }
 }
