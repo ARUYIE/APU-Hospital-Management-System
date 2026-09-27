@@ -7,12 +7,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.TreeMap;
 
 public class ReportData {
@@ -24,12 +22,6 @@ public class ReportData {
     private int completed;
     private int cancelled;
     private double totalRevenue;
-
-    /*
-     * Department appointments are no longer calculated because
-     * SERVICE_TYPE has been removed from bookings.txt.
-     */
-    private final Map<String, Integer> departmentAppointments;
 
     private final Map<String, Double> monthlyRevenue;
     private final Map<String, Integer> appointmentStatus;
@@ -45,20 +37,12 @@ public class ReportData {
 
         this.month = month;
 
-        departmentAppointments = new LinkedHashMap<>();
         monthlyRevenue = new TreeMap<>();
-        appointmentStatus = new LinkedHashMap<>();
-        doctorWorkload = new LinkedHashMap<>();
+        appointmentStatus = new java.util.LinkedHashMap<>();
+        doctorWorkload = new java.util.LinkedHashMap<>();
         weeklyAppointmentVolume = new TreeMap<>();
 
         calculateReport();
-
-        /*
-         * Department appointments are intentionally not calculated.
-         *
-         * bookings.txt no longer contains SERVICE_TYPE.
-         */
-
         calculateMonthlyRevenue();
         calculateAppointmentStatus();
         calculateDoctorWorkload();
@@ -165,31 +149,12 @@ public class ReportData {
 
     /*
      * ---------------------------------------------------------
-     * DEPARTMENT APPOINTMENTS
-     * ---------------------------------------------------------
-     *
-     * SERVICE_TYPE has been removed from bookings.txt.
-     *
-     * Therefore department appointment data is no longer
-     * available from the booking records.
-     *
-     * This method intentionally leaves the map empty.
-     */
-    private void calculateDepartmentAppointments() {
-
-        departmentAppointments.clear();
-    }
-
-    /*
-     * ---------------------------------------------------------
      * MONTHLY REVENUE
      * ---------------------------------------------------------
      *
      * Revenue is calculated directly from bookings.txt.
      *
      * Only COMPLETED appointments generate revenue.
-     *
-     * SERVICE_TYPE is not required.
      */
     private void calculateMonthlyRevenue() {
 
@@ -579,16 +544,10 @@ public class ReportData {
                     continue;
                 }
 
-                /*
-                 * Find the lowest minimum rate.
-                 */
                 if (minRate < minimumRate) {
                     minimumRate = minRate;
                 }
 
-                /*
-                 * Find the highest maximum rate.
-                 */
                 if (maxRate > maximumRate) {
                     maximumRate = maxRate;
                 }
@@ -630,8 +589,8 @@ public class ReportData {
             double minimumRate,
             double maximumRate) {
 
-        Random random =
-                new Random(bookId.hashCode());
+        java.util.Random random =
+                new java.util.Random(bookId.hashCode());
 
         return minimumRate
                 + (maximumRate - minimumRate)
@@ -666,14 +625,6 @@ public class ReportData {
 
     public double getTotalRevenue() {
         return totalRevenue;
-    }
-
-    /*
-     * Kept for compatibility with DepartmentPieChart.
-     * The map remains empty because SERVICE_TYPE no longer exists.
-     */
-    public Map<String, Integer> getDepartmentAppointments() {
-        return departmentAppointments;
     }
 
     public Map<String, Double> getMonthlyRevenue() {
