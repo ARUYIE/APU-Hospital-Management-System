@@ -1,5 +1,6 @@
 DEPT_ID|DEPT_NAME|DESCRIPTION|HEAD_MANAGER_ID
-D001|Cardiology|Heart and Cardiovascular Diseases|U008
-D002|Neurology|Nervous System Disorders|U008
+D001|Cardiology|Heart and Cardiovascular Diseases|U013
+D002|Neurology|Nervous System Disorders|U014
 D003|General_Surgery|General Surgical Procedures|U002
 D004|Physiotherapy|Physical Recovery Treatment|U008
+D005|Colonoscopy|Treatment for Colon and Bowels|U012

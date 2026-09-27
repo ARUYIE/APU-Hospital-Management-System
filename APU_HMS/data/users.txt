@@ -9,3 +9,6 @@ U008|MEDICAL_MANAGER|manager|manager|Manager Two|manager@gmail.com|01001111111
 U009|ADMIN_STAFF|jdoe|password|Jane Doe|janedoe@gmail.com|0123456890
 U010|DOCTOR|liuSS|password|Sammy Liu|sammyliu@gmail.com|01238591942|Surgeon
 U011|PATIENT|ruien|1|ruien1|1|1|1|Male
+U012|MEDICAL_MANAGER|m3|m3|manager3|manager@gmail.com|1111111111111111
+U013|MEDICAL_MANAGER|m4|m4|manager4|manager4@gmail.com|111111111111
+U014|MEDICAL_MANAGER|m5|m5|Lauren Co|manager5@gmail.com|010238472
