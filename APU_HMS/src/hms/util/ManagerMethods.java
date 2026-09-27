@@ -1,12 +1,11 @@
 package hms.util;
 
-import hms.gui.panels.ManageRecordsPanel;
-import hms.role.Role;
-import hms.role.User;
-
 import java.awt.GridLayout;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Properties;
+
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -14,6 +13,14 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
+
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
+
+import hms.gui.panels.ManageRecordsPanel;
+import hms.role.Role;
+import hms.role.User;
 
 public class ManagerMethods {
 
@@ -26,9 +33,9 @@ public class ManagerMethods {
     }
 
     // Clinical Department Methods
-    private boolean departmentNameExists( String departmentName, String currentDeptId) {
-        List<String> departmentRecords =
-                FileManager.readLines("department.txt");
+    private boolean departmentNameExists(String departmentName, String currentDeptId) {
+        List<String> departmentRecords
+                = FileManager.readLines("department.txt");
 
         // Skip header
         for (int i = 1; i < departmentRecords.size(); i++) {
@@ -39,18 +46,18 @@ public class ManagerMethods {
                 continue;
             }
 
-            String[] parts =
-                    ManageRecordsHelper.splitRecord(record);
+            String[] parts
+                    = ManageRecordsHelper.splitRecord(record);
 
             if (parts.length < 4) {
                 continue;
             }
 
-            String existingDeptId =
-                    parts[0].trim();
+            String existingDeptId
+                    = parts[0].trim();
 
-            String existingDeptName =
-                    parts[1].trim();
+            String existingDeptName
+                    = parts[1].trim();
 
             // Ignore the department currently being edited
             if (currentDeptId != null
@@ -67,13 +74,13 @@ public class ManagerMethods {
 
         return false;
     }
-    
+
     public String addDepartmentRow() {
         JTextField nameField = new JTextField();
         JTextField descriptionField = new JTextField();
 
-        List<User> managers =
-                UserRepository.loadAll();
+        List<User> managers
+                = UserRepository.loadAll();
 
         List<User> medicalManagers = managers.stream()
                 .filter(user -> user.getRole() == Role.MEDICAL_MANAGER)
@@ -91,8 +98,8 @@ public class ManagerMethods {
             return null;
         }
 
-        JComboBox<String> managerCombo =
-                new JComboBox<>();
+        JComboBox<String> managerCombo
+                = new JComboBox<>();
 
         for (User manager : medicalManagers) {
             managerCombo.addItem(
@@ -100,8 +107,8 @@ public class ManagerMethods {
             );
         }
 
-        JPanel form =
-                new JPanel(
+        JPanel form
+                = new JPanel(
                         new GridLayout(3, 2, 8, 8)
                 );
 
@@ -126,11 +133,11 @@ public class ManagerMethods {
             return null;
         }
 
-        String deptName =
-                nameField.getText().trim();
+        String deptName
+                = nameField.getText().trim();
 
-        String description =
-                descriptionField.getText().trim();
+        String description
+                = descriptionField.getText().trim();
 
         if (deptName.isEmpty()
                 || description.isEmpty()) {
@@ -158,7 +165,7 @@ public class ManagerMethods {
 
             return null;
         }
-        
+
         if (departmentNameExists(deptName, null)) {
             JOptionPane.showMessageDialog(
                     panel,
@@ -170,8 +177,8 @@ public class ManagerMethods {
             return null;
         }
 
-        int selectedIndex =
-                managerCombo.getSelectedIndex();
+        int selectedIndex
+                = managerCombo.getSelectedIndex();
 
         if (selectedIndex < 0) {
 
@@ -185,13 +192,13 @@ public class ManagerMethods {
             return null;
         }
 
-        String selectedManagerId =
-                medicalManagers
+        String selectedManagerId
+                = medicalManagers
                         .get(selectedIndex)
                         .getUserId();
 
-        String deptId =
-                IDGenerator.next("D", fileName);
+        String deptId
+                = IDGenerator.next("D", fileName);
 
         return String.join(
                 "|",
@@ -271,11 +278,11 @@ public class ManagerMethods {
             return null;
         }
 
-        String updatedDeptName =
-                nameField.getText().trim();
+        String updatedDeptName
+                = nameField.getText().trim();
 
-        String updatedDescription =
-                descriptionField.getText().trim();
+        String updatedDescription
+                = descriptionField.getText().trim();
 
         if (updatedDeptName.isEmpty()
                 || updatedDescription.isEmpty()) {
@@ -294,8 +301,8 @@ public class ManagerMethods {
 
         if (managerCombo.getSelectedIndex() >= 0) {
 
-            selectedManagerId =
-                    headManagers
+            selectedManagerId
+                    = headManagers
                             .get(managerCombo.getSelectedIndex())
                             .getUserId();
         }
@@ -313,7 +320,7 @@ public class ManagerMethods {
 
             return null;
         }
-        
+
         if (departmentNameExists(
                 updatedDeptName,
                 deptId)) {
@@ -336,15 +343,15 @@ public class ManagerMethods {
                 selectedManagerId
         );
     }
-    
+
     // Roster Methods
     private boolean doctorShiftCheck(
             String doctorName,
             String date,
             String currentRosterId) {
 
-        List<String> rosterRecords =
-                FileManager.readLines("roster.txt");
+        List<String> rosterRecords
+                = FileManager.readLines("roster.txt");
 
         // Skip header
         for (int i = 1; i < rosterRecords.size(); i++) {
@@ -355,8 +362,8 @@ public class ManagerMethods {
                 continue;
             }
 
-            String[] parts =
-                    record.split("\\|", -1);
+            String[] parts
+                    = record.split("\\|", -1);
 
             if (parts.length < 7) {
                 continue;
@@ -477,20 +484,20 @@ public class ManagerMethods {
         SpinnerDateModel dateModel = new SpinnerDateModel();
         JSpinner dateSpinner = new JSpinner(dateModel);
 
-        JSpinner.DateEditor dateEditor =
-                new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
+        JSpinner.DateEditor dateEditor
+                = new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
 
         dateSpinner.setEditor(dateEditor);
 
         // Shift start time
-        SpinnerDateModel startTimeModel =
-                new SpinnerDateModel();
+        SpinnerDateModel startTimeModel
+                = new SpinnerDateModel();
 
-        JSpinner startTimeSpinner =
-                new JSpinner(startTimeModel);
+        JSpinner startTimeSpinner
+                = new JSpinner(startTimeModel);
 
-        JSpinner.DateEditor startTimeEditor =
-                new JSpinner.DateEditor(
+        JSpinner.DateEditor startTimeEditor
+                = new JSpinner.DateEditor(
                         startTimeSpinner,
                         "HH:mm"
                 );
@@ -498,14 +505,14 @@ public class ManagerMethods {
         startTimeSpinner.setEditor(startTimeEditor);
 
         // Shift end time
-        SpinnerDateModel endTimeModel =
-                new SpinnerDateModel();
+        SpinnerDateModel endTimeModel
+                = new SpinnerDateModel();
 
-        JSpinner endTimeSpinner =
-                new JSpinner(endTimeModel);
+        JSpinner endTimeSpinner
+                = new JSpinner(endTimeModel);
 
-        JSpinner.DateEditor endTimeEditor =
-                new JSpinner.DateEditor(
+        JSpinner.DateEditor endTimeEditor
+                = new JSpinner.DateEditor(
                         endTimeSpinner,
                         "HH:mm"
                 );
@@ -554,39 +561,39 @@ public class ManagerMethods {
         }
 
         // Get selected values
-        String selectedDoctorName =
-                (String) doctorCombo.getSelectedItem();
+        String selectedDoctorName
+                = (String) doctorCombo.getSelectedItem();
 
-        String department =
-                (String) departmentCombo.getSelectedItem();
+        String department
+                = (String) departmentCombo.getSelectedItem();
 
-        java.util.Date selectedDate =
-                (java.util.Date) dateSpinner.getValue();
+        java.util.Date selectedDate
+                = (java.util.Date) dateSpinner.getValue();
 
         String date = new java.text.SimpleDateFormat(
                 "yyyy-MM-dd"
         ).format(selectedDate);
 
-        java.util.Date selectedStartTime =
-                (java.util.Date) startTimeSpinner.getValue();
+        java.util.Date selectedStartTime
+                = (java.util.Date) startTimeSpinner.getValue();
 
-        java.util.Date selectedEndTime =
-                (java.util.Date) endTimeSpinner.getValue();
+        java.util.Date selectedEndTime
+                = (java.util.Date) endTimeSpinner.getValue();
 
-        java.text.SimpleDateFormat timeFormat =
-                new java.text.SimpleDateFormat("HH:mm");
+        java.text.SimpleDateFormat timeFormat
+                = new java.text.SimpleDateFormat("HH:mm");
 
-        String startTime =
-                timeFormat.format(selectedStartTime);
+        String startTime
+                = timeFormat.format(selectedStartTime);
 
-        String endTime =
-                timeFormat.format(selectedEndTime);
+        String endTime
+                = timeFormat.format(selectedEndTime);
 
-        String shift =
-                startTime + " - " + endTime;
+        String shift
+                = startTime + " - " + endTime;
 
-        String status =
-                (String) statusCombo.getSelectedItem();
+        String status
+                = (String) statusCombo.getSelectedItem();
 
         // Validate
         if (selectedDoctorName == null
@@ -665,8 +672,8 @@ public class ManagerMethods {
         }
 
         // Generate roster ID
-        String rosterId =
-                IDGenerator.next("R", fileName);
+        String rosterId
+                = IDGenerator.next("R", fileName);
 
         // Create the roster record
         String normalizedRecord = String.join("|",
@@ -682,8 +689,8 @@ public class ManagerMethods {
         // Return the record to ManageRecordsPanel
         return normalizedRecord;
     }
-    
-   public String editRosterRecord(String record) {
+
+    public String editRosterRecord(String record) {
 
         String[] parts = record.split("\\|", -1);
 
@@ -751,15 +758,29 @@ public class ManagerMethods {
 
         departmentField.setSelectedItem(department);
 
-        // Date
-        JTextField dateField = new JTextField(date);
+        UtilDateModel model = new UtilDateModel();
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        try {
+            java.util.Date parsedDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(parsedDate);
+            model.setDate(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE));
+            model.setSelected(true);
+        } catch (Exception e) {
+            model.setSelected(true);
+        }
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
+        JDatePickerImpl effectiveDatePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
 
         // Shift start time
         SpinnerDateModel startTimeModel = new SpinnerDateModel();
         JSpinner startTimeSpinner = new JSpinner(startTimeModel);
 
-        JSpinner.DateEditor startTimeEditor =
-                new JSpinner.DateEditor(
+        JSpinner.DateEditor startTimeEditor
+                = new JSpinner.DateEditor(
                         startTimeSpinner,
                         "HH:mm"
                 );
@@ -770,8 +791,8 @@ public class ManagerMethods {
         SpinnerDateModel endTimeModel = new SpinnerDateModel();
         JSpinner endTimeSpinner = new JSpinner(endTimeModel);
 
-        JSpinner.DateEditor endTimeEditor =
-                new JSpinner.DateEditor(
+        JSpinner.DateEditor endTimeEditor
+                = new JSpinner.DateEditor(
                         endTimeSpinner,
                         "HH:mm"
                 );
@@ -787,14 +808,14 @@ public class ManagerMethods {
 
                 if (shiftParts.length == 2) {
 
-                    java.text.SimpleDateFormat timeFormat =
-                            new java.text.SimpleDateFormat("HH:mm");
+                    java.text.SimpleDateFormat timeFormat
+                            = new java.text.SimpleDateFormat("HH:mm");
 
-                    java.util.Date startTime =
-                            timeFormat.parse(shiftParts[0].trim());
+                    java.util.Date startTime
+                            = timeFormat.parse(shiftParts[0].trim());
 
-                    java.util.Date endTime =
-                            timeFormat.parse(shiftParts[1].trim());
+                    java.util.Date endTime
+                            = timeFormat.parse(shiftParts[1].trim());
 
                     startTimeSpinner.setValue(startTime);
                     endTimeSpinner.setValue(endTime);
@@ -830,8 +851,8 @@ public class ManagerMethods {
         form.add(new JLabel("DEPARTMENT:"));
         form.add(departmentField);
 
-        form.add(new JLabel("DATE:"));
-        form.add(dateField);
+        form.add(new JLabel("DATE (YYYY-MM-DD):"));
+        form.add(effectiveDatePicker);
 
         form.add(new JLabel("SHIFT START:"));
         form.add(startTimeSpinner);
@@ -854,7 +875,16 @@ public class ManagerMethods {
             return null;
         }
 
-        String updatedDate = dateField.getText().trim();
+        java.util.Date selectedDateUtil = (java.util.Date) effectiveDatePicker.getModel().getValue();
+        String updatedDate = selectedDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDateUtil)
+                : java.time.LocalDate.now().toString();
+
+        java.util.Date selectedStartTime
+                = (java.util.Date) startTimeSpinner.getValue();
+
+        java.util.Date selectedEndTime
+                = (java.util.Date) endTimeSpinner.getValue();
 
         if (updatedDate.isEmpty()) {
             JOptionPane.showMessageDialog(
@@ -866,12 +896,6 @@ public class ManagerMethods {
 
             return null;
         }
-
-        java.util.Date selectedStartTime =
-                (java.util.Date) startTimeSpinner.getValue();
-
-        java.util.Date selectedEndTime =
-                (java.util.Date) endTimeSpinner.getValue();
 
         if (selectedStartTime == null || selectedEndTime == null) {
             JOptionPane.showMessageDialog(
@@ -895,24 +919,23 @@ public class ManagerMethods {
             return null;
         }
 
-        java.text.SimpleDateFormat timeFormat =
-                new java.text.SimpleDateFormat("HH:mm");
+        java.text.SimpleDateFormat timeFormat
+                = new java.text.SimpleDateFormat("HH:mm");
 
-        String startTime =
-                timeFormat.format(selectedStartTime);
+        String startTime
+                = timeFormat.format(selectedStartTime);
 
-        String endTime =
-                timeFormat.format(selectedEndTime);
+        String endTime
+                = timeFormat.format(selectedEndTime);
 
-        String updatedShift =
-                startTime + " - " + endTime;
+        String updatedShift
+                = startTime + " - " + endTime;
 
         // Check for scheduling conflict using the NEW date
         if (doctorShiftCheck(
                 doctorName,
                 updatedDate,
                 rosterId)) {
-
             JOptionPane.showMessageDialog(
                     panel,
                     "This doctor already has a shift on "

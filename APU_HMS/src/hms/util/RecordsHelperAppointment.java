@@ -17,7 +17,6 @@ import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import javax.swing.table.DefaultTableModel;
 
 import org.jdatepicker.impl.JDatePanelImpl;
 import org.jdatepicker.impl.JDatePickerImpl;
@@ -49,7 +48,25 @@ public final class RecordsHelperAppointment {
 
         JTextField patientIdField = new JTextField(patientId);
         JTextField doctorIdField = new JTextField(doctorId);
-        JTextField dateField = new JTextField(date);
+
+        UtilDateModel model = new UtilDateModel();
+        try {
+            java.util.Date parsedDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date);
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.setTime(parsedDate);
+            model.setDate(cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DATE));
+            model.setSelected(true);
+        } catch (Exception e) {
+            model.setSelected(true); // Fallback if parsing fails
+        }
+
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
+        JDatePickerImpl datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
+
         JTextField timeField = new JTextField(time);
 
         JComboBox<String> statusField = new JComboBox<>(
@@ -69,8 +86,8 @@ public final class RecordsHelperAppointment {
         form.add(new JLabel("DOCTOR_ID:"));
         form.add(doctorIdField);
 
-        form.add(new JLabel("DATE:"));
-        form.add(dateField);
+        form.add(new JLabel("DATE (YYYY-MM-DD):"));
+        form.add(datePicker);
 
         form.add(new JLabel("TIME:"));
         form.add(timeField);
@@ -90,11 +107,16 @@ public final class RecordsHelperAppointment {
             return null;
         }
 
+        java.util.Date selectedDateUtil = (java.util.Date) datePicker.getModel().getValue();
+        String dateStr = selectedDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDateUtil)
+                : LocalDate.now().toString();
+
         return String.join("|",
                 appointmentIdField.getText().trim(),
                 patientIdField.getText().trim(),
                 doctorIdField.getText().trim(),
-                dateField.getText().trim(),
+                dateStr,
                 timeField.getText().trim(),
                 statusField.getSelectedItem().toString().trim()
         );
@@ -374,30 +396,6 @@ public final class RecordsHelperAppointment {
         refreshAction.run();
     }
 
-    public void addAppointmentRow(DefaultTableModel tableModel, String line, JComboBox<String> doctorSearchBox) {
-        String[] parts = ManageRecordsHelper.splitRecord(line);
-        if (parts.length < 6) {
-            return;
-        }
-
-        String doctorName = ManageRecordsHelper.findName(parts[2].trim());
-        String selectedDoctor = (String) doctorSearchBox.getSelectedItem();
-        if (selectedDoctor != null && !selectedDoctor.equals("All Doctors") && !selectedDoctor.equals("Doctor Name")) {
-            if (!doctorName.equals(selectedDoctor)) {
-                return;
-            }
-        }
-
-        tableModel.addRow(new Object[]{
-            parts[0].trim(),
-            ManageRecordsHelper.findName(parts[1].trim()),
-            doctorName,
-            parts[3].trim(),
-            parts[4].trim(),
-            parts[5].trim()
-        });
-    }
-
     public static List<String> updateAppointmentStatus(Component comp, List<String> records, String appointmentId, String newStatus) {
         List<String> updatedLines = new java.util.ArrayList<>();
         boolean found = false;
@@ -413,7 +411,7 @@ public final class RecordsHelperAppointment {
                     String patientId = parts[1].trim();
                     String doctorId = parts[2].trim();
                     String appointmentDate = parts[3].trim();
-                    generateBillForCompletedAppointment(patientId, doctorId, appointmentDate);
+                    BillingManager.generateBillForAppointment(parts[0].trim());
                 }
             } else {
                 updatedLines.add(record);
@@ -436,24 +434,6 @@ public final class RecordsHelperAppointment {
                 doctorSearchBox.addItem(user.getFullName());
             }
         }
-    }
-
-    private static void generateBillForCompletedAppointment(String patientId, String doctorId, String appointmentDate) {
-        List<String> billLines = FileManager.readLines("bills.txt");
-        for (int i = 1; i < billLines.size(); i++) {
-            String line = billLines.get(i);
-            if (line != null && line.contains(patientId) && line.contains(appointmentDate)) {
-                return; // Bill already exists
-            }
-        }
-
-        String amount = "150.00";
-        String services = "General Consultation";
-
-        String billId = IDGenerator.next("BLL", "bills.txt");
-        String newBill = String.join("|", billId, patientId, amount, services, appointmentDate, "UNPAID");
-
-        FileManager.appendLine("bills.txt", newBill);
     }
 
     private static void setUneditable(JTextField field) {

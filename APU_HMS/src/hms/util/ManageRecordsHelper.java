@@ -45,6 +45,7 @@ public final class ManageRecordsHelper {
     private final boolean consultationTable;
     private final boolean prescriptionTable;
     private final boolean labRequestTable;
+    private final boolean billsTable;
     private final DefaultTableModel tableModel;
     private final JComboBox<String> doctorSearchBox;
     private final JComboBox<String> assetSearchBox;
@@ -68,6 +69,7 @@ public final class ManageRecordsHelper {
         this.consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
         this.prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
         this.labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
+        this.billsTable = "bills.txt".equalsIgnoreCase(fileName);
         this.doctorMethods = new DoctorMethods();
     }
 
@@ -108,11 +110,17 @@ public final class ManageRecordsHelper {
         List<String> after = FileManager.readLines(fileName);
         boolean saved = after.size() == before.size() + 1
                 && after.get(after.size() - 1).equals(record);
-        if (!saved) {
-            return false;
+        if (saved) {
+            if ("bookings.txt".equalsIgnoreCase(fileName)) {
+                String[] parts = splitRecord(record);
+                if (parts.length >= 6 && parts[5].trim().equalsIgnoreCase("COMPLETED")) {
+                    BillingManager.generateBillForAppointment(parts[0].trim());
+                }
+            }
+            refreshTable();
+            return true;
         }
-        refreshTable();
-        return true;
+        return false;
     }
 
     public boolean writeRecords(List<String> updatedRecords, String errorMessage) {
@@ -122,8 +130,17 @@ public final class ManageRecordsHelper {
         }
         linesToWrite.addAll(updatedRecords);
         FileManager.writeAllLines(fileName, linesToWrite);
+
         boolean saved = FileManager.readLines(fileName).equals(linesToWrite);
         if (saved) {
+            if ("bookings.txt".equalsIgnoreCase(fileName)) {
+                for (String record : updatedRecords) {
+                    String[] parts = splitRecord(record);
+                    if (parts.length >= 6 && parts[5].trim().equalsIgnoreCase("COMPLETED")) {
+                        BillingManager.generateBillForAppointment(parts[0].trim());
+                    }
+                }
+            }
             refreshTable();
         }
         return saved;
@@ -289,15 +306,35 @@ public final class ManageRecordsHelper {
                 return;
             }
 
+            String aptId = parts[0].trim();
+            String ratingDisplay = "No Review";
+            String commentDisplay = "N/A";
+
+            List<String> reviewLines = FileManager.readLines("reviews.txt");
+            for (int i = 1; i < reviewLines.size(); i++) {
+                String rLine = reviewLines.get(i);
+                if (rLine == null || rLine.trim().isEmpty()) {
+                    continue;
+                }
+
+                String[] rParts = splitRecord(rLine);
+                if (rParts.length >= 4 && rParts[1].trim().equalsIgnoreCase(aptId)) {
+                    ratingDisplay = rParts[2].trim() + " / 5 ⭐";
+                    commentDisplay = rParts[3].trim();
+                    break;
+                }
+            }
+
             tableModel.addRow(new Object[]{
-                parts[0].trim(),
+                aptId,
                 findName(parts[1].trim()),
                 doctorName,
                 parts[3].trim(),
                 parts[4].trim(),
-                parts[5].trim()
+                parts[5].trim(),
+                ratingDisplay, // Added Rating column
+                commentDisplay // Added Comment column
             });
-
         } else if (assetTable) {
             RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
 
@@ -319,10 +356,6 @@ public final class ManageRecordsHelper {
             });
 
         } else if (consultationTable && parts.length >= 9) {
-            if (!visibleToCurrentDoctor(parts[2].trim())) {
-                return;
-            }
-
             String patientId = parts[1].trim();
             User currentUser = Session.getCurrentUser();
 
@@ -344,19 +377,17 @@ public final class ManageRecordsHelper {
                     break;
                 }
             }
-
             tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                findName(parts[1].trim()),
-                findName(parts[2].trim()),
-                appointmentDateTime,
-                parts[4].trim(),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim(),
-                parts[8].trim()
+                parts[0].trim(), // Vital Sign ID
+                findName(parts[1].trim()), // Patient Name
+                findName(parts[2].trim()), // Doctor Name
+                appointmentDateTime, // Appointment Date & Time 
+                parts[4].trim(), // BP
+                parts[5].trim(), // Heart Rate
+                parts[6].trim(), // Temperature
+                parts[7].trim(), // Date
+                parts[8].trim() // Notes
             });
-
         } else if (prescriptionTable && parts.length >= 8) {
             String patientId = parts[1].trim();
 
@@ -399,15 +430,37 @@ public final class ManageRecordsHelper {
             if (!visibleToCurrentDoctor(parts[2].trim())) {
                 return;
             }
+
+            String patientId = parts[1].trim();
+            User currentUser = Session.getCurrentUser();
+            if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+                if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                        && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                    return;
+                }
+            }
+
+            String appointmentId = parts[4].trim();
+            String appointmentDateTime = appointmentId;
+
+            List<String> bookingLines = FileManager.readLines("bookings.txt");
+            for (String booking : bookingLines) {
+                String[] bParts = splitRecord(booking);
+                if (bParts.length >= 5 && bParts[0].trim().equals(appointmentId)) {
+                    appointmentDateTime = bParts[3].trim() + " " + bParts[4].trim();
+                    break;
+                }
+            }
+
             tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                findName(parts[1].trim()),
-                findName(parts[2].trim()),
-                parts[3].trim(),
-                findAssetType(parts[4].trim()),
-                parts[5].trim(),
-                parts[6].trim(),
-                parts[7].trim()
+                parts[0].trim(), // Request ID
+                findName(parts[1].trim()), // Patient Full Name
+                findName(parts[2].trim()), // Doctor Full Name
+                parts[3].trim(), // Test Type
+                appointmentDateTime, // Appointment Date & Time
+                parts[5].trim(), // Date Requested
+                parts[6].trim(), // Date Completed
+                parts[7].trim() // Status
             });
 
         } else if (rosterTable && parts.length >= 7) {
@@ -421,6 +474,78 @@ public final class ManageRecordsHelper {
                 parts[6].trim()
             });
 
+        } else if (billsTable && parts.length >= 5) {
+            String aptId = parts[0].trim();
+
+            List<String> appointments = FileManager.readLines("bookings.txt");
+            List<String> rosterLines = FileManager.readLines("roster.txt");
+            List<String> ratesLines = FileManager.readLines("consultation_rates.txt");
+            List<String> userLines = FileManager.readLines("users.txt");
+
+            String doctorId = "";
+            String date = "";
+            String patientId = "";
+
+            for (String apt : appointments) {
+                String[] aptParts = splitRecord(apt);
+                if (aptParts.length >= 6 && aptParts[0].trim().equalsIgnoreCase(aptId)) {
+                    patientId = aptParts[1].trim();
+                    doctorId = aptParts[2].trim();
+                    date = aptParts[3].trim();
+                    break;
+                }
+            }
+
+            // Check patient insurance
+            String patientInsurance = "";
+            for (String uLine : userLines) {
+                String[] uParts = splitRecord(uLine);
+                if (uParts.length > 0 && uParts[0].trim().equalsIgnoreCase(patientId)) {
+                    patientInsurance = uParts[uParts.length - 1].trim();
+                    break;
+                }
+            }
+
+            // Find Department from roster.txt
+            String doctorFullName = findName(doctorId);
+            String department = "General";
+            for (String rLine : rosterLines) {
+                String[] rParts = splitRecord(rLine);
+                if (rParts.length >= 4) {
+                    String rosterDocName = rParts[1].trim();
+                    if (rosterDocName.equalsIgnoreCase(doctorFullName) || rosterDocName.equalsIgnoreCase(doctorId)) {
+                        department = rParts[3].trim();
+                        break;
+                    }
+                }
+            }
+
+            // Find Base Rate from consultation_rates.txt
+            double baseRate = 50.00;
+            for (String rtLine : ratesLines) {
+                String[] rtParts = splitRecord(rtLine);
+                if (rtParts.length >= 2 && rtParts[0].trim().equalsIgnoreCase(department)) {
+                    try {
+                        baseRate = Double.parseDouble(rtParts[1].trim());
+                    } catch (NumberFormatException ignored) {
+                    }
+                    break;
+                }
+            }
+
+            double discount = (!patientInsurance.isEmpty() && !patientInsurance.equalsIgnoreCase("None")) ? baseRate * 0.20 : 0.0;
+            double finalAmount = baseRate - discount;
+
+            tableModel.addRow(new Object[]{
+                aptId,
+                date,
+                doctorFullName,
+                department,
+                String.format("$%.2f", baseRate),
+                String.format("$%.2f", discount),
+                String.format("$%.2f", finalAmount),
+                parts[parts.length - 1].trim() // PAID/UNPAID
+            });
         } else {
             if (parts.length > 1) {
                 Object[] rowData = new Object[parts.length];
@@ -509,6 +634,8 @@ public final class ManageRecordsHelper {
             "DENIED",
             "SCHEDULED",
             "CANCELLED",
+            "UNPAID",
+            "PAID",
             "COMPLETED"
     );
 
@@ -575,11 +702,13 @@ public final class ManageRecordsHelper {
                                 break;
                             case "SCHEDULED":
                             case "APPROVED":
+                            case "PAID":
                                 c.setBackground(new java.awt.Color(220, 248, 220)); // Light Green
                                 c.setForeground(java.awt.Color.BLACK);
                                 break;
                             case "CANCELLED":
                             case "DENIED":
+                            case "UNPAID":
                                 c.setBackground(new java.awt.Color(255, 225, 225)); // Light Red/Pink
                                 c.setForeground(java.awt.Color.BLACK);
                                 break;

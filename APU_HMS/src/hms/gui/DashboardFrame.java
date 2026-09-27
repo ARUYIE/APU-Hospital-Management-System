@@ -20,6 +20,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 
+import hms.gui.panels.CommentsAndRatingPanel;
 import hms.role.User;
 import hms.util.Session;
 import hms.util.UIUtil;
@@ -96,22 +97,22 @@ public class DashboardFrame extends JFrame {
         menuList.setCellRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value,
-                int index, boolean isSelected, boolean cellHasFocus) {
-            JLabel label = (JLabel) super.getListCellRendererComponent(
-                list, value, index, isSelected, cellHasFocus);
-            label.setOpaque(true);
-            label.setBackground(Color.WHITE);
-            label.setForeground(Color.BLACK);
-            label.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(180, 195, 215)),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
-            if (isSelected) {
-                label.setBackground(new Color(232, 240, 252));
-                label.setForeground(new Color(27, 60, 108));
-            }
-            label.setFont(label.getFont().deriveFont(Font.BOLD,
-                index == hoveredIndex[0] ? hoverFontSize : baseFontSize));
-            return label;
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus);
+                label.setOpaque(true);
+                label.setBackground(Color.WHITE);
+                label.setForeground(Color.BLACK);
+                label.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(180, 195, 215)),
+                        BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+                if (isSelected) {
+                    label.setBackground(new Color(232, 240, 252));
+                    label.setForeground(new Color(27, 60, 108));
+                }
+                label.setFont(label.getFont().deriveFont(Font.BOLD,
+                        index == hoveredIndex[0] ? hoverFontSize : baseFontSize));
+                return label;
             }
         });
 
@@ -138,10 +139,10 @@ public class DashboardFrame extends JFrame {
                 showPanelFor(menuList.getSelectedValue());
             }
         });
-        
+
         // shows profile panel on login
         menuList.setSelectedValue("Profile", true);
-        
+
         JScrollPane scrollPane = new JScrollPane(menuList);
         scrollPane.setPreferredSize(new Dimension(320, 0));
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -161,36 +162,40 @@ public class DashboardFrame extends JFrame {
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                         "Manage Appointments", "bookings.txt"));
                 break;
-            case "Users":
-                setContent(new hms.gui.panels.UsersMenuPanel(
-                    this));
-                break;                
+            case "Bills":
+                setContent(new hms.gui.panels.ViewBillsPanel(
+                        "Manage Bills"));
+                break;
             case "Wards/Clinics":
                 setContent(new hms.gui.panels.WardsClinicsMenuPanel(this));
                 break;
+            case "Users":
+                setContent(new hms.gui.panels.UsersMenuPanel(
+                        this));
+                break;
             case "Consultation Rates":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "Configure Consultation Rates", "consultation_rates.txt"));
+                        "Configure Consultation Rates", "consultation_rates.txt"));
                 break;
             case "Insurances":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                         "Manage Insurance Networks", "insurance_networks.txt"));
                 break;
-                
+
             // Wong Willard - Medical Manager
             case "Clinical Departments":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "Manage Departments and Specialties", "department.txt"));
-                break;                
+                        "Manage Departments and Specialties", "department.txt"));
+                break;
             case "Doctor Operational Roster":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "Manager Doctor Operational Roster", "roster.txt"));
+                        "Manager Doctor Operational Roster", "roster.txt"));
                 break;
             case "View Analytical Reports":
                 setContent(new hms.util.ReportCharts(
-                    "View Hospital Metrics and Revenue Summaries"));
+                        "View Hospital Metrics and Revenue Summaries"));
                 break;
-                
+
             //Low Kai Lun - Doctor
             case "My Appointments":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
@@ -198,18 +203,18 @@ public class DashboardFrame extends JFrame {
                 break;
             case "Patient Vitals & Consultation Notes":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "Log Vitals & Consultation Notes", "vital_signs.txt"));
+                        "Log Vitals & Consultation Notes", "vital_signs.txt"));
                 break;
             case "Prescriptions":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "Issue Prescriptions", "prescriptions.txt"));
+                        "Issue Prescriptions", "prescriptions.txt"));
                 break;
             case "Lab & Imaging Requests":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
-                    "Request Lab Tests / Imaging", "lab_requests.txt"));
+                        "Request Lab Tests / Imaging", "lab_requests.txt"));
                 break;
-            
-                //Yong Jun Hong - Patient 
+
+            //Yong Jun Hong - Patient 
             case "Book / View Appointments":
                 setContent(new hms.gui.panels.ManageRecordsPanel(
                         "Book / View Appointments", "bookings.txt"));
@@ -217,20 +222,17 @@ public class DashboardFrame extends JFrame {
 
             case "View My Assessment Results":
                 setContent(new hms.gui.panels.ViewAssessmentResultsPanel(
-                            "View My Assessment Results"));
+                        "View My Assessment Results"));
                 break;
 
             case "View My Bills":
-                setContent(new hms.gui.panels.ViewMyBillsPanel(
-                        "View My Bills"));
+                setContent(new hms.gui.panels.ViewBillsPanel(
+                        "View My Bills (Please Head to Front Desk to Pay)"));
                 break;
-
             case "Comment & Rating":
-                setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "Comment & Rating", "feedback_records.txt"));
+                setContent(new CommentsAndRatingPanel("Comment & Rating"));
                 break;
 
-                    
             default:
                 setContent(new hms.gui.panels.PlaceholderPanel(menuLabel));
         }

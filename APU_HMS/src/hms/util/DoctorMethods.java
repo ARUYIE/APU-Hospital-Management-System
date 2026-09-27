@@ -3,15 +3,20 @@ package hms.util;
 import java.awt.Component;
 import java.awt.GridLayout;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Properties;
 
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
 
 import hms.role.Role;
 import hms.role.User;
@@ -62,7 +67,7 @@ public class DoctorMethods {
         String medication = parts[3].trim();
         String dosage = parts[4].trim();
         String duration = parts[5].trim();
-        String appointmentId = parts[6].trim(); // Appointment ID stored at index 6
+        String appointmentId = parts[6].trim();
         String status = parts[7].trim();
 
         JTextField prescriptionIdField = new JTextField(prescriptionId);
@@ -77,12 +82,11 @@ public class DoctorMethods {
             patientCombo.addItem(patient.getFullName());
         }
         patientCombo.setSelectedItem(findName(patientId));
-        patientCombo.setEnabled(false); // Locked to record patient
+        patientCombo.setEnabled(false);
 
         JTextField doctorIdField = new JTextField(findName(doctorId));
         setUneditable(doctorIdField);
 
-        // Load appointments for linking
         List<String> appointmentLines = FileManager.readLines("bookings.txt");
         List<String> appointmentIds = new ArrayList<>();
         List<String> appointmentDisplayItems = new ArrayList<>();
@@ -182,7 +186,7 @@ public class DoctorMethods {
                 updatedMedication,
                 updatedDosage,
                 updatedDuration,
-                updatedAppointmentId, // Stored at index 6
+                updatedAppointmentId,
                 updatedStatus
         );
     }
@@ -256,7 +260,6 @@ public class DoctorMethods {
 
         String appointmentId = appointmentIds.get(selectedIndex);
 
-        // Retrieve patient ID from booking
         String patientId = "";
         for (String line : appointmentLines) {
             String[] p = ManageRecordsHelper.splitRecord(line);
@@ -283,81 +286,9 @@ public class DoctorMethods {
                 medication,
                 dosage,
                 duration,
-                appointmentId, // Appointment ID stored at index 6
+                appointmentId,
                 status
         );
-    }
-
-    private static boolean hasIllegalChars(
-            String... values) {
-
-        for (String value : values) {
-
-            if (value == null) {
-                continue;
-            }
-
-            if (value.contains("|")
-                    || value.contains("\n")
-                    || value.contains("\r")) {
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static boolean hasPrescriptionForMedication(
-            String fileName,
-            String patientId,
-            String medication,
-            String currentPrescriptionId) {
-
-        List<String> records
-                = FileManager.readLines(fileName);
-
-        for (int i = 1; i < records.size(); i++) {
-
-            String record = records.get(i);
-
-            if (record == null
-                    || record.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] parts
-                    = ManageRecordsHelper.splitRecord(record);
-
-            if (parts.length < 8) {
-                continue;
-            }
-
-            String prescriptionId
-                    = parts[0].trim();
-
-            String existingPatientId
-                    = parts[1].trim();
-
-            String existingMedication
-                    = parts[3].trim();
-
-            if (currentPrescriptionId != null
-                    && prescriptionId.equals(
-                            currentPrescriptionId)) {
-
-                continue;
-            }
-
-            if (existingPatientId.equals(patientId)
-                    && existingMedication.equalsIgnoreCase(
-                            medication)) {
-
-                return true;
-            }
-        }
-
-        return false;
     }
 
     public static String editLabRequestRecord(
@@ -488,11 +419,26 @@ public class DoctorMethods {
             roomCombo.setEnabled(false);
         }
 
-        JTextField dateRequestedField
-                = new JTextField(dateRequested);
+        // --- JDatePicker Setup for Date Requested ---
+        UtilDateModel reqModel = new UtilDateModel();
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        try {
+            java.util.Date parsedDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(dateRequested);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(parsedDate);
+            reqModel.setDate(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE));
+            reqModel.setSelected(true);
+        } catch (Exception e) {
+            reqModel.setSelected(true);
+        }
+        JDatePanelImpl reqDatePanel = new JDatePanelImpl(reqModel, p);
+        JDatePickerImpl dateRequestedPicker = new JDatePickerImpl(reqDatePanel, new DateLabelFormatter());
 
         if (!isDoctor) {
-            setUneditable(dateRequestedField);
+            dateRequestedPicker.setEnabled(false);
         }
 
         JComboBox<String> statusCombo = new JComboBox<>(
@@ -540,7 +486,7 @@ public class DoctorMethods {
                         ? "DATE_REQUESTED:"
                         : "DATE_REQUESTED (set by doctor):"
         ));
-        form.add(dateRequestedField);
+        form.add(dateRequestedPicker);
 
         form.add(new JLabel(
                 isDoctor
@@ -581,9 +527,10 @@ public class DoctorMethods {
                         ? (String) testTypeCombo.getSelectedItem()
                         : testType;
 
+        java.util.Date selectedReqDateUtil = (java.util.Date) dateRequestedPicker.getModel().getValue();
         String updatedDateRequested
-                = isDoctor
-                        ? dateRequestedField.getText().trim()
+                = isDoctor && selectedReqDateUtil != null
+                        ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedReqDateUtil)
                         : dateRequested;
 
         int selectedRoomIndex
@@ -607,30 +554,13 @@ public class DoctorMethods {
                         : dateCompleted;
 
         if (isDoctor) {
-
             if (updatedDateRequested.isEmpty()) {
-
                 JOptionPane.showMessageDialog(
                         parent,
                         "Date requested is required.",
                         "Invalid Request",
                         JOptionPane.WARNING_MESSAGE
                 );
-
-                return null;
-            }
-
-            try {
-                java.time.LocalDate.parse(updatedDateRequested);
-            } catch (java.time.format.DateTimeParseException exception) {
-
-                JOptionPane.showMessageDialog(
-                        parent,
-                        "Date requested must be in YYYY-MM-DD format.",
-                        "Invalid Request",
-                        JOptionPane.WARNING_MESSAGE
-                );
-
                 return null;
             }
         }
@@ -773,10 +703,15 @@ public class DoctorMethods {
 
         setUneditable(statusField);
 
-        JTextField dateRequestedField
-                = new JTextField(
-                        LocalDate.now().toString()
-                );
+        // --- JDatePicker Setup for Add Lab Request ---
+        UtilDateModel addReqModel = new UtilDateModel();
+        addReqModel.setSelected(true);
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        JDatePanelImpl addReqDatePanel = new JDatePanelImpl(addReqModel, p);
+        JDatePickerImpl dateRequestedPicker = new JDatePickerImpl(addReqDatePanel, new DateLabelFormatter());
 
         JPanel form
                 = new JPanel(
@@ -807,7 +742,7 @@ public class DoctorMethods {
                         "DATE_REQUESTED (YYYY-MM-DD):"
                 )
         );
-        form.add(dateRequestedField);
+        form.add(dateRequestedPicker);
 
         int choice
                 = JOptionPane.showConfirmDialog(
@@ -825,38 +760,10 @@ public class DoctorMethods {
         String testType
                 = (String) testTypeCombo.getSelectedItem();
 
-        String dateRequested
-                = dateRequestedField
-                        .getText()
-                        .trim();
-
-        if (dateRequested.isEmpty()) {
-
-            JOptionPane.showMessageDialog(
-                    parent,
-                    "Date requested is required.",
-                    "Invalid Request",
-                    JOptionPane.WARNING_MESSAGE
-            );
-
-            return null;
-        }
-
-        try {
-
-            LocalDate.parse(dateRequested);
-
-        } catch (DateTimeParseException exception) {
-
-            JOptionPane.showMessageDialog(
-                    parent,
-                    "Date requested must be in YYYY-MM-DD format.",
-                    "Invalid Request",
-                    JOptionPane.WARNING_MESSAGE
-            );
-
-            return null;
-        }
+        java.util.Date selectedAddReqDateUtil = (java.util.Date) dateRequestedPicker.getModel().getValue();
+        String dateRequested = selectedAddReqDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedAddReqDateUtil)
+                : LocalDate.now().toString();
 
         int selectedRoomIndex
                 = roomCombo.getSelectedIndex();
@@ -919,14 +826,13 @@ public class DoctorMethods {
         String vitalSignId = parts[0].trim();
         String patientId = parts[1].trim();
         String doctorId = parts[2].trim();
-        String consultationId = parts[3].trim(); // Holds APPOINTMENT_ID
+        String consultationId = parts[3].trim();
         String bp = parts[4].trim();
         String heartRate = parts[5].trim();
         String temperature = parts[6].trim();
         String date = parts[7].trim();
         String notes = parts[8].trim();
 
-        User currentDoctor = Session.getCurrentUser();
         JTextField vitalSignIdField = new JTextField(vitalSignId);
         setUneditable(vitalSignIdField);
 
@@ -939,12 +845,11 @@ public class DoctorMethods {
             patientCombo.addItem(patient.getFullName());
         }
         patientCombo.setSelectedItem(findName(patientId));
-        patientCombo.setEnabled(false); // Locked to record patient
+        patientCombo.setEnabled(false);
 
         JTextField doctorIdField = new JTextField(findName(doctorId));
         setUneditable(doctorIdField);
 
-        // Load appointments for linking
         List<String> appointmentLines = FileManager.readLines("bookings.txt");
         List<String> appointmentIds = new ArrayList<>();
         List<String> appointmentDisplayItems = new ArrayList<>();
@@ -984,7 +889,25 @@ public class DoctorMethods {
         JTextField bpField = new JTextField(bp);
         JTextField heartRateField = new JTextField(heartRate);
         JTextField temperatureField = new JTextField(temperature);
-        JTextField dateField = new JTextField(date);
+
+        // --- JDatePicker Setup for Edit Vital Signs ---
+        UtilDateModel vsEditModel = new UtilDateModel();
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        try {
+            java.util.Date parsedDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(parsedDate);
+            vsEditModel.setDate(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE));
+            vsEditModel.setSelected(true);
+        } catch (Exception e) {
+            vsEditModel.setSelected(true);
+        }
+        JDatePanelImpl vsEditDatePanel = new JDatePanelImpl(vsEditModel, p);
+        JDatePickerImpl datePicker = new JDatePickerImpl(vsEditDatePanel, new DateLabelFormatter());
+
         JTextField notesField = new JTextField(notes);
 
         JPanel form = new JPanel(new GridLayout(9, 2, 8, 8));
@@ -1003,7 +926,7 @@ public class DoctorMethods {
         form.add(new JLabel("TEMPERATURE:"));
         form.add(temperatureField);
         form.add(new JLabel("DATE:"));
-        form.add(dateField);
+        form.add(datePicker);
         form.add(new JLabel("NOTES:"));
         form.add(notesField);
 
@@ -1028,7 +951,12 @@ public class DoctorMethods {
         String updatedBp = bpField.getText().trim();
         String updatedHeartRate = heartRateField.getText().trim();
         String updatedTemperature = temperatureField.getText().trim();
-        String updatedDate = dateField.getText().trim();
+
+        java.util.Date selectedVsDateUtil = (java.util.Date) datePicker.getModel().getValue();
+        String updatedDate = selectedVsDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedVsDateUtil)
+                : LocalDate.now().toString();
+
         String updatedNotes = notesField.getText().trim();
 
         if (updatedBp.isEmpty() || updatedHeartRate.isEmpty() || updatedTemperature.isEmpty() || updatedDate.isEmpty() || updatedNotes.isEmpty()) {
@@ -1062,7 +990,6 @@ public class DoctorMethods {
             return null;
         }
 
-        // Load existing appointments to hook CONSULTATION_ID to APPOINTMENT_ID
         List<String> appointmentLines = FileManager.readLines("bookings.txt");
         List<String> appointmentIds = new ArrayList<>();
         List<String> appointmentDisplayItems = new ArrayList<>();
@@ -1102,7 +1029,17 @@ public class DoctorMethods {
         JTextField bpField = new JTextField();
         JTextField heartRateField = new JTextField();
         JTextField temperatureField = new JTextField();
-        JTextField dateField = new JTextField(LocalDate.now().toString());
+
+        // --- JDatePicker Setup for Add Vital Signs ---
+        UtilDateModel vsAddModel = new UtilDateModel();
+        vsAddModel.setSelected(true);
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        JDatePanelImpl vsAddDatePanel = new JDatePanelImpl(vsAddModel, p);
+        JDatePickerImpl datePicker = new JDatePickerImpl(vsAddDatePanel, new DateLabelFormatter());
+
         JTextField notesField = new JTextField();
 
         JPanel form = new JPanel(new GridLayout(8, 2, 8, 8));
@@ -1115,7 +1052,7 @@ public class DoctorMethods {
         form.add(new JLabel("TEMPERATURE:"));
         form.add(temperatureField);
         form.add(new JLabel("DATE:"));
-        form.add(dateField);
+        form.add(datePicker);
         form.add(new JLabel("NOTES (symptoms / observations / diagnosis):"));
         form.add(notesField);
 
@@ -1136,13 +1073,12 @@ public class DoctorMethods {
             return null;
         }
 
-        String consultationId = appointmentIds.get(selectedIndex); // Stores APPOINTMENT_ID
+        String consultationId = appointmentIds.get(selectedIndex);
 
-        // Fetch patient ID from the selected booking line
         String selectedAptLine = "";
         for (String line : appointmentLines) {
-            String[] p = ManageRecordsHelper.splitRecord(line);
-            if (p.length > 0 && p[0].trim().equals(consultationId)) {
+            String[] prts = ManageRecordsHelper.splitRecord(line);
+            if (prts.length > 0 && prts[0].trim().equals(consultationId)) {
                 selectedAptLine = line;
                 break;
             }
@@ -1154,7 +1090,12 @@ public class DoctorMethods {
         String bp = bpField.getText().trim();
         String heartRate = heartRateField.getText().trim();
         String temperature = temperatureField.getText().trim();
-        String date = dateField.getText().trim();
+
+        java.util.Date selectedVsAddDateUtil = (java.util.Date) datePicker.getModel().getValue();
+        String date = selectedVsAddDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedVsAddDateUtil)
+                : LocalDate.now().toString();
+
         String notes = notesField.getText().trim();
 
         if (bp.isEmpty() || heartRate.isEmpty() || temperature.isEmpty() || date.isEmpty() || notes.isEmpty()) {
@@ -1175,50 +1116,18 @@ public class DoctorMethods {
         );
     }
 
-    private static boolean hasVitalSignOnDate(
-            String fileName,
-            String patientId,
-            String date,
-            String currentRecordId) {
+    private static boolean hasIllegalChars(
+            String... values) {
 
-        List<String> records
-                = FileManager.readLines(fileName);
+        for (String value : values) {
 
-        for (int i = 1; i < records.size(); i++) {
-
-            String record = records.get(i);
-
-            if (record == null
-                    || record.trim().isEmpty()) {
+            if (value == null) {
                 continue;
             }
 
-            String[] parts
-                    = ManageRecordsHelper.splitRecord(
-                            record
-                    );
-
-            if (parts.length < 9) {
-                continue;
-            }
-
-            String recordId
-                    = parts[0].trim();
-
-            String existingPatientId
-                    = parts[1].trim();
-
-            String existingDate
-                    = parts[7].trim();
-
-            if (currentRecordId != null
-                    && recordId.equals(
-                            currentRecordId)) {
-                continue;
-            }
-
-            if (existingPatientId.equals(patientId)
-                    && existingDate.equals(date)) {
+            if (value.contains("|")
+                    || value.contains("\n")
+                    || value.contains("\r")) {
 
                 return true;
             }

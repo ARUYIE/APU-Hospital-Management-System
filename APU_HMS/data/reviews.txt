@@ -1,0 +1,4 @@
+REVIEW_ID|APPOINTMENT_ID|RATING|COMMENT|PATIENT_ID
+REV001|B001|5|Very good doctor, quick and efficient|U004
+REV002|B002|3|The needle insertion was very painful|U004
+REV003|B004|5|Very good diagnosis|U011
