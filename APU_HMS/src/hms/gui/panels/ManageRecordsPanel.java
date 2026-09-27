@@ -30,7 +30,7 @@ import hms.util.RecordsHelperAppointment;
 import hms.util.RecordsHelperAsset;
 import hms.util.RecordsHelperConsultation;
 import hms.util.RecordsHelperInsurance;
-import hms.util.DoctorRosterMethods;
+import hms.util.ManagerMethods;
 import hms.util.DoctorMethods;
 import hms.util.Session;
 
@@ -60,12 +60,12 @@ public class ManageRecordsPanel extends JPanel {
     private final JTable recordsTable;
     private final ManageRecordsHelper recordHelper;
     private List<String> records = new ArrayList<>();
-    private final DoctorRosterMethods rosterMethods;
+    private final ManagerMethods managerMethods;
     private final DoctorMethods doctorMethods;
 
     public ManageRecordsPanel(String title, String fileName) {
         this.fileName = fileName;
-        this.rosterMethods = new DoctorRosterMethods(this, fileName);
+        this.managerMethods = new ManagerMethods(this, fileName);
         this.doctorMethods = new DoctorMethods();
         
         // Tan Rui En - Admin
@@ -374,65 +374,68 @@ public class ManageRecordsPanel extends JPanel {
     }
 
     private void markLabRequestCompleted() {
-    if (!labRequestTable) {
-        return;
+        if (!labRequestTable) {
+            return;
+        }
+
+        int viewRow = recordsTable.getSelectedRow();
+        if (viewRow == -1) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select a request first.",
+                    "No Record Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int modelRow = recordsTable.convertRowIndexToModel(viewRow);
+        String record = records.get(modelRow);
+        String[] parts = splitRecord(record);
+
+        if (parts.length < 8) {
+            return;
+        }
+
+        String dateCompleted = JOptionPane.showInputDialog(
+                this,
+                "Enter the date completed (YYYY-MM-DD):",
+                java.time.LocalDate.now().toString()
+        );
+
+        if (dateCompleted == null) {
+            return; // User clicked Cancel
+        }
+
+        dateCompleted = dateCompleted.trim();
+
+        try {
+            java.time.LocalDate.parse(dateCompleted);
+        } catch (java.time.format.DateTimeParseException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Date must be in YYYY-MM-DD format.",
+                    "Invalid Date", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        parts[6] = dateCompleted; // DATE_COMPLETED
+        parts[7] = "COMPLETED";   // STATUS
+        String updatedRecord = String.join("|", parts);
+
+        List<String> updatedLines = new ArrayList<>(records);
+        updatedLines.set(modelRow, updatedRecord);
+
+        writeRecords(updatedLines, "The record could not be updated.");
+        refreshTable();
     }
-
-    int viewRow = recordsTable.getSelectedRow();
-    if (viewRow == -1) {
-        JOptionPane.showMessageDialog(this,
-                "Please select a request first.",
-                "No Record Selected", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-
-    int modelRow = recordsTable.convertRowIndexToModel(viewRow);
-    String record = records.get(modelRow);
-    String[] parts = splitRecord(record);
-
-    if (parts.length < 8) {
-        return;
-    }
-
-    String dateCompleted = JOptionPane.showInputDialog(
-            this,
-            "Enter the date completed (YYYY-MM-DD):",
-            java.time.LocalDate.now().toString()
-    );
-
-    if (dateCompleted == null) {
-        return; // User clicked Cancel
-    }
-
-    dateCompleted = dateCompleted.trim();
-
-    try {
-        java.time.LocalDate.parse(dateCompleted);
-    } catch (java.time.format.DateTimeParseException ex) {
-        JOptionPane.showMessageDialog(this,
-                "Date must be in YYYY-MM-DD format.",
-                "Invalid Date", JOptionPane.WARNING_MESSAGE);
-        return;
-    }
-
-    parts[6] = dateCompleted; // DATE_COMPLETED
-    parts[7] = "COMPLETED";   // STATUS
-    String updatedRecord = String.join("|", parts);
-
-    List<String> updatedLines = new ArrayList<>(records);
-    updatedLines.set(modelRow, updatedRecord);
-
-    writeRecords(updatedLines, "The record could not be updated.");
-    refreshTable();
-}
+    
     private void editSelectedRecord() {
         int viewRow = recordsTable.getSelectedRow();
 
         if (viewRow == -1) {
-            JOptionPane.showMessageDialog(this,
+            JOptionPane.showMessageDialog(
+                    this,
                     "Please select a record first.",
                     "No Record Selected",
-                    JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
@@ -445,11 +448,31 @@ public class ManageRecordsPanel extends JPanel {
                 .toString()
                 .trim();
 
-        // Find the actual record in the records list using its ID
-        int recordIndex = -1;
+        /*
+         * Read the latest records directly from the file.
+         * Do not use the in-memory records list here because
+         * the table may be filtered or the list may be outdated.
+         */
+        List<String> latestRecords = FileManager.readLines(fileName);
 
-        for (int i = 0; i < records.size(); i++) {
-            String record = records.get(i);
+        if (latestRecords == null || latestRecords.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No records were found.",
+                    "Edit Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        String originalRecord = null;
+
+        /*
+         * Skip the header at index 0.
+         */
+        for (int i = 1; i < latestRecords.size(); i++) {
+
+            String record = latestRecords.get(i);
 
             if (record == null || record.trim().isEmpty()) {
                 continue;
@@ -459,33 +482,46 @@ public class ManageRecordsPanel extends JPanel {
 
             if (parts.length > 0
                     && parts[0].trim().equals(selectedId)) {
-                recordIndex = i;
+
+                originalRecord = record;
                 break;
             }
         }
 
-        if (recordIndex == -1) {
-            JOptionPane.showMessageDialog(this,
+        if (originalRecord == null) {
+            JOptionPane.showMessageDialog(
+                    this,
                     "The selected record could not be found.",
                     "Edit Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.ERROR_MESSAGE
+            );
             return;
         }
 
-        String originalRecord = records.get(recordIndex);
-
         String updatedRecord = departmentTable
-                ? rosterMethods.editDepartmentRecord(originalRecord)
+                ? managerMethods.editDepartmentRecord(originalRecord)
                 : appointmentTable
-                ? RecordsHelperAppointment.editAppointmentRecord(this, originalRecord)
+                ? RecordsHelperAppointment.editAppointmentRecord(
+                        this,
+                        originalRecord
+                )
                 : insuranceTable
-                ? RecordsHelperInsurance.editInsuranceRecord(this, originalRecord)
+                ? RecordsHelperInsurance.editInsuranceRecord(
+                        this,
+                        originalRecord
+                )
                 : consultationRateTable
-                ? RecordsHelperConsultation.editConsultationRateRecord(this, originalRecord)
+                ? RecordsHelperConsultation.editConsultationRateRecord(
+                        this,
+                        originalRecord
+                )
                 : assetTable
-                ? RecordsHelperAsset.editAssetRecord(this, originalRecord)
+                ? RecordsHelperAsset.editAssetRecord(
+                        this,
+                        originalRecord
+                )
                 : rosterTable
-                ? rosterMethods.editRosterRecord(originalRecord)
+                ? managerMethods.editRosterRecord(originalRecord)
                 : consultationTable
                 ? doctorMethods.editVitalSignRecord(
                         this,
@@ -521,21 +557,63 @@ public class ManageRecordsPanel extends JPanel {
         String normalizedRecord = updatedRecord.trim();
 
         if (!isValidRecord(normalizedRecord)) {
-            JOptionPane.showMessageDialog(this,
+            JOptionPane.showMessageDialog(
+                    this,
                     "Enter correct record.",
                     "Invalid Record",
-                    JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
-        // Update the actual record in the current records list
-        records.set(recordIndex, normalizedRecord);
+        /*
+         * Find the record again in the latest file data
+         * and replace it.
+         */
+        int recordIndex = -1;
 
-        // Save the current records list
-        writeRecords(
-                records,
-                "The record could not be updated."
+        for (int i = 1; i < latestRecords.size(); i++) {
+
+            String record = latestRecords.get(i);
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts = ManageRecordsHelper.splitRecord(record);
+
+            if (parts.length > 0
+                    && parts[0].trim().equals(selectedId)) {
+
+                recordIndex = i;
+                break;
+            }
+        }
+
+        if (recordIndex == -1) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "The selected record could not be updated.",
+                    "Edit Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        latestRecords.set(recordIndex, normalizedRecord);
+
+        /*
+         * Save directly using the latest file contents.
+         */
+        FileManager.writeAllLines(
+                fileName,
+                latestRecords
         );
+
+        /*
+         * Reload records and refresh the JTable.
+         */
+        refreshTable();
     }
 
     private String[] splitRecord(String record) {
@@ -572,7 +650,7 @@ public class ManageRecordsPanel extends JPanel {
             return;
         }
         if (rosterTable) {
-            String newRecord = rosterMethods.addRosterRecord();
+            String newRecord = managerMethods.addRosterRecord();
 
             if (newRecord == null) {
                 return;
@@ -645,7 +723,7 @@ public class ManageRecordsPanel extends JPanel {
         }
         
         if (departmentTable) {
-            String newRecord = rosterMethods.addDepartmentRow();
+            String newRecord = managerMethods.addDepartmentRow();
 
             if (newRecord != null) {
 
@@ -708,31 +786,137 @@ public class ManageRecordsPanel extends JPanel {
         refreshTable();
     }
 
-
     private void deleteSelectedRecord() {
         int viewRow = recordsTable.getSelectedRow();
+
         if (viewRow == -1) {
-            JOptionPane.showMessageDialog(this,
+            JOptionPane.showMessageDialog(
+                    this,
                     "Please select a record first.",
-                    "No Record Selected", JOptionPane.WARNING_MESSAGE);
+                    "No Record Selected",
+                    JOptionPane.WARNING_MESSAGE
+            );
             return;
         }
 
         int modelRow = recordsTable.convertRowIndexToModel(viewRow);
-        int choice = JOptionPane.showConfirmDialog(this,
-                "Delete the selected record?", "Confirm Delete",
-                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+        String selectedId = recordsTable
+                .getModel()
+                .getValueAt(modelRow, 0)
+                .toString()
+                .trim();
+
+        // Read the latest records directly from the file
+        List<String> latestRecords = FileManager.readLines(fileName);
+
+        if (latestRecords == null || latestRecords.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No records were found.",
+                    "Delete Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        String originalRecord = null;
+        int recordIndex = -1;
+
+        // Skip header
+        for (int i = 1; i < latestRecords.size(); i++) {
+
+            String record = latestRecords.get(i);
+
+            if (record == null || record.trim().isEmpty()) {
+                continue;
+            }
+
+            String[] parts =
+                    ManageRecordsHelper.splitRecord(record);
+
+            if (parts.length > 0
+                    && parts[0].trim().equals(selectedId)) {
+
+                originalRecord = record;
+                recordIndex = i;
+                break;
+            }
+        }
+
+        if (originalRecord == null) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "The selected record could not be found.",
+                    "Delete Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        // Only the manager who manages the roster can delete it
+        if (rosterTable) {
+
+            User loggedInManager = Session.getCurrentUser();
+
+            if (loggedInManager == null) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "No user is currently logged in.",
+                        "Delete Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
+            String[] parts =
+                    ManageRecordsHelper.splitRecord(originalRecord);
+
+            if (parts.length < 7) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Invalid roster record.",
+                        "Delete Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
+            String managedBy = parts[2].trim();
+
+            if (!managedBy.equalsIgnoreCase(
+                    loggedInManager.getFullName().trim())) {
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        "You can only delete rosters managed by the current signed-in user.",
+                        "Access Denied",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+        }
+
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete this record?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+
         if (choice != JOptionPane.YES_OPTION) {
             return;
         }
 
-        if (!recordHelper.deleteRecord(modelRow)) {
-            JOptionPane.showMessageDialog(this,
-                    "The record could not be deleted.",
-                    "Save Error", JOptionPane.ERROR_MESSAGE);
-            refreshTable();
-            return;
-        }
+        latestRecords.remove(recordIndex);
+
+        FileManager.writeAllLines(
+                fileName,
+                latestRecords
+        );
+
+        refreshTable();
     }
 
     public boolean hasIllegalChars(String... values) {
