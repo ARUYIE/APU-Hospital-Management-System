@@ -40,11 +40,11 @@ public class ReportCharts extends JPanel {
 
     private final String selectedMonth;
 
-    private JPanel departmentChartPanel;
-    private JPanel revenueChartPanel;
-    private JPanel statusChartPanel;
-    private JPanel doctorWorkloadChartPanel;
-    private JPanel weeklyVolumeChartPanel;
+    private final JPanel departmentChartPanel;
+    private final JPanel revenueChartPanel;
+    private final JPanel statusChartPanel;
+    private final JPanel doctorWorkloadChartPanel;
+    private final JPanel weeklyVolumeChartPanel;
 
     public ReportCharts(String title) {
 
@@ -201,14 +201,15 @@ public class ReportCharts extends JPanel {
     }
 
     private void loadCharts() {
-
         ReportData data =
                 new ReportData(selectedMonth);
 
-        departmentChartPanel.add(
-                new DepartmentPieChart(data),
-                BorderLayout.CENTER
-        );
+        /*
+         * Department chart is intentionally not loaded.
+         *
+         * booking.txt no longer contains SERVICE_TYPE,
+         * so department appointment data is not available.
+         */
 
         revenueChartPanel.add(
                 new RevenueBarChart(data),

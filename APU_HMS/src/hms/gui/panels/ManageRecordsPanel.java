@@ -685,6 +685,7 @@ public class ManageRecordsPanel extends JPanel {
     public void refreshTable() {
         recordHelper.refreshTable();
         records = recordHelper.getRecords();
+        setupTableSorter();
     }
 
     private void addRecord() {
@@ -972,17 +973,6 @@ public class ManageRecordsPanel extends JPanel {
         return recordsTable;
     }
     
-    public void addBackButton(Runnable action) {
-        JButton backButton = new JButton("Back");
-
-        backButton.addActionListener(e -> action.run());
-
-        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        backPanel.setOpaque(false);
-        backPanel.add(backButton);
-
-        add(backPanel, BorderLayout.SOUTH);
-
     public void addBackButton(Runnable onBack) {
         JButton backButton = new JButton("Back");
         backButton.setBackground(Color.BLACK);
