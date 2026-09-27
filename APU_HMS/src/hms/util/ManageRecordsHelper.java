@@ -1,6 +1,10 @@
 package hms.util;
 
+import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dialog;
+import java.awt.GridLayout;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -8,17 +12,26 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
 import hms.role.Role;
 import hms.role.User;
 
-/** Shared data and table operations for record-management panels. */
+/**
+ * Shared data and table operations for record-management panels.
+ */
 public final class ManageRecordsHelper {
 
     private final String fileName;
@@ -32,13 +45,14 @@ public final class ManageRecordsHelper {
     private final boolean consultationTable;
     private final boolean prescriptionTable;
     private final boolean labRequestTable;
+    private final boolean billsTable;
     private final DefaultTableModel tableModel;
     private final JComboBox<String> doctorSearchBox;
     private final JComboBox<String> assetSearchBox;
     private boolean updatingAssetFilter;
     private final List<String> records = new ArrayList<>();
     private String headerLine;
-    
+
     private final DoctorMethods doctorMethods;
 
     public ManageRecordsHelper(String fileName, DefaultTableModel tableModel, JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox, boolean consultationTable, boolean prescriptionTable, boolean labRequestTable) {
@@ -55,6 +69,7 @@ public final class ManageRecordsHelper {
         this.consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
         this.prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
         this.labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
+        this.billsTable = "bills.txt".equalsIgnoreCase(fileName);
         this.doctorMethods = new DoctorMethods();
     }
 
@@ -79,8 +94,6 @@ public final class ManageRecordsHelper {
         refreshAssetFilterOptions();
         tableModel.setRowCount(0);
 
-
-
         for (String record : records) {
 
             if (record == null || record.trim().isEmpty()) {
@@ -97,11 +110,17 @@ public final class ManageRecordsHelper {
         List<String> after = FileManager.readLines(fileName);
         boolean saved = after.size() == before.size() + 1
                 && after.get(after.size() - 1).equals(record);
-        if (!saved) {
-            return false;
+        if (saved) {
+            if ("bookings.txt".equalsIgnoreCase(fileName)) {
+                String[] parts = splitRecord(record);
+                if (parts.length >= 6 && parts[5].trim().equalsIgnoreCase("COMPLETED")) {
+                    BillingManager.generateBillForAppointment(parts[0].trim());
+                }
+            }
+            refreshTable();
+            return true;
         }
-        refreshTable();
-        return true;
+        return false;
     }
 
     public boolean writeRecords(List<String> updatedRecords, String errorMessage) {
@@ -111,13 +130,21 @@ public final class ManageRecordsHelper {
         }
         linesToWrite.addAll(updatedRecords);
         FileManager.writeAllLines(fileName, linesToWrite);
+
         boolean saved = FileManager.readLines(fileName).equals(linesToWrite);
         if (saved) {
+            if ("bookings.txt".equalsIgnoreCase(fileName)) {
+                for (String record : updatedRecords) {
+                    String[] parts = splitRecord(record);
+                    if (parts.length >= 6 && parts[5].trim().equalsIgnoreCase("COMPLETED")) {
+                        BillingManager.generateBillForAppointment(parts[0].trim());
+                    }
+                }
+            }
             refreshTable();
         }
         return saved;
     }
-    
 
     public boolean deleteRecord(int modelRow) {
         if (modelRow < 0 || modelRow >= records.size()) {
@@ -245,139 +272,199 @@ public final class ManageRecordsHelper {
     }
 
     private void addTableRow(String line) {
-    String[] parts = splitRecord(line);
+        String[] parts = splitRecord(line);
 
-    if (departmentTable && parts.length >= 4) {
-        tableModel.addRow(new Object[]{
-            parts[0].trim(),
-            parts[1].trim(),
-            findName(parts[3].trim()),
-            parts[2].trim()
-        });
+        if (departmentTable && parts.length >= 4) {
+            tableModel.addRow(new Object[]{
+                parts[0].trim(),
+                parts[1].trim(),
+                findName(parts[3].trim()),
+                parts[2].trim()
+            });
 
-    } else if ((patientAppointmentTable || appointmentTable) && parts.length >= 6) {
-        String doctorId = parts[2].trim();
-        if (!visibleToCurrentDoctor(doctorId)) {
-            return;
-        }
-        //patient can only see their own appointment
-        String patientId = parts[1].trim();
-        User currentUser = Session.getCurrentUser();
-        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
-            if (!patientId.equalsIgnoreCase(currentUser.getUserId())
-                    && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
-                return; 
+        } else if ((patientAppointmentTable || appointmentTable) && parts.length >= 6) {
+            String doctorId = parts[2].trim();
+            if (!visibleToCurrentDoctor(doctorId)) {
+                return;
             }
-        }
-        String doctorName = findName(doctorId);
-        String selectedDoctor = doctorSearchBox != null ? (String) doctorSearchBox.getSelectedItem() : null;
+            //patient can only see their own appointment
+            String patientId = parts[1].trim();
+            User currentUser = Session.getCurrentUser();
+            if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+                if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                        && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                    return;
+                }
+            }
+            String doctorName = findName(doctorId);
+            String selectedDoctor = doctorSearchBox != null ? (String) doctorSearchBox.getSelectedItem() : null;
 
-        if (selectedDoctor != null
-                && !selectedDoctor.equals("All Doctors")
-                && !selectedDoctor.equals("Doctor Name")
-                && !doctorName.equalsIgnoreCase(selectedDoctor)) {
-            return;
-        }
+            if (selectedDoctor != null
+                    && !selectedDoctor.equals("All Doctors")
+                    && !selectedDoctor.equals("Doctor Name")
+                    && !doctorName.equalsIgnoreCase(selectedDoctor)) {
+                return;
+            }
 
-        tableModel.addRow(new Object[]{
-            parts[0].trim(),           
-            findName(parts[1].trim()), 
-            doctorName,                
-            parts[3].trim(),           
-            parts[4].trim(),           
-            parts[5].trim()            
-        });
+            String aptId = parts[0].trim();
+            String ratingDisplay = "No Review";
+            String commentDisplay = "N/A";
 
-    } else if (assetTable) {
-        RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
+            List<String> reviewLines = FileManager.readLines("reviews.txt");
+            for (int i = 1; i < reviewLines.size(); i++) {
+                String rLine = reviewLines.get(i);
+                if (rLine == null || rLine.trim().isEmpty()) {
+                    continue;
+                }
 
-    } else if (insuranceTable) {
-        RecordsHelperInsurance.addInsuranceRow(tableModel, line);
+                String[] rParts = splitRecord(rLine);
+                if (rParts.length >= 4 && rParts[1].trim().equalsIgnoreCase(aptId)) {
+                    ratingDisplay = rParts[2].trim() + " / 5 ⭐";
+                    commentDisplay = rParts[3].trim();
+                    break;
+                }
+            }
 
-    } else if (consultationRateTable && parts.length >= 6) {
-        if (parts[0].trim().equalsIgnoreCase("SPECIALTY")) {
-            return;
-        }
+            tableModel.addRow(new Object[]{
+                aptId,
+                findName(parts[1].trim()),
+                doctorName,
+                parts[3].trim(),
+                parts[4].trim(),
+                parts[5].trim(),
+                ratingDisplay, // Added Rating column
+                commentDisplay // Added Comment column
+            });
+        } else if (assetTable) {
+            RecordsHelperAsset.addAssetRow(tableModel, line, assetSearchBox);
 
-        tableModel.addRow(new Object[]{
-            parts[0].trim(), // Specialty
-            parts[1].trim(), // Base Rate
-            parts[2].trim(), // Min Rate
-            parts[3].trim(), // Max Rate
-            parts[4].trim(), // Currency
-            parts[5].trim()  // Effective Date
-        });
+        } else if (insuranceTable) {
+            RecordsHelperInsurance.addInsuranceRow(tableModel, line);
 
-    } else if (consultationTable && parts.length >= 9) {
+        } else if (consultationRateTable && parts.length >= 6) {
+            if (parts[0].trim().equalsIgnoreCase("SPECIALTY")) {
+                return;
+            }
+
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), // Specialty
+                parts[1].trim(), // Base Rate
+                parts[2].trim(), // Min Rate
+                parts[3].trim(), // Max Rate
+                parts[4].trim(), // Currency
+                parts[5].trim() // Effective Date
+            });
+
+        } else if (consultationTable && parts.length >= 9) {
+            String patientId = parts[1].trim();
+            User currentUser = Session.getCurrentUser();
+
+            if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+                if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                        && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                    return;
+                }
+            }
+
+            String consultationId = parts[3].trim();
+            String appointmentDateTime = consultationId;
+
+            List<String> bookingLines = FileManager.readLines("bookings.txt");
+            for (String booking : bookingLines) {
+                String[] bParts = splitRecord(booking);
+                if (bParts.length >= 5 && bParts[0].trim().equals(consultationId)) {
+                    appointmentDateTime = bParts[3].trim() + " " + bParts[4].trim();
+                    break;
+                }
+            }
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), // Vital Sign ID
+                findName(parts[1].trim()), // Patient Name
+                findName(parts[2].trim()), // Doctor Name
+                appointmentDateTime, // Appointment Date & Time 
+                parts[4].trim(), // BP
+                parts[5].trim(), // Heart Rate
+                parts[6].trim(), // Temperature
+                parts[7].trim(), // Date
+                parts[8].trim() // Notes
+            });
+        } else if (prescriptionTable && parts.length >= 8) {
+            String patientId = parts[1].trim();
+
+            User currentUser = Session.getCurrentUser();
+            if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+                if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                        && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                    return;
+                }
+            }
+
             if (!visibleToCurrentDoctor(parts[2].trim())) {
                 return;
             }
 
-        String patientId = parts[1].trim();
-        User currentUser = Session.getCurrentUser();
-        
-        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
-            if (!patientId.equalsIgnoreCase(currentUser.getUserId())
-                    && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+            String appointmentId = parts[6].trim();
+            String appointmentDateTime = appointmentId;
 
-                return; 
+            List<String> bookingLines = FileManager.readLines("bookings.txt");
+            for (String booking : bookingLines) {
+                String[] bParts = splitRecord(booking);
+                if (bParts.length >= 5 && bParts[0].trim().equals(appointmentId)) {
+                    appointmentDateTime = bParts[3].trim() + " " + bParts[4].trim();
+                    break;
+                }
             }
-        }
 
-        tableModel.addRow(new Object[]{
-            parts[0].trim(),           
-            findName(parts[1].trim()), 
-            findName(parts[2].trim()), 
-            parts[3].trim(),           
-            parts[4].trim(),           
-            parts[5].trim(),          
-            parts[6].trim(),           
-            parts[7].trim(),           
-            parts[8].trim()            
-        });
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), // Prescription ID
+                findName(parts[1].trim()), // Patient Full Name
+                findName(parts[2].trim()), // Doctor Full Name
+                parts[3].trim(), // Medication
+                parts[4].trim(), // Dosage
+                parts[5].trim(), // Duration
+                appointmentDateTime, // Appointment Date & Time 
+                parts[7].trim() // Status
+            });
 
-    } else if (prescriptionTable && parts.length >= 8) {
-        String patientId = parts[1].trim();
-
-        User currentUser = Session.getCurrentUser();
-        if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
-            if (!patientId.equalsIgnoreCase(currentUser.getUserId())
-                    && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
-                return; 
-            }
-        }
-
+        } else if (labRequestTable && parts.length >= 8) {
             if (!visibleToCurrentDoctor(parts[2].trim())) {
                 return;
             }
-        tableModel.addRow(new Object[]{
-            parts[0].trim(),
-            findName(parts[1].trim()),
-            findName(parts[2].trim()),
-            parts[3].trim(),
-            parts[4].trim(),
-            parts[5].trim(),
-            parts[6].trim(),
-            parts[7].trim()
-        });
 
-    } else if (labRequestTable && parts.length >= 8) {
-            if (!visibleToCurrentDoctor(parts[2].trim())) {
-                return;
+            String patientId = parts[1].trim();
+            User currentUser = Session.getCurrentUser();
+            if (currentUser != null && currentUser.getRole() == Role.PATIENT) {
+                if (!patientId.equalsIgnoreCase(currentUser.getUserId())
+                        && !patientId.equalsIgnoreCase(currentUser.getUsername())) {
+                    return;
+                }
             }
-        tableModel.addRow(new Object[]{
-            parts[0].trim(), 
-            findName(parts[1].trim()),
-            findName(parts[2].trim()),
-            parts[3].trim(),
-            findAssetType(parts[4].trim()),
-            parts[5].trim(),
-            parts[6].trim(),
-            parts[7].trim()
-        });
 
-    } else if (rosterTable && parts.length >= 7) {
-        tableModel.addRow(new Object[]{
+            String appointmentId = parts[4].trim();
+            String appointmentDateTime = appointmentId;
+
+            List<String> bookingLines = FileManager.readLines("bookings.txt");
+            for (String booking : bookingLines) {
+                String[] bParts = splitRecord(booking);
+                if (bParts.length >= 5 && bParts[0].trim().equals(appointmentId)) {
+                    appointmentDateTime = bParts[3].trim() + " " + bParts[4].trim();
+                    break;
+                }
+            }
+
+            tableModel.addRow(new Object[]{
+                parts[0].trim(), // Request ID
+                findName(parts[1].trim()), // Patient Full Name
+                findName(parts[2].trim()), // Doctor Full Name
+                parts[3].trim(), // Test Type
+                appointmentDateTime, // Appointment Date & Time
+                parts[5].trim(), // Date Requested
+                parts[6].trim(), // Date Completed
+                parts[7].trim() // Status
+            });
+
+        } else if (rosterTable && parts.length >= 7) {
+            tableModel.addRow(new Object[]{
                 parts[0].trim(),
                 parts[1].trim(),
                 parts[2].trim(),
@@ -385,33 +472,105 @@ public final class ManageRecordsHelper {
                 parts[4].trim(),
                 parts[5].trim(),
                 parts[6].trim()
-        });
-
-    } else {
-        if (parts.length > 1) {
-            Object[] rowData = new Object[parts.length];
-            for (int i = 0; i < parts.length; i++) {
-                rowData[i] = parts[i].trim();
-            }
-            tableModel.addRow(rowData);
-        } else {
-            tableModel.addRow(new Object[]{
-                tableModel.getRowCount() + 1,
-                line
             });
+
+        } else if (billsTable && parts.length >= 5) {
+            String aptId = parts[0].trim();
+
+            List<String> appointments = FileManager.readLines("bookings.txt");
+            List<String> rosterLines = FileManager.readLines("roster.txt");
+            List<String> ratesLines = FileManager.readLines("consultation_rates.txt");
+            List<String> userLines = FileManager.readLines("users.txt");
+
+            String doctorId = "";
+            String date = "";
+            String patientId = "";
+
+            for (String apt : appointments) {
+                String[] aptParts = splitRecord(apt);
+                if (aptParts.length >= 6 && aptParts[0].trim().equalsIgnoreCase(aptId)) {
+                    patientId = aptParts[1].trim();
+                    doctorId = aptParts[2].trim();
+                    date = aptParts[3].trim();
+                    break;
+                }
+            }
+
+            // Check patient insurance
+            String patientInsurance = "";
+            for (String uLine : userLines) {
+                String[] uParts = splitRecord(uLine);
+                if (uParts.length > 0 && uParts[0].trim().equalsIgnoreCase(patientId)) {
+                    patientInsurance = uParts[uParts.length - 1].trim();
+                    break;
+                }
+            }
+
+            // Find Department from roster.txt
+            String doctorFullName = findName(doctorId);
+            String department = "General";
+            for (String rLine : rosterLines) {
+                String[] rParts = splitRecord(rLine);
+                if (rParts.length >= 4) {
+                    String rosterDocName = rParts[1].trim();
+                    if (rosterDocName.equalsIgnoreCase(doctorFullName) || rosterDocName.equalsIgnoreCase(doctorId)) {
+                        department = rParts[3].trim();
+                        break;
+                    }
+                }
+            }
+
+            // Find Base Rate from consultation_rates.txt
+            double baseRate = 50.00;
+            for (String rtLine : ratesLines) {
+                String[] rtParts = splitRecord(rtLine);
+                if (rtParts.length >= 2 && rtParts[0].trim().equalsIgnoreCase(department)) {
+                    try {
+                        baseRate = Double.parseDouble(rtParts[1].trim());
+                    } catch (NumberFormatException ignored) {
+                    }
+                    break;
+                }
+            }
+
+            double discount = (!patientInsurance.isEmpty() && !patientInsurance.equalsIgnoreCase("None")) ? baseRate * 0.20 : 0.0;
+            double finalAmount = baseRate - discount;
+
+            tableModel.addRow(new Object[]{
+                aptId,
+                date,
+                doctorFullName,
+                department,
+                String.format("$%.2f", baseRate),
+                String.format("$%.2f", discount),
+                String.format("$%.2f", finalAmount),
+                parts[parts.length - 1].trim() // PAID/UNPAID
+            });
+        } else {
+            if (parts.length > 1) {
+                Object[] rowData = new Object[parts.length];
+                for (int i = 0; i < parts.length; i++) {
+                    rowData[i] = parts[i].trim();
+                }
+                tableModel.addRow(rowData);
+            } else {
+                tableModel.addRow(new Object[]{
+                    tableModel.getRowCount() + 1,
+                    line
+                });
+            }
         }
     }
-}
 
     private static boolean visibleToCurrentDoctor(String doctorId) {
         User current = Session.getCurrentUser();
         if (current == null || current.getRole() != Role.DOCTOR) {
-            return true; 
+            return true;
         }
-        return doctorId.equalsIgnoreCase(current.getUserId()) 
-            || doctorId.equalsIgnoreCase(current.getFullName());
+        return doctorId.equalsIgnoreCase(current.getUserId())
+                || doctorId.equalsIgnoreCase(current.getFullName());
     }
-    
+
     public static String[] splitRecord(String record) {
         return record.split("\\|", -1);
     }
@@ -432,12 +591,12 @@ public final class ManageRecordsHelper {
         if (assetId == null || assetId.trim().isEmpty()) {
             return "N/A";
         }
-        
+
         List<String> assetLines = FileManager.readLines("hospital_assets.txt");
         for (String line : assetLines) {
             String[] parts = splitRecord(line);
             if (parts.length >= 3 && parts[0].trim().equalsIgnoreCase(assetId.trim())) {
-                return parts[2].trim(); 
+                return parts[2].trim();
             }
         }
         return assetId;
@@ -453,7 +612,7 @@ public final class ManageRecordsHelper {
             return false;
         }
     }
-    
+
     public static boolean isValidRecord(String record) {
         return record != null && !record.isEmpty() && !record.contains("\n")
                 && !record.contains("\r") && record.indexOf('|') > 0;
@@ -468,34 +627,46 @@ public final class ManageRecordsHelper {
         return false;
     }
 
-
-
     private static final List<String> STATUS_ORDER = Arrays.asList(
-        "PENDING", 
-        "IN_PROGRESS",
-        "APPROVED", 
-        "DENIED", 
-        "SCHEDULED",
-        "CANCELLED",
-        "COMPLETED"
+            "PENDING",
+            "IN_PROGRESS",
+            "APPROVED",
+            "DENIED",
+            "SCHEDULED",
+            "CANCELLED",
+            "UNPAID",
+            "PAID",
+            "COMPLETED"
     );
 
     public static void applyStatusSorter(JTable table, int statusColumnIndex) {
-        if (table == null || table.getModel() == null) return;
+        if (table == null || table.getModel() == null) {
+            return;
+        }
 
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
 
         Comparator<String> statusComparator = (s1, s2) -> {
-            if (s1 == null && s2 == null) return 0;
-            if (s1 == null) return 1;
-            if (s2 == null) return -1;
+            if (s1 == null && s2 == null) {
+                return 0;
+            }
+            if (s1 == null) {
+                return 1;
+            }
+            if (s2 == null) {
+                return -1;
+            }
 
             int index1 = STATUS_ORDER.indexOf(s1.trim().toUpperCase());
             int index2 = STATUS_ORDER.indexOf(s2.trim().toUpperCase());
 
-            if (index1 == -1) index1 = Integer.MAX_VALUE;
-            if (index2 == -1) index2 = Integer.MAX_VALUE;
+            if (index1 == -1) {
+                index1 = Integer.MAX_VALUE;
+            }
+            if (index2 == -1) {
+                index2 = Integer.MAX_VALUE;
+            }
 
             return Integer.compare(index1, index2);
         };
@@ -503,8 +674,11 @@ public final class ManageRecordsHelper {
         sorter.setComparator(statusColumnIndex, statusComparator);
         table.setRowSorter(sorter);
     }
+
     public static void applyStatusColorCoding(JTable table, int statusColumnIndex) {
-        if (table == null) return;
+        if (table == null) {
+            return;
+        }
 
         javax.swing.table.TableCellRenderer defaultRenderer = table.getDefaultRenderer(Object.class);
 
@@ -512,7 +686,7 @@ public final class ManageRecordsHelper {
             @Override
             public Component getTableCellRendererComponent(JTable jTable, Object value,
                     boolean isSelected, boolean hasFocus, int row, int column) {
-                
+
                 Component c = super.getTableCellRendererComponent(jTable, value, isSelected, hasFocus, row, column);
 
                 if (!isSelected) {
@@ -523,16 +697,18 @@ public final class ManageRecordsHelper {
                         String status = statusObj.toString().trim().toUpperCase();
                         switch (status) {
                             case "COMPLETED":
-                                c.setBackground(java.awt.Color.LIGHT_GRAY); 
+                                c.setBackground(java.awt.Color.LIGHT_GRAY);
                                 c.setForeground(java.awt.Color.BLACK);
                                 break;
                             case "SCHEDULED":
                             case "APPROVED":
+                            case "PAID":
                                 c.setBackground(new java.awt.Color(220, 248, 220)); // Light Green
                                 c.setForeground(java.awt.Color.BLACK);
                                 break;
                             case "CANCELLED":
                             case "DENIED":
+                            case "UNPAID":
                                 c.setBackground(new java.awt.Color(255, 225, 225)); // Light Red/Pink
                                 c.setForeground(java.awt.Color.BLACK);
                                 break;
@@ -540,7 +716,7 @@ public final class ManageRecordsHelper {
                                 c.setBackground(new java.awt.Color(255, 255, 210)); // Light Yellow
                                 c.setForeground(java.awt.Color.BLACK);
                                 break;
-                            case "IN_PROGRESS":                                
+                            case "IN_PROGRESS":
                             default:
                                 c.setBackground(java.awt.Color.WHITE);
                                 c.setForeground(java.awt.Color.BLACK);
@@ -556,5 +732,54 @@ public final class ManageRecordsHelper {
         });
     }
 
-}
+    public static String showDatePickerDialog(Component parent, String initialDate) {
+        JDialog pickerDialog = new JDialog(SwingUtilities.getWindowAncestor(parent), "Select Date", Dialog.ModalityType.APPLICATION_MODAL);
+        pickerDialog.setLayout(new BorderLayout(8, 8));
 
+        JPanel panel = new JPanel(new GridLayout(3, 2, 6, 6));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        LocalDate parsedDate;
+        try {
+            parsedDate = LocalDate.parse(initialDate);
+        } catch (Exception e) {
+            parsedDate = LocalDate.now();
+        }
+
+        JTextField yearField = new JTextField(String.valueOf(parsedDate.getYear()), 5);
+        JComboBox<Integer> monthCombo = new JComboBox<>(new Integer[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12});
+        monthCombo.setSelectedItem(parsedDate.getMonthValue());
+        JComboBox<Integer> dayCombo = new JComboBox<>(new Integer[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31});
+        dayCombo.setSelectedItem(parsedDate.getDayOfMonth());
+
+        panel.add(new JLabel("Year (YYYY):"));
+        panel.add(yearField);
+        panel.add(new JLabel("Month:"));
+        panel.add(monthCombo);
+        panel.add(new JLabel("Day:"));
+        panel.add(dayCombo);
+
+        final String[] result = {null};
+        JButton okButton = new JButton("Select");
+        okButton.addActionListener(e -> {
+            try {
+                int year = Integer.parseInt(yearField.getText().trim());
+                int month = (int) monthCombo.getSelectedItem();
+                int day = (int) dayCombo.getSelectedItem();
+                LocalDate date = LocalDate.of(year, month, day);
+                result[0] = date.toString();
+                pickerDialog.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(pickerDialog, "Invalid date values selected.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        pickerDialog.add(panel, BorderLayout.CENTER);
+        pickerDialog.add(okButton, BorderLayout.SOUTH);
+        pickerDialog.pack();
+        pickerDialog.setLocationRelativeTo(parent);
+        pickerDialog.setVisible(true);
+
+        return result[0];
+    }
+}

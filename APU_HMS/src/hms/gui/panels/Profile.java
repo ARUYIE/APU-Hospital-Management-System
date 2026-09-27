@@ -1,5 +1,20 @@
 package hms.gui.panels;
 
+import java.awt.BorderLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+
 import hms.role.Doctor;
 import hms.role.Patient;
 import hms.role.User;
@@ -7,33 +22,46 @@ import hms.util.Session;
 import hms.util.UserRepository;
 import hms.util.Validator;
 
-import javax.swing.*;
-import java.awt.*;
-
 public class Profile extends JPanel {
+
     public Profile() {
-        setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        setLayout(new BorderLayout(15, 15));
+        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        setOpaque(false);
 
         User currentUser = Session.getCurrentUser();
         if (currentUser == null) {
-            add(new JLabel("No user is currently logged in."));
+            JLabel errLabel = new JLabel("No user is currently logged in.");
+            errLabel.setFont(errLabel.getFont().deriveFont(Font.BOLD, 16f));
+            add(errLabel);
             return;
         }
 
-        JLabel title = new JLabel("Profile");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 16f));
-
-        JTextField fullNameField = new JTextField(currentUser.getFullName(), 20);
-        JTextField emailField = new JTextField(currentUser.getEmail(), 20);
-        JTextField phoneField = new JTextField(currentUser.getPhone(), 20);
-        JPasswordField passwordField = new JPasswordField(20);
-
         JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.insets = new Insets(10, 10, 10, 10); // Increased spacing
         gbc.fill = GridBagConstraints.HORIZONTAL;
         int row = 0;
+
+        // Larger Title positioned just above User ID
+        JLabel title = new JLabel("Profile");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 40f));
+        gbvSetPosition(gbc, 0, row++, 2, GridBagConstraints.NONE);
+        form.add(title, gbc);
+
+        gbc.gridwidth = 1;
+
+        // Larger Font for Input Fields
+        Font inputFont = new Font("SansSerif", Font.PLAIN, 14);
+        JTextField fullNameField = new JTextField(currentUser.getFullName(), 20);
+        fullNameField.setFont(inputFont);
+        JTextField emailField = new JTextField(currentUser.getEmail(), 20);
+        emailField.setFont(inputFont);
+        JTextField phoneField = new JTextField(currentUser.getPhone(), 20);
+        phoneField.setFont(inputFont);
+        JPasswordField passwordField = new JPasswordField(20);
+        passwordField.setFont(inputFont);
 
         addReadOnlyRow(form, gbc, row++, "User ID:", currentUser.getUserId());
         addReadOnlyRow(form, gbc, row++, "Username:", currentUser.getUsername());
@@ -51,11 +79,16 @@ public class Profile extends JPanel {
         addEditableRow(form, gbc, row++, "New Password (leave blank to keep current):", passwordField);
 
         JButton saveButton = new JButton("Save Changes");
-        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.NONE;
-        form.add(saveButton, gbc);
-        gbc.gridwidth = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        saveButton.setFont(new Font("SansSerif", Font.BOLD, 14));
+        saveButton.setMargin(new Insets(8, 16, 8, 16));
 
-        
+        gbc.gridx = 0;
+        gbc.gridy = row++;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.NONE;
+        form.add(saveButton, gbc);
+        gbc.gridwidth = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         saveButton.addActionListener(e -> {
             String fullName = fullNameField.getText().trim();
@@ -64,9 +97,15 @@ public class Profile extends JPanel {
             String newPassword = new String(passwordField.getPassword());
 
             StringBuilder errors = new StringBuilder();
-            if (!Validator.isNonEmpty(fullName)) errors.append("- Full name is required.\n");
-            if (!Validator.isValidEmail(email)) errors.append("- A valid email is required.\n");
-            if (!Validator.isValidPhone(phone)) errors.append("- A valid phone number is required.\n");
+            if (!Validator.isNonEmpty(fullName)) {
+                errors.append("- Full name is required.\n");
+            }
+            if (!Validator.isValidEmail(email)) {
+                errors.append("- A valid email is required.\n");
+            }
+            if (!Validator.isValidPhone(phone)) {
+                errors.append("- A valid phone number is required.\n");
+            }
             if (!newPassword.isEmpty() && !Validator.isValidPassword(newPassword)) {
                 errors.append("- New password must be at least 6 characters.\n");
             }
@@ -88,22 +127,34 @@ public class Profile extends JPanel {
             JOptionPane.showMessageDialog(this, "Your profile has been updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
         });
 
-        add(title, BorderLayout.NORTH);
         add(form, BorderLayout.CENTER);
     }
 
+    private static void gbvSetPosition(GridBagConstraints gbc, int x, int y, int width, int fill) {
+        gbc.gridx = x;
+        gbc.gridy = y;
+        gbc.gridwidth = width;
+        gbc.fill = fill;
+    }
+
     private static void addReadOnlyRow(JPanel panel, GridBagConstraints gbc, int row, String label, String value) {
-        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
-        panel.add(new JLabel(label), gbc);
+        gbvSetPosition(gbc, 0, row, 1, GridBagConstraints.HORIZONTAL);
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 14));
+        panel.add(lbl, gbc);
+
         JLabel valueLabel = new JLabel(value);
-        valueLabel.setFont(valueLabel.getFont().deriveFont(Font.PLAIN));
+        valueLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         gbc.gridx = 1;
         panel.add(valueLabel, gbc);
     }
 
     private static void addEditableRow(JPanel panel, GridBagConstraints gbc, int row, String label, JComponent field) {
-        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
-        panel.add(new JLabel(label), gbc);
+        gbvSetPosition(gbc, 0, row, 1, GridBagConstraints.HORIZONTAL);
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 14));
+        panel.add(lbl, gbc);
+
         gbc.gridx = 1;
         panel.add(field, gbc);
     }
