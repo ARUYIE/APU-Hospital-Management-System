@@ -1,6 +1,7 @@
 package hms.util;
 
 import hms.role.User;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -24,7 +25,12 @@ public class ReportData {
     private int cancelled;
     private double totalRevenue;
 
+    /*
+     * Department appointments are no longer calculated because
+     * SERVICE_TYPE has been removed from bookings.txt.
+     */
     private final Map<String, Integer> departmentAppointments;
+
     private final Map<String, Double> monthlyRevenue;
     private final Map<String, Integer> appointmentStatus;
     private final Map<String, Integer> doctorWorkload;
@@ -32,11 +38,6 @@ public class ReportData {
     /*
      * LocalDate is used as the key so the weeks remain
      * chronologically ordered.
-     *
-     * The chart can format the date as:
-     * Sep 6
-     * Sep 13
-     * Sep 20
      */
     private final Map<LocalDate, Integer> weeklyAppointmentVolume;
 
@@ -51,7 +52,13 @@ public class ReportData {
         weeklyAppointmentVolume = new TreeMap<>();
 
         calculateReport();
-        calculateDepartmentAppointments();
+
+        /*
+         * Department appointments are intentionally not calculated.
+         *
+         * bookings.txt no longer contains SERVICE_TYPE.
+         */
+
         calculateMonthlyRevenue();
         calculateAppointmentStatus();
         calculateDoctorWorkload();
@@ -62,6 +69,11 @@ public class ReportData {
      * ---------------------------------------------------------
      * MAIN REPORT
      * ---------------------------------------------------------
+     *
+     * Current bookings.txt format:
+     *
+     * BOOK_ID|PATIENT_ID|DOCTOR_ID|CONSULTATION_DATE|
+     * CONSULTATION_TIME|STATUS
      */
     private void calculateReport() {
 
@@ -93,7 +105,10 @@ public class ReportData {
             String[] parts =
                     ManageRecordsHelper.splitRecord(record);
 
-            if (parts.length < 7) {
+            /*
+             * Current booking record has 6 fields.
+             */
+            if (parts.length < 6) {
                 continue;
             }
 
@@ -153,68 +168,16 @@ public class ReportData {
      * DEPARTMENT APPOINTMENTS
      * ---------------------------------------------------------
      *
-     * SERVICE_TYPE from bookings.txt is used as the
-     * department/service category.
+     * SERVICE_TYPE has been removed from bookings.txt.
      *
-     * Cancelled appointments are excluded.
+     * Therefore department appointment data is no longer
+     * available from the booking records.
+     *
+     * This method intentionally leaves the map empty.
      */
     private void calculateDepartmentAppointments() {
 
         departmentAppointments.clear();
-
-        List<String> bookingRecords =
-                FileManager.readLines("bookings.txt");
-
-        for (int i = 1; i < bookingRecords.size(); i++) {
-
-            String record = bookingRecords.get(i);
-
-            if (record == null || record.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] parts =
-                    ManageRecordsHelper.splitRecord(record);
-
-            if (parts.length < 7) {
-                continue;
-            }
-
-            String dateText = parts[3].trim();
-            String status = parts[5].trim();
-            String serviceType = parts[6].trim();
-
-            LocalDate date;
-
-            try {
-                date = LocalDate.parse(dateText);
-            } catch (Exception e) {
-                continue;
-            }
-
-            String recordMonth =
-                    date.format(
-                            DateTimeFormatter.ofPattern("yyyy-MM")
-                    );
-
-            if (!recordMonth.equals(month)) {
-                continue;
-            }
-
-            if (status.equalsIgnoreCase("CANCELLED")) {
-                continue;
-            }
-
-            if (serviceType.isEmpty()) {
-                serviceType = "Unknown";
-            }
-
-            departmentAppointments.merge(
-                    serviceType,
-                    1,
-                    Integer::sum
-            );
-        }
     }
 
     /*
@@ -226,8 +189,7 @@ public class ReportData {
      *
      * Only COMPLETED appointments generate revenue.
      *
-     * The result contains all months found in bookings.txt,
-     * allowing the revenue chart to display a monthly trend.
+     * SERVICE_TYPE is not required.
      */
     private void calculateMonthlyRevenue() {
 
@@ -252,7 +214,10 @@ public class ReportData {
             String[] parts =
                     ManageRecordsHelper.splitRecord(record);
 
-            if (parts.length < 7) {
+            /*
+             * Current booking record has 6 fields.
+             */
+            if (parts.length < 6) {
                 continue;
             }
 
@@ -321,7 +286,10 @@ public class ReportData {
             String[] parts =
                     ManageRecordsHelper.splitRecord(record);
 
-            if (parts.length < 7) {
+            /*
+             * Current booking record has 6 fields.
+             */
+            if (parts.length < 6) {
                 continue;
             }
 
@@ -417,7 +385,10 @@ public class ReportData {
             String[] parts =
                     ManageRecordsHelper.splitRecord(record);
 
-            if (parts.length < 7) {
+            /*
+             * Current booking record has 6 fields.
+             */
+            if (parts.length < 6) {
                 continue;
             }
 
@@ -468,15 +439,6 @@ public class ReportData {
      *
      * Weeks start on SUNDAY.
      *
-     * Example:
-     *
-     * 2026-09-06 -> Sep 6
-     * 2026-09-07 -> Sep 6
-     * 2026-09-12 -> Sep 6
-     *
-     * 2026-09-13 -> Sep 13
-     * 2026-09-14 -> Sep 13
-     *
      * CANCELLED appointments are excluded.
      */
     private void calculateWeeklyAppointmentVolume() {
@@ -497,7 +459,10 @@ public class ReportData {
             String[] parts =
                     ManageRecordsHelper.splitRecord(record);
 
-            if (parts.length < 7) {
+            /*
+             * Current booking record has 6 fields.
+             */
+            if (parts.length < 6) {
                 continue;
             }
 
@@ -553,13 +518,15 @@ public class ReportData {
      * - smallest MIN_RATE
      * - largest MAX_RATE
      *
+     * Invalid records are ignored.
+     *
      * Fallback:
      * RM100 - RM250
      */
     private double[] getRateRange() {
 
         double minimumRate = Double.MAX_VALUE;
-        double maximumRate = Double.MIN_VALUE;
+        double maximumRate = Double.NEGATIVE_INFINITY;
 
         List<String> rateRecords =
                 FileManager.readLines(
@@ -577,7 +544,11 @@ public class ReportData {
             String[] parts =
                     ManageRecordsHelper.splitRecord(record);
 
-            if (parts.length < 6) {
+            /*
+             * We only access parts[2] and parts[3],
+             * so at least 4 fields are required.
+             */
+            if (parts.length < 4) {
                 continue;
             }
 
@@ -593,21 +564,48 @@ public class ReportData {
                                 parts[3].trim()
                         );
 
+                /*
+                 * Ignore negative rates.
+                 */
+                if (minRate < 0 || maxRate < 0) {
+                    continue;
+                }
+
+                /*
+                 * Ignore invalid ranges where the minimum
+                 * is greater than the maximum.
+                 */
+                if (minRate > maxRate) {
+                    continue;
+                }
+
+                /*
+                 * Find the lowest minimum rate.
+                 */
                 if (minRate < minimumRate) {
                     minimumRate = minRate;
                 }
 
+                /*
+                 * Find the highest maximum rate.
+                 */
                 if (maxRate > maximumRate) {
                     maximumRate = maxRate;
                 }
 
             } catch (NumberFormatException e) {
-                // Ignore invalid rate records.
+                /*
+                 * Ignore invalid rate records.
+                 */
             }
         }
 
+        /*
+         * If no valid consultation rates were found,
+         * use the default range.
+         */
         if (minimumRate == Double.MAX_VALUE
-                || maximumRate == Double.MIN_VALUE) {
+                || maximumRate == Double.NEGATIVE_INFINITY) {
 
             minimumRate = 100.0;
             maximumRate = 250.0;
@@ -670,6 +668,10 @@ public class ReportData {
         return totalRevenue;
     }
 
+    /*
+     * Kept for compatibility with DepartmentPieChart.
+     * The map remains empty because SERVICE_TYPE no longer exists.
+     */
     public Map<String, Integer> getDepartmentAppointments() {
         return departmentAppointments;
     }
