@@ -1,5 +1,4 @@
 ROSTER_ID|DOCTOR_NAME|MANAGED_BY|DEPARTMENT|DATE|SHIFT|STATUS
 R001|Docter Low|medicalManagersBoss|General_Surgery|2026-09-27|09:30 - 17:00|Active
-R002|Docter Low|medicalManagersBoss|General_Surgery|2026-09-28|13:00 - 21:30|Active
-R003|Sammy Liu|Manager Two|Neurology|2026-09-26|14:00 - 22:00|Active
-R004|Sammy Liu|Manager Two|Cardiology|2026-09-27|13:30 - 21:30|Active
+R002|Sammy Liu|Manager Two|Neurology|2026-09-26|14:00 - 22:00|Active
+

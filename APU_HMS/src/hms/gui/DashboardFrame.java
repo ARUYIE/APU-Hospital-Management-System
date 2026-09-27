@@ -162,8 +162,8 @@ public class DashboardFrame extends JFrame {
                         "Manage Appointments", "bookings.txt"));
                 break;
             case "Users":
-                setContent(new hms.gui.panels.ManageUserPanel(
-                    "View, Edit And Register Users"));
+                setContent(new hms.gui.panels.UsersMenuPanel(
+                    this));
                 break;                
             case "Wards/Clinics":
                 setContent(new hms.gui.panels.WardsClinicsMenuPanel(this));
@@ -221,8 +221,8 @@ public class DashboardFrame extends JFrame {
                 break;
 
             case "View My Bills":
-                setContent(new hms.gui.panels.ManageRecordsPanel(
-                        "View My Bills", "bills.txt"));
+                setContent(new hms.gui.panels.ViewMyBillsPanel(
+                        "View My Bills"));
                 break;
 
             case "Comment & Rating":
