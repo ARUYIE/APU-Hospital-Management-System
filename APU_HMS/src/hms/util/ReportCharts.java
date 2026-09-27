@@ -40,7 +40,6 @@ public class ReportCharts extends JPanel {
 
     private final String selectedMonth;
 
-    private final JPanel departmentChartPanel;
     private final JPanel revenueChartPanel;
     private final JPanel statusChartPanel;
     private final JPanel doctorWorkloadChartPanel;
@@ -51,10 +50,13 @@ public class ReportCharts extends JPanel {
         selectedMonth =
                 java.time.YearMonth.now().toString();
 
-        String monthDisplay = java.time.YearMonth.now().getMonth().getDisplayName(
-            java.time.format.TextStyle.FULL,
-            java.util.Locale.ENGLISH
-        );
+        String monthDisplay =
+                java.time.YearMonth.now()
+                        .getMonth()
+                        .getDisplayName(
+                                java.time.format.TextStyle.FULL,
+                                java.util.Locale.ENGLISH
+                        );
 
         setLayout(
                 new BorderLayout(10, 10)
@@ -81,10 +83,11 @@ public class ReportCharts extends JPanel {
                 BorderLayout.NORTH
         );
 
-        departmentChartPanel =
-                createChartPanel(
-                        "Department Appointments - " + monthDisplay
-                );
+        /*
+         * -----------------------------------------------------
+         * CREATE FOUR CHART PANELS
+         * -----------------------------------------------------
+         */
 
         revenueChartPanel =
                 createChartPanel(
@@ -107,66 +110,42 @@ public class ReportCharts extends JPanel {
                 );
 
         /*
-         * First row:
-         * Department + Revenue
+         * -----------------------------------------------------
+         * 2 x 2 CHART GRID
+         * -----------------------------------------------------
+         *
+         * Row 1:
+         * Monthly Revenue | Total Appointments
+         *
+         * Row 2:
+         * Doctor Workload | Weekly Appointment Volume
          */
-        JPanel topCharts =
-                new JPanel(
-                        new GridLayout(
-                                1,
-                                2,
-                                10,
-                                10
-                        )
-                );
 
-        topCharts.add(
-                departmentChartPanel
-        );
-
-        topCharts.add(
-                revenueChartPanel
-        );
-
-        /*
-         * Second row:
-         * Status + Doctor workload
-         */
-        JPanel middleCharts =
-                new JPanel(
-                        new GridLayout(
-                                1,
-                                2,
-                                10,
-                                10
-                        )
-                );
-
-        middleCharts.add(
-                statusChartPanel
-        );
-
-        middleCharts.add(
-                doctorWorkloadChartPanel
-        );
-
-        /*
-         * Third row:
-         * Weekly volume across the full width.
-         */
         JPanel allCharts =
                 new JPanel(
                         new GridLayout(
-                                3,
-                                1,
+                                2,
+                                2,
                                 10,
                                 10
                         )
                 );
 
-        allCharts.add(topCharts);
-        allCharts.add(middleCharts);
-        allCharts.add(weeklyVolumeChartPanel);
+        allCharts.add(
+                revenueChartPanel
+        );
+
+        allCharts.add(
+                statusChartPanel
+        );
+
+        allCharts.add(
+                doctorWorkloadChartPanel
+        );
+
+        allCharts.add(
+                weeklyVolumeChartPanel
+        );
 
         add(
                 allCharts,
@@ -201,14 +180,14 @@ public class ReportCharts extends JPanel {
     }
 
     private void loadCharts() {
+
         ReportData data =
                 new ReportData(selectedMonth);
 
         /*
-         * Department chart is intentionally not loaded.
-         *
-         * booking.txt no longer contains SERVICE_TYPE,
-         * so department appointment data is not available.
+         * -----------------------------------------------------
+         * MONTHLY REVENUE
+         * -----------------------------------------------------
          */
 
         revenueChartPanel.add(
@@ -216,15 +195,33 @@ public class ReportCharts extends JPanel {
                 BorderLayout.CENTER
         );
 
+        /*
+         * -----------------------------------------------------
+         * COMPLETED VS CANCELLED
+         * -----------------------------------------------------
+         */
+
         statusChartPanel.add(
                 new StatusPieChart(data),
                 BorderLayout.CENTER
         );
 
+        /*
+         * -----------------------------------------------------
+         * DOCTOR WORKLOAD
+         * -----------------------------------------------------
+         */
+
         doctorWorkloadChartPanel.add(
                 new DoctorWorkloadBarChart(data),
                 BorderLayout.CENTER
         );
+
+        /*
+         * -----------------------------------------------------
+         * WEEKLY APPOINTMENT VOLUME
+         * -----------------------------------------------------
+         */
 
         weeklyVolumeChartPanel.add(
                 new WeeklyVolumeBarChart(data),
@@ -233,198 +230,6 @@ public class ReportCharts extends JPanel {
 
         revalidate();
         repaint();
-    }
-
-    // =========================================================
-    // DEPARTMENT PIE CHART
-    // CURRENT MONTH
-    // =========================================================
-
-    private static class DepartmentPieChart
-            extends JPanel {
-
-        private final ReportData data;
-
-        public DepartmentPieChart(
-                ReportData data) {
-
-            this.data = data;
-
-            setPreferredSize(
-                    new Dimension(
-                            350,
-                            180
-                    )
-            );
-        }
-
-        @Override
-        protected void paintComponent(
-                Graphics graphics) {
-
-            super.paintComponent(graphics);
-
-            Graphics2D g2 =
-                    (Graphics2D) graphics.create();
-
-            g2.setRenderingHint(
-                    RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON
-            );
-
-            Map<String, Integer> values =
-                    data.getDepartmentAppointments();
-
-            if (values.isEmpty()) {
-
-                drawNoData(
-                        g2,
-                        getWidth(),
-                        getHeight()
-                );
-
-                g2.dispose();
-                return;
-            }
-
-            List<Map.Entry<String, Integer>>
-                    entries =
-                    new ArrayList<>(
-                            values.entrySet()
-                    );
-
-            entries.sort(
-                    Map.Entry.<String, Integer>
-                            comparingByValue()
-                            .reversed()
-            );
-
-            int total = 0;
-
-            for (Map.Entry<String, Integer> entry
-                    : entries) {
-
-                total += entry.getValue();
-            }
-
-            int diameter =
-                    Math.min(
-                            getHeight() - 45,
-                            105
-                    );
-
-            int x = 15;
-            int y =
-                    (getHeight() - diameter) / 2;
-
-            double startAngle = 0;
-
-            for (int i = 0;
-                    i < entries.size();
-                    i++) {
-
-                Map.Entry<String, Integer> entry =
-                        entries.get(i);
-
-                double percentage =
-                        (double) entry.getValue()
-                        / total
-                        * 100.0;
-
-                double angle =
-                        360.0
-                        * percentage
-                        / 100.0;
-
-                g2.setColor(
-                        CHART_COLORS[
-                                i % CHART_COLORS.length
-                        ]
-                );
-
-                g2.fillArc(
-                        x,
-                        y,
-                        diameter,
-                        diameter,
-                        (int) Math.round(startAngle),
-                        (int) Math.round(angle)
-                );
-
-                startAngle += angle;
-            }
-
-            /*
-             * Legend displays:
-             *
-             * Department (count - percentage)
-             */
-            int legendX =
-                    x + diameter + 20;
-
-            int legendY = 25;
-
-            g2.setFont(
-                    g2.getFont().deriveFont(
-                            9f
-                    )
-            );
-
-            for (int i = 0;
-                    i < entries.size();
-                    i++) {
-
-                Map.Entry<String, Integer> entry =
-                        entries.get(i);
-
-                if (legendY > getHeight() - 15) {
-                    break;
-                }
-
-                double percentage =
-                        (double) entry.getValue()
-                        / total
-                        * 100.0;
-
-                g2.setColor(
-                        CHART_COLORS[
-                                i % CHART_COLORS.length
-                        ]
-                );
-
-                g2.fillRect(
-                        legendX,
-                        legendY - 9,
-                        9,
-                        9
-                );
-
-                g2.setColor(
-                        Color.DARK_GRAY
-                );
-
-                String label =
-                        entry.getKey()
-                        + " ("
-                        + entry.getValue()
-                        + " - "
-                        + String.format(
-                                "%.1f%%",
-                                percentage
-                        )
-                        + ")";
-
-                g2.drawString(
-                        label,
-                        legendX + 13,
-                        legendY
-                );
-
-                legendY += 17;
-            }
-
-            g2.dispose();
-        }
     }
 
     // =========================================================
@@ -731,10 +536,19 @@ public class ReportCharts extends JPanel {
                     / total
                     * 100.0;
 
+            /*
+             * -----------------------------------------------------
+             * LARGER PIE CHART
+             * -----------------------------------------------------
+             *
+             * The pie is positioned on the left side.
+             * The labels are positioned on the right side.
+             */
+
             int diameter =
                     Math.min(
-                            getHeight() - 45,
-                            105
+                            getHeight() - 25,
+                            145
                     );
 
             int x = 15;
@@ -747,6 +561,9 @@ public class ReportCharts extends JPanel {
                     * completedPercentage
                     / 100.0;
 
+            /*
+             * Completed slice
+             */
             g2.setColor(
                     CHART_COLORS[0]
             );
@@ -762,6 +579,9 @@ public class ReportCharts extends JPanel {
                     )
             );
 
+            /*
+             * Cancelled slice
+             */
             g2.setColor(
                     CHART_COLORS[3]
             );
@@ -780,16 +600,21 @@ public class ReportCharts extends JPanel {
             );
 
             /*
-             * Legend
+             * -----------------------------------------------------
+             * LABELS ON THE RIGHT
+             * -----------------------------------------------------
              */
-            int legendX =
-                    x + diameter + 20;
 
-            int legendY = 40;
+            int legendX =
+                    x + diameter + 25;
+
+            int legendY =
+                    y + 35;
 
             g2.setFont(
                     g2.getFont().deriveFont(
-                            9f
+                            Font.PLAIN,
+                            10f
                     )
             );
 
@@ -803,8 +628,8 @@ public class ReportCharts extends JPanel {
             g2.fillRect(
                     legendX,
                     legendY - 9,
-                    9,
-                    9
+                    10,
+                    10
             );
 
             g2.setColor(
@@ -812,22 +637,31 @@ public class ReportCharts extends JPanel {
             );
 
             g2.drawString(
-                    "Completed: "
-                    + completed
-                    + " ("
-                    + String.format(
+                    "Completed",
+                    legendX + 16,
+                    legendY
+            );
+
+            g2.drawString(
+                    completed
+                    + " appointments",
+                    legendX + 16,
+                    legendY + 16
+            );
+
+            g2.drawString(
+                    String.format(
                             "%.1f%%",
                             completedPercentage
-                    )
-                    + ")",
-                    legendX + 13,
-                    legendY
+                    ),
+                    legendX + 16,
+                    legendY + 32
             );
 
             /*
              * Cancelled
              */
-            legendY += 25;
+            legendY += 70;
 
             g2.setColor(
                     CHART_COLORS[3]
@@ -836,8 +670,8 @@ public class ReportCharts extends JPanel {
             g2.fillRect(
                     legendX,
                     legendY - 9,
-                    9,
-                    9
+                    10,
+                    10
             );
 
             g2.setColor(
@@ -845,16 +679,25 @@ public class ReportCharts extends JPanel {
             );
 
             g2.drawString(
-                    "Cancelled: "
-                    + cancelled
-                    + " ("
-                    + String.format(
+                    "Cancelled",
+                    legendX + 16,
+                    legendY
+            );
+
+            g2.drawString(
+                    cancelled
+                    + " appointments",
+                    legendX + 16,
+                    legendY + 16
+            );
+
+            g2.drawString(
+                    String.format(
                             "%.1f%%",
                             cancelledPercentage
-                    )
-                    + ")",
-                    legendX + 13,
-                    legendY
+                    ),
+                    legendX + 16,
+                    legendY + 32
             );
 
             g2.dispose();
@@ -1210,11 +1053,6 @@ public class ReportCharts extends JPanel {
 
                 /*
                  * Sunday starting date.
-                 *
-                 * Example:
-                 * Sep 6
-                 * Sep 13
-                 * Sep 20
                  */
                 String label =
                         sunday.format(
