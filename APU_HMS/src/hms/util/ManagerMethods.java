@@ -416,7 +416,6 @@ public class ManagerMethods {
                 String doctorId = parts[0].trim();
                 String managerId = parts[1].trim();
 
-                // Only get doctors assigned to the logged-in manager
                 if (managerId.equals(loggedInManagerId)) {
                     assignedDoctorIds.add(doctorId);
                 }
@@ -483,19 +482,46 @@ public class ManagerMethods {
 
         dateSpinner.setEditor(dateEditor);
 
-        // Shift
-        JComboBox<String> shiftCombo = new JComboBox<>();
-        shiftCombo.addItem("Morning");
-        shiftCombo.addItem("Afternoon");
-        shiftCombo.addItem("Night");
+        // Shift start time
+        SpinnerDateModel startTimeModel =
+                new SpinnerDateModel();
+
+        JSpinner startTimeSpinner =
+                new JSpinner(startTimeModel);
+
+        JSpinner.DateEditor startTimeEditor =
+                new JSpinner.DateEditor(
+                        startTimeSpinner,
+                        "HH:mm"
+                );
+
+        startTimeSpinner.setEditor(startTimeEditor);
+
+        // Shift end time
+        SpinnerDateModel endTimeModel =
+                new SpinnerDateModel();
+
+        JSpinner endTimeSpinner =
+                new JSpinner(endTimeModel);
+
+        JSpinner.DateEditor endTimeEditor =
+                new JSpinner.DateEditor(
+                        endTimeSpinner,
+                        "HH:mm"
+                );
+
+        endTimeSpinner.setEditor(endTimeEditor);
 
         // Status
         JComboBox<String> statusCombo = new JComboBox<>();
+
         statusCombo.addItem("Active");
         statusCombo.addItem("Inactive");
 
         // Form
-        JPanel form = new JPanel(new GridLayout(5, 2, 8, 8));
+        JPanel form = new JPanel(
+                new GridLayout(6, 2, 8, 8)
+        );
 
         form.add(new JLabel("DOCTOR_NAME:"));
         form.add(doctorCombo);
@@ -506,8 +532,11 @@ public class ManagerMethods {
         form.add(new JLabel("DATE:"));
         form.add(dateSpinner);
 
-        form.add(new JLabel("SHIFT:"));
-        form.add(shiftCombo);
+        form.add(new JLabel("SHIFT START:"));
+        form.add(startTimeSpinner);
+
+        form.add(new JLabel("SHIFT END:"));
+        form.add(endTimeSpinner);
 
         form.add(new JLabel("STATUS:"));
         form.add(statusCombo);
@@ -538,8 +567,23 @@ public class ManagerMethods {
                 "yyyy-MM-dd"
         ).format(selectedDate);
 
+        java.util.Date selectedStartTime =
+                (java.util.Date) startTimeSpinner.getValue();
+
+        java.util.Date selectedEndTime =
+                (java.util.Date) endTimeSpinner.getValue();
+
+        java.text.SimpleDateFormat timeFormat =
+                new java.text.SimpleDateFormat("HH:mm");
+
+        String startTime =
+                timeFormat.format(selectedStartTime);
+
+        String endTime =
+                timeFormat.format(selectedEndTime);
+
         String shift =
-                (String) shiftCombo.getSelectedItem();
+                startTime + " - " + endTime;
 
         String status =
                 (String) statusCombo.getSelectedItem();
@@ -550,7 +594,8 @@ public class ManagerMethods {
                 || department == null
                 || department.isEmpty()
                 || selectedDate == null
-                || shift == null
+                || selectedStartTime == null
+                || selectedEndTime == null
                 || shift.isEmpty()
                 || status == null
                 || status.isEmpty()) {
@@ -559,6 +604,19 @@ public class ManagerMethods {
                     panel,
                     "Please fill in all roster fields.",
                     "Invalid Roster",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        // Validate shift time
+        if (!selectedStartTime.before(selectedEndTime)) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Shift end time must be later than shift start time.",
+                    "Invalid Shift",
                     JOptionPane.WARNING_MESSAGE
             );
 
@@ -587,26 +645,28 @@ public class ManagerMethods {
 
             return null;
         }
-        
+
+        // Check whether doctor already has a roster on this date
         if (doctorShiftCheck(
-            selectedDoctorName,
-            date,
-            null)) {
+                selectedDoctorName,
+                date,
+                null)) {
 
-        JOptionPane.showMessageDialog(
-                panel,
-                "This doctor already has a shift on "
-                + date
-                + ". A doctor can only have one shift per date.",
-                "Scheduling Conflict",
-                JOptionPane.WARNING_MESSAGE
-        );
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "This doctor already has a shift on "
+                    + date
+                    + ". A doctor can only have one shift per date.",
+                    "Scheduling Conflict",
+                    JOptionPane.WARNING_MESSAGE
+            );
 
-        return null;
-    }
+            return null;
+        }
 
         // Generate roster ID
-        String rosterId = IDGenerator.next("R", fileName);
+        String rosterId =
+                IDGenerator.next("R", fileName);
 
         // Create the roster record
         String normalizedRecord = String.join("|",
@@ -621,11 +681,11 @@ public class ManagerMethods {
 
         // Return the record to ManageRecordsPanel
         return normalizedRecord;
-    }   
+    }
     
-    public String editRosterRecord(String record) {
+   public String editRosterRecord(String record) {
 
-        String[] parts = record.split("\\|");
+        String[] parts = record.split("\\|", -1);
 
         if (parts.length < 7) {
             return null;
@@ -643,8 +703,6 @@ public class ManagerMethods {
             return null;
         }
 
-        String loggedInManagerId = loggedInManager.getUserId();
-
         String rosterId = parts[0].trim();
         String doctorName = parts[1].trim();
         String managerName = parts[2].trim();
@@ -653,52 +711,12 @@ public class ManagerMethods {
         String shift = parts[5].trim();
         String status = parts[6].trim();
 
-        // Check that the doctor belongs to the logged-in manager
-        List<String> assignments = FileManager.readLines(
-                "doctor_manager_assignments.txt"
-        );
-
-        List<String> assignedDoctorIds = new ArrayList<>();
-
-        for (String assignment : assignments) {
-
-            if (assignment == null || assignment.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] assignmentParts = assignment.split("\\|");
-
-            if (assignmentParts.length >= 2) {
-
-                String doctorId = assignmentParts[0].trim();
-                String managerId = assignmentParts[1].trim();
-
-                if (managerId.equals(loggedInManagerId)) {
-                    assignedDoctorIds.add(doctorId);
-                }
-            }
-        }
-
-        List<User> users = UserRepository.loadAll();
-
-        String doctorId = "";
-
-        for (User user : users) {
-
-            if (user.getRole() == Role.DOCTOR
-                    && user.getFullName().equals(doctorName)) {
-
-                doctorId = user.getUserId();
-                break;
-            }
-        }
-
-        if (doctorId.isEmpty()
-                || !assignedDoctorIds.contains(doctorId)) {
+        // Check that this roster is managed by the currently logged-in manager
+        if (!managerName.equalsIgnoreCase(loggedInManager.getFullName().trim())) {
 
             JOptionPane.showMessageDialog(
                     panel,
-                    "You can only edit rosters for doctors assigned to you.",
+                    "You can only edit rosters managed by the current signed-in user.",
                     "Access Denied",
                     JOptionPane.WARNING_MESSAGE
             );
@@ -736,16 +754,64 @@ public class ManagerMethods {
         // Date
         JTextField dateField = new JTextField(date);
 
-        // Shift
-        JComboBox<String> shiftField = new JComboBox<>(
-                new String[]{
-                    "Morning",
-                    "Afternoon",
-                    "Night"
-                }
-        );
+        // Shift start time
+        SpinnerDateModel startTimeModel = new SpinnerDateModel();
+        JSpinner startTimeSpinner = new JSpinner(startTimeModel);
 
-        shiftField.setSelectedItem(shift);
+        JSpinner.DateEditor startTimeEditor =
+                new JSpinner.DateEditor(
+                        startTimeSpinner,
+                        "HH:mm"
+                );
+
+        startTimeSpinner.setEditor(startTimeEditor);
+
+        // Shift end time
+        SpinnerDateModel endTimeModel = new SpinnerDateModel();
+        JSpinner endTimeSpinner = new JSpinner(endTimeModel);
+
+        JSpinner.DateEditor endTimeEditor =
+                new JSpinner.DateEditor(
+                        endTimeSpinner,
+                        "HH:mm"
+                );
+
+        endTimeSpinner.setEditor(endTimeEditor);
+
+        // Load the existing shift time
+        try {
+
+            if (shift.contains(" - ")) {
+
+                String[] shiftParts = shift.split("\\s*-\\s*");
+
+                if (shiftParts.length == 2) {
+
+                    java.text.SimpleDateFormat timeFormat =
+                            new java.text.SimpleDateFormat("HH:mm");
+
+                    java.util.Date startTime =
+                            timeFormat.parse(shiftParts[0].trim());
+
+                    java.util.Date endTime =
+                            timeFormat.parse(shiftParts[1].trim());
+
+                    startTimeSpinner.setValue(startTime);
+                    endTimeSpinner.setValue(endTime);
+                }
+            }
+
+        } catch (java.text.ParseException e) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "The existing shift time is invalid.",
+                    "Roster Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            return null;
+        }
 
         // Status
         JComboBox<String> statusField = new JComboBox<>(
@@ -758,7 +824,7 @@ public class ManagerMethods {
         statusField.setSelectedItem(status);
 
         JPanel form = new JPanel(
-                new GridLayout(4, 2, 8, 8)
+                new GridLayout(5, 2, 8, 8)
         );
 
         form.add(new JLabel("DEPARTMENT:"));
@@ -767,8 +833,11 @@ public class ManagerMethods {
         form.add(new JLabel("DATE:"));
         form.add(dateField);
 
-        form.add(new JLabel("SHIFT:"));
-        form.add(shiftField);
+        form.add(new JLabel("SHIFT START:"));
+        form.add(startTimeSpinner);
+
+        form.add(new JLabel("SHIFT END:"));
+        form.add(endTimeSpinner);
 
         form.add(new JLabel("STATUS:"));
         form.add(statusField);
@@ -785,30 +854,84 @@ public class ManagerMethods {
             return null;
         }
 
+        String updatedDate = dateField.getText().trim();
+
+        if (updatedDate.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Please enter a date.",
+                    "Invalid Roster",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        java.util.Date selectedStartTime =
+                (java.util.Date) startTimeSpinner.getValue();
+
+        java.util.Date selectedEndTime =
+                (java.util.Date) endTimeSpinner.getValue();
+
+        if (selectedStartTime == null || selectedEndTime == null) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Please select both shift start and end times.",
+                    "Invalid Roster",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        if (!selectedStartTime.before(selectedEndTime)) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Shift end time must be later than shift start time.",
+                    "Invalid Shift",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return null;
+        }
+
+        java.text.SimpleDateFormat timeFormat =
+                new java.text.SimpleDateFormat("HH:mm");
+
+        String startTime =
+                timeFormat.format(selectedStartTime);
+
+        String endTime =
+                timeFormat.format(selectedEndTime);
+
+        String updatedShift =
+                startTime + " - " + endTime;
+
+        // Check for scheduling conflict using the NEW date
         if (doctorShiftCheck(
-            doctorName,
-            dateField.getText().trim(),
-            rosterId)) {
+                doctorName,
+                updatedDate,
+                rosterId)) {
 
-        JOptionPane.showMessageDialog(
-                panel,
-                "This doctor already has a shift on "
-                + date
-                + ". A doctor can only have one shift per date.",
-                "Scheduling Conflict",
-                JOptionPane.WARNING_MESSAGE
-        );
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "This doctor already has a shift on "
+                    + updatedDate
+                    + ". A doctor can only have one shift per date.",
+                    "Scheduling Conflict",
+                    JOptionPane.WARNING_MESSAGE
+            );
 
-        return null;
-    }
-        
+            return null;
+        }
+
         return String.join("|",
                 rosterId,
                 doctorName,
                 managerName,
                 departmentField.getSelectedItem().toString().trim(),
-                dateField.getText().trim(),
-                shiftField.getSelectedItem().toString().trim(),
+                updatedDate,
+                updatedShift,
                 statusField.getSelectedItem().toString().trim()
         );
     }

@@ -38,9 +38,8 @@ public final class ManageRecordsHelper {
     private boolean updatingAssetFilter;
     private final List<String> records = new ArrayList<>();
     private String headerLine;
-    private boolean headerPresent;
-    private boolean initialized;
     
+    private final DoctorMethods doctorMethods;
 
     public ManageRecordsHelper(String fileName, DefaultTableModel tableModel, JComboBox<String> doctorSearchBox, JComboBox<String> assetSearchBox, boolean consultationTable, boolean prescriptionTable, boolean labRequestTable) {
         this.fileName = fileName;
@@ -56,6 +55,7 @@ public final class ManageRecordsHelper {
         this.consultationTable = "vital_signs.txt".equalsIgnoreCase(fileName);
         this.prescriptionTable = "prescriptions.txt".equalsIgnoreCase(fileName);
         this.labRequestTable = "lab_requests.txt".equalsIgnoreCase(fileName);
+        this.doctorMethods = new DoctorMethods();
     }
 
     public List<String> getRecords() {
