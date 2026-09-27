@@ -92,7 +92,7 @@ public class ManageRecordsPanel extends JPanel {
                 departmentTable
                 ? new String[]{"DEPARTMENT_ID", "DEPARTMENT_NAME", "HEAD_MANAGER_NAME", "DESCRIPTION"}
                 : appointmentTable
-                ? new String[]{"APPOINTMENT_ID", "PATIENT_NAME", "DOCTOR_NAME", "DATE", "TIME", "STATUS"}
+                ? new String[]{"APPOINTMENT_ID", "PATIENT_NAME", "DOCTOR_NAME", "DATE", "TIME (30MIN SLOTS)", "STATUS"}
                 : assetTable
                 ? new String[]{"ASSET_ID", "ROOM_TYPE", "ROOM_NAME", "LOCATION", "STATUS", "RESERVED_BY"}
                 : insuranceTable
