@@ -26,11 +26,6 @@ public class ReportData {
     private final Map<String, Double> monthlyRevenue;
     private final Map<String, Integer> appointmentStatus;
     private final Map<String, Integer> doctorWorkload;
-
-    /*
-     * LocalDate is used as the key so the weeks remain
-     * chronologically ordered.
-     */
     private final Map<LocalDate, Integer> weeklyAppointmentVolume;
 
     public ReportData(String month) {
@@ -49,16 +44,6 @@ public class ReportData {
         calculateWeeklyAppointmentVolume();
     }
 
-    /*
-     * ---------------------------------------------------------
-     * MAIN REPORT
-     * ---------------------------------------------------------
-     *
-     * Current bookings.txt format:
-     *
-     * BOOK_ID|PATIENT_ID|DOCTOR_ID|CONSULTATION_DATE|
-     * CONSULTATION_TIME|STATUS
-     */
     private void calculateReport() {
 
         totalPatients = 0;
@@ -147,15 +132,6 @@ public class ReportData {
         totalPatients = uniquePatients.size();
     }
 
-    /*
-     * ---------------------------------------------------------
-     * MONTHLY REVENUE
-     * ---------------------------------------------------------
-     *
-     * Revenue is calculated directly from bookings.txt.
-     *
-     * Only COMPLETED appointments generate revenue.
-     */
     private void calculateMonthlyRevenue() {
 
         monthlyRevenue.clear();
@@ -198,9 +174,6 @@ public class ReportData {
                 continue;
             }
 
-            /*
-             * Revenue only comes from completed appointments.
-             */
             if (!status.equalsIgnoreCase("COMPLETED")) {
                 continue;
             }
@@ -225,11 +198,6 @@ public class ReportData {
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * APPOINTMENT STATUS
-     * ---------------------------------------------------------
-     */
     private void calculateAppointmentStatus() {
 
         appointmentStatus.clear();
@@ -297,13 +265,6 @@ public class ReportData {
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * DOCTOR WORKLOAD
-     * ---------------------------------------------------------
-     *
-     * Counts non-cancelled appointments assigned to each doctor.
-     */
     private void calculateDoctorWorkload() {
 
         doctorWorkload.clear();
@@ -397,15 +358,6 @@ public class ReportData {
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * WEEKLY APPOINTMENT VOLUME
-     * ---------------------------------------------------------
-     *
-     * Weeks start on SUNDAY.
-     *
-     * CANCELLED appointments are excluded.
-     */
     private void calculateWeeklyAppointmentVolume() {
 
         weeklyAppointmentVolume.clear();
@@ -474,20 +426,6 @@ public class ReportData {
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * CONSULTATION RATE RANGE
-     * ---------------------------------------------------------
-     *
-     * Finds:
-     * - smallest MIN_RATE
-     * - largest MAX_RATE
-     *
-     * Invalid records are ignored.
-     *
-     * Fallback:
-     * RM100 - RM250
-     */
     private double[] getRateRange() {
 
         double minimumRate = Double.MAX_VALUE;
@@ -509,10 +447,7 @@ public class ReportData {
             String[] parts =
                     ManageRecordsHelper.splitRecord(record);
 
-            /*
-             * We only access parts[2] and parts[3],
-             * so at least 4 fields are required.
-             */
+
             if (parts.length < 4) {
                 continue;
             }
@@ -529,17 +464,10 @@ public class ReportData {
                                 parts[3].trim()
                         );
 
-                /*
-                 * Ignore negative rates.
-                 */
                 if (minRate < 0 || maxRate < 0) {
                     continue;
                 }
 
-                /*
-                 * Ignore invalid ranges where the minimum
-                 * is greater than the maximum.
-                 */
                 if (minRate > maxRate) {
                     continue;
                 }
@@ -552,17 +480,9 @@ public class ReportData {
                     maximumRate = maxRate;
                 }
 
-            } catch (NumberFormatException e) {
-                /*
-                 * Ignore invalid rate records.
-                 */
-            }
+            } catch (NumberFormatException e) {}
         }
 
-        /*
-         * If no valid consultation rates were found,
-         * use the default range.
-         */
         if (minimumRate == Double.MAX_VALUE
                 || maximumRate == Double.NEGATIVE_INFINITY) {
 
@@ -576,14 +496,6 @@ public class ReportData {
         };
     }
 
-    /*
-     * ---------------------------------------------------------
-     * GENERATE APPOINTMENT FEE
-     * ---------------------------------------------------------
-     *
-     * The booking ID is used as the seed so the same
-     * appointment always produces the same fee.
-     */
     private double generateAppointmentFee(
             String bookId,
             double minimumRate,
@@ -596,12 +508,6 @@ public class ReportData {
                 + (maximumRate - minimumRate)
                 * random.nextDouble();
     }
-
-    /*
-     * ---------------------------------------------------------
-     * GETTERS
-     * ---------------------------------------------------------
-     */
 
     public String getMonth() {
         return month;
