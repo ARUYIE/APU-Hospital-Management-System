@@ -1,6 +1,7 @@
 package hms.util;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
@@ -22,16 +23,42 @@ public final class UIUtil {
 
     public static JPanel createPatternPanel() {
         JPanel panel = new JPanel(new GridBagLayout()) {
-            // Toggles between frame 0 and frame 1
+            
+            // Logic variables
             private boolean toggleFrame = false;
+            private int timerTicks = 0;
+            
+            // Current visual state
+            private double currentOffset = 0.0;
+            private double currentRotation = 0.0;
+
+            // Target for continuous rotation
+            private double targetRotation = 0.0;
 
             {
-                // Timer set to 2000 milliseconds 
-                Timer animationTimer = new Timer(3000, new ActionListener() {
+                Timer animationTimer = new Timer(16, new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        toggleFrame = !toggleFrame;
-                        // System.out.println("animation frame: " + (toggleFrame ? "2" : "1"));
+                        timerTicks++;
+                        
+                        // Every ~3 seconds (180 ticks)
+                        if (timerTicks >= 180) {
+                            toggleFrame = !toggleFrame;
+                            
+                            // Instead of flipping back to 0, add another 180 degrees (Math.PI)
+                            // so it completes the circle in the same direction.
+                            targetRotation += Math.PI; 
+                            
+                            timerTicks = 0; 
+                        }
+
+                        // Offset still bounces between 5.0 and 0.0
+                        double targetOffset = toggleFrame ? 5.0 : 0.0;
+
+                        // Smoothly move 8% of the remaining distance every frame
+                        currentOffset += (targetOffset - currentOffset) * 0.08;
+                        currentRotation += (targetRotation - currentRotation) * 0.08;
+                        
                         repaint();
                     }
                 });
@@ -42,37 +69,36 @@ public final class UIUtil {
             protected void paintComponent(Graphics graphics) {
                 super.paintComponent(graphics);
                 Graphics2D g2 = (Graphics2D) graphics.create();
-                paintPattern(g2, getWidth(), getHeight(), toggleFrame);
+                paintPattern(g2, getWidth(), getHeight(), currentOffset, currentRotation);
                 g2.dispose();
             }
         };
         panel.setOpaque(true);
         panel.setBackground(DASHBOARD_BLUE);
+        
+        panel.setPreferredSize(new Dimension(800, 600)); 
+        
         return panel;
     }
 
-    public static void paintPattern(Graphics2D g2, int width, int height, boolean frame) {
+    public static void paintPattern(Graphics2D g2, int width, int height, double offset, double rotationRadians) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         int spacing = 28;
         int loopSize = 16;
         Color loopColor = new Color(120, 148, 188, 55);
 
-        // Frame 1 (false): 0 offset & 0 degrees. Frame 2 (true): 10px diagonal shift & 25-degree rotation.
-        double diagonalOffset = frame ? 5.0 : 0.0;
-        double rotationAngle = frame ? Math.toRadians(180.0) : 0.0;
-
         AffineTransform oldTransform = g2.getTransform();
 
-        for (double y = -spacing + diagonalOffset; y < height + spacing; y += spacing) {
-            for (double x = -spacing + diagonalOffset; x < width + spacing; x += spacing) {
+        for (double y = -spacing + offset; y < height + spacing; y += spacing) {
+            for (double x = -spacing + offset; x < width + spacing; x += spacing) {
                 double cx = x + spacing / 2.0;
                 double cy = y + spacing / 2.0;
 
                 AffineTransform saveTransform = g2.getTransform();
 
                 // Rotate ONLY this individual element around its exact center (cx, cy)
-                g2.rotate(rotationAngle, cx, cy);
+                g2.rotate(rotationRadians, cx, cy);
 
                 g2.setColor(loopColor);
                 g2.draw(new java.awt.geom.Arc2D.Double(
