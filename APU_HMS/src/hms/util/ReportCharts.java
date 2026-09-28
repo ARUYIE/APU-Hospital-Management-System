@@ -21,10 +21,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-/**
- * Displays hospital analytical reports using
- * standard Java Swing/AWT components.
- */
+
 public class ReportCharts extends JPanel {
 
     private static final Color[] CHART_COLORS = {
@@ -83,12 +80,6 @@ public class ReportCharts extends JPanel {
                 BorderLayout.NORTH
         );
 
-        /*
-         * -----------------------------------------------------
-         * CREATE FOUR CHART PANELS
-         * -----------------------------------------------------
-         */
-
         revenueChartPanel =
                 createChartPanel(
                         "Monthly Revenue - " + monthDisplay
@@ -108,18 +99,6 @@ public class ReportCharts extends JPanel {
                 createChartPanel(
                         "Weekly Appointment Volume - " + monthDisplay
                 );
-
-        /*
-         * -----------------------------------------------------
-         * 2 x 2 CHART GRID
-         * -----------------------------------------------------
-         *
-         * Row 1:
-         * Monthly Revenue | Total Appointments
-         *
-         * Row 2:
-         * Doctor Workload | Weekly Appointment Volume
-         */
 
         JPanel allCharts =
                 new JPanel(
@@ -184,11 +163,6 @@ public class ReportCharts extends JPanel {
         ReportData data =
                 new ReportData(selectedMonth);
 
-        /*
-         * -----------------------------------------------------
-         * MONTHLY REVENUE
-         * -----------------------------------------------------
-         */
 
         revenueChartPanel.add(
                 new RevenueBarChart(data),
@@ -206,22 +180,12 @@ public class ReportCharts extends JPanel {
                 BorderLayout.CENTER
         );
 
-        /*
-         * -----------------------------------------------------
-         * DOCTOR WORKLOAD
-         * -----------------------------------------------------
-         */
 
         doctorWorkloadChartPanel.add(
                 new DoctorWorkloadBarChart(data),
                 BorderLayout.CENTER
         );
 
-        /*
-         * -----------------------------------------------------
-         * WEEKLY APPOINTMENT VOLUME
-         * -----------------------------------------------------
-         */
 
         weeklyVolumeChartPanel.add(
                 new WeeklyVolumeBarChart(data),
@@ -231,11 +195,6 @@ public class ReportCharts extends JPanel {
         revalidate();
         repaint();
     }
-
-    // =========================================================
-    // MONTHLY REVENUE BAR CHART
-    // ALL MONTHS
-    // =========================================================
 
     private static class RevenueBarChart
             extends JPanel {
@@ -459,10 +418,6 @@ public class ReportCharts extends JPanel {
         }
     }
 
-    // =========================================================
-    // STATUS PIE CHART
-    // CURRENT MONTH
-    // =========================================================
 
     private static class StatusPieChart
             extends JPanel {
@@ -536,15 +491,6 @@ public class ReportCharts extends JPanel {
                     / total
                     * 100.0;
 
-            /*
-             * -----------------------------------------------------
-             * LARGER PIE CHART
-             * -----------------------------------------------------
-             *
-             * The pie is positioned on the left side.
-             * The labels are positioned on the right side.
-             */
-
             int diameter =
                     Math.min(
                             getHeight() - 25,
@@ -561,9 +507,6 @@ public class ReportCharts extends JPanel {
                     * completedPercentage
                     / 100.0;
 
-            /*
-             * Completed slice
-             */
             g2.setColor(
                     CHART_COLORS[0]
             );
@@ -579,9 +522,6 @@ public class ReportCharts extends JPanel {
                     )
             );
 
-            /*
-             * Cancelled slice
-             */
             g2.setColor(
                     CHART_COLORS[3]
             );
@@ -599,11 +539,6 @@ public class ReportCharts extends JPanel {
                     )
             );
 
-            /*
-             * -----------------------------------------------------
-             * LABELS ON THE RIGHT
-             * -----------------------------------------------------
-             */
 
             int legendX =
                     x + diameter + 25;
@@ -618,9 +553,6 @@ public class ReportCharts extends JPanel {
                     )
             );
 
-            /*
-             * Completed
-             */
             g2.setColor(
                     CHART_COLORS[0]
             );
@@ -658,9 +590,6 @@ public class ReportCharts extends JPanel {
                     legendY + 32
             );
 
-            /*
-             * Cancelled
-             */
             legendY += 70;
 
             g2.setColor(
@@ -703,11 +632,6 @@ public class ReportCharts extends JPanel {
             g2.dispose();
         }
     }
-
-    // =========================================================
-    // DOCTOR WORKLOAD BAR CHART
-    // CURRENT MONTH
-    // =========================================================
 
     private static class DoctorWorkloadBarChart
             extends JPanel {
@@ -893,11 +817,6 @@ public class ReportCharts extends JPanel {
         }
     }
 
-    // =========================================================
-    // WEEKLY APPOINTMENT VOLUME BAR CHART
-    // CURRENT MONTH
-    // =========================================================
-
     private static class WeeklyVolumeBarChart
             extends JPanel {
 
@@ -1051,9 +970,6 @@ public class ReportCharts extends JPanel {
                         )
                 );
 
-                /*
-                 * Sunday starting date.
-                 */
                 String label =
                         sunday.format(
                                 formatter
@@ -1086,11 +1002,7 @@ public class ReportCharts extends JPanel {
             g2.dispose();
         }
     }
-
-    // =========================================================
-    // NO DATA
-    // =========================================================
-
+    
     private static void drawNoData(
             Graphics2D g2,
             int width,
