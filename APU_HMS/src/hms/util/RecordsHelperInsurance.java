@@ -1,15 +1,25 @@
 package hms.util;
 
-import java.awt.*;
-import javax.swing.table.DefaultTableModel;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.GridLayout;
+import java.time.LocalDate;
+import java.util.Calendar;
+import java.util.Properties;
+
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.table.DefaultTableModel;
 
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
 
 public final class RecordsHelperInsurance {
+
     private RecordsHelperInsurance() {
     }
 
@@ -35,7 +45,23 @@ public final class RecordsHelperInsurance {
         JTextField coveragePercentageField = new JTextField(coveragePercentage);
         JTextField statusField = new JTextField(status);
         JTextField contactInfoField = new JTextField(contactInfo);
-        JTextField effectiveDateField = new JTextField(effectiveDate);
+
+        UtilDateModel model = new UtilDateModel();
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        try {
+            java.util.Date parsedDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(effectiveDate);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(parsedDate);
+            model.setDate(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE));
+            model.setSelected(true);
+        } catch (Exception e) {
+            model.setSelected(true);
+        }
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
+        JDatePickerImpl effectiveDatePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
 
         JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
         form.add(new JLabel("INSURANCE_ID:"));
@@ -50,8 +76,8 @@ public final class RecordsHelperInsurance {
         form.add(statusField);
         form.add(new JLabel("CONTACT_INFO:"));
         form.add(contactInfoField);
-        form.add(new JLabel("EFFECTIVE_DATE:"));
-        form.add(effectiveDateField);
+        form.add(new JLabel("EFFECTIVE_DATE (YYYY-MM_DD):"));
+        form.add(effectiveDatePicker);
 
         int choice = JOptionPane.showConfirmDialog(comp, form,
                 "Edit Insurance", JOptionPane.OK_CANCEL_OPTION,
@@ -59,7 +85,10 @@ public final class RecordsHelperInsurance {
         if (choice != JOptionPane.OK_OPTION) {
             return null;
         }
-
+        java.util.Date selectedDateUtil = (java.util.Date) effectiveDatePicker.getModel().getValue();
+        String finalDateStr = selectedDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDateUtil)
+                : LocalDate.now().toString();
         return String.join("|",
                 insuranceIdField.getText().trim(),
                 insuranceNameField.getText().trim(),
@@ -67,7 +96,8 @@ public final class RecordsHelperInsurance {
                 coveragePercentageField.getText().trim(),
                 statusField.getText().trim(),
                 contactInfoField.getText().trim(),
-                effectiveDateField.getText().trim());
+                finalDateStr
+        );
 
     }
 
@@ -77,15 +107,29 @@ public final class RecordsHelperInsurance {
         JTextField coveragePercentageField = new JTextField();
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{"ACTIVE", "INACTIVE"});
         JTextField contactField = new JTextField();
-        JTextField effectiveDateField = new JTextField(java.time.LocalDate.now().toString());
+
+        UtilDateModel model = new UtilDateModel();
+        model.setSelected(true);
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
+        JDatePickerImpl effectiveDatePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
 
         JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
-        form.add(new JLabel("PROVIDER_NAME:")); form.add(providerField);
-        form.add(new JLabel("COVERAGE_RATE:")); form.add(coverageRateField);
-        form.add(new JLabel("COVERAGE_PERCENTAGE:")); form.add(coveragePercentageField);
-        form.add(new JLabel("STATUS:")); form.add(statusCombo);
-        form.add(new JLabel("CONTACT_INFO:")); form.add(contactField);
-        form.add(new JLabel("EFFECTIVE_DATE:")); form.add(effectiveDateField);
+        form.add(new JLabel("PROVIDER_NAME:"));
+        form.add(providerField);
+        form.add(new JLabel("COVERAGE_RATE:"));
+        form.add(coverageRateField);
+        form.add(new JLabel("COVERAGE_PERCENTAGE:"));
+        form.add(coveragePercentageField);
+        form.add(new JLabel("STATUS:"));
+        form.add(statusCombo);
+        form.add(new JLabel("CONTACT_INFO:"));
+        form.add(contactField);
+        form.add(new JLabel("EFFECTIVE_DATE:"));
+        form.add(effectiveDatePicker);
 
         int choice = JOptionPane.showConfirmDialog(comp, form,
                 "Add Accepted Insurance Network", JOptionPane.OK_CANCEL_OPTION,
@@ -115,11 +159,20 @@ public final class RecordsHelperInsurance {
             return;
         }
 
+        java.util.Date selectedDateUtil = (java.util.Date) effectiveDatePicker.getModel().getValue();
+        String finalDateStr = selectedDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDateUtil)
+                : java.time.LocalDate.now().toString();
+
         FileManager.appendLine(fileName, String.join("|",
-            IDGenerator.next("INS", fileName), providerField.getText().trim(),
-                coverageRateField.getText().trim(), percentage,
-                (String) statusCombo.getSelectedItem(), contactField.getText().trim(),
-                effectiveDateField.getText().trim()));
+                IDGenerator.next("INS", fileName),
+                providerField.getText().trim(),
+                coverageRateField.getText().trim(),
+                percentage,
+                (String) statusCombo.getSelectedItem(),
+                contactField.getText().trim(),
+                finalDateStr
+        ));
         refreshAction.run();
     }
 
@@ -130,15 +183,16 @@ public final class RecordsHelperInsurance {
         }
 
         tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim(),
-                parts.length > 6 ? parts[6].trim() : ""
+            parts[0].trim(),
+            parts[1].trim(),
+            parts[2].trim(),
+            parts[3].trim(),
+            parts[4].trim(),
+            parts[5].trim(),
+            parts.length > 6 ? parts[6].trim() : ""
         });
     }
+
     private static void setUneditable(JTextField field) {
         field.setEditable(false);
         field.setFocusable(false);

@@ -1,12 +1,11 @@
 package hms.util;
 
-import hms.gui.panels.ManageRecordsPanel;
-import hms.role.Role;
-import hms.role.User;
-
 import java.awt.GridLayout;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Properties;
+
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -14,6 +13,14 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
+
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
+
+import hms.gui.panels.ManageRecordsPanel;
+import hms.role.Role;
+import hms.role.User;
 
 public class ManagerMethods {
 
@@ -26,9 +33,9 @@ public class ManagerMethods {
     }
 
     // Clinical Department Methods
-    private boolean departmentNameExists( String departmentName, String currentDeptId) {
-        List<String> departmentRecords =
-                FileManager.readLines("department.txt");
+    private boolean departmentNameExists(String departmentName, String currentDeptId) {
+        List<String> departmentRecords
+                = FileManager.readLines("department.txt");
 
         // Skip header
         for (int i = 1; i < departmentRecords.size(); i++) {
@@ -39,18 +46,18 @@ public class ManagerMethods {
                 continue;
             }
 
-            String[] parts =
-                    ManageRecordsHelper.splitRecord(record);
+            String[] parts
+                    = ManageRecordsHelper.splitRecord(record);
 
             if (parts.length < 4) {
                 continue;
             }
 
-            String existingDeptId =
-                    parts[0].trim();
+            String existingDeptId
+                    = parts[0].trim();
 
-            String existingDeptName =
-                    parts[1].trim();
+            String existingDeptName
+                    = parts[1].trim();
 
             // Ignore the department currently being edited
             if (currentDeptId != null
@@ -67,13 +74,13 @@ public class ManagerMethods {
 
         return false;
     }
-    
+
     private boolean managerAlreadyManagesDepartment(
             String managerId,
             String currentDeptId) {
 
-        List<String> lines =
-                FileManager.readLines(fileName);
+        List<String> lines
+                = FileManager.readLines(fileName);
 
         for (int i = 1; i < lines.size(); i++) {
 
@@ -83,18 +90,18 @@ public class ManagerMethods {
                 continue;
             }
 
-            String[] parts =
-                    ManageRecordsHelper.splitRecord(line);
+            String[] parts
+                    = ManageRecordsHelper.splitRecord(line);
 
             if (parts.length < 4) {
                 continue;
             }
 
-            String existingDeptId =
-                    parts[0].trim();
+            String existingDeptId
+                    = parts[0].trim();
 
-            String existingManagerId =
-                    parts[3].trim();
+            String existingManagerId
+                    = parts[3].trim();
 
             // When editing, ignore the current department.
             if (currentDeptId != null
@@ -109,13 +116,13 @@ public class ManagerMethods {
 
         return false;
     }
-    
+
     public String addDepartmentRow() {
         JTextField nameField = new JTextField();
         JTextField descriptionField = new JTextField();
 
-        List<User> managers =
-                UserRepository.loadAll();
+        List<User> managers
+                = UserRepository.loadAll();
 
         List<User> medicalManagers = managers.stream()
                 .filter(user -> user.getRole() == Role.MEDICAL_MANAGER)
@@ -159,8 +166,8 @@ public class ManagerMethods {
             return null;
         }
 
-        JComboBox<String> managerCombo =
-                new JComboBox<>();
+        JComboBox<String> managerCombo
+                = new JComboBox<>();
 
         for (User manager : availableManagers) {
 
@@ -169,8 +176,8 @@ public class ManagerMethods {
             );
         }
 
-        JPanel form =
-                new JPanel(
+        JPanel form
+                = new JPanel(
                         new GridLayout(3, 2, 8, 8)
                 );
 
@@ -195,11 +202,11 @@ public class ManagerMethods {
             return null;
         }
 
-        String deptName =
-                nameField.getText().trim();
+        String deptName
+                = nameField.getText().trim();
 
-        String description =
-                descriptionField.getText().trim();
+        String description
+                = descriptionField.getText().trim();
 
         if (deptName.isEmpty()
                 || description.isEmpty()) {
@@ -228,9 +235,7 @@ public class ManagerMethods {
             return null;
         }
 
-        if (departmentNameExists(
-                deptName,
-                null)) {
+        if (departmentNameExists(deptName, null)) {
 
             JOptionPane.showMessageDialog(
                     panel,
@@ -242,8 +247,8 @@ public class ManagerMethods {
             return null;
         }
 
-        int selectedIndex =
-                managerCombo.getSelectedIndex();
+        int selectedIndex
+                = managerCombo.getSelectedIndex();
 
         if (selectedIndex < 0) {
 
@@ -257,8 +262,8 @@ public class ManagerMethods {
             return null;
         }
 
-        User selectedManager =
-                availableManagers.get(selectedIndex);
+        User selectedManager
+                = availableManagers.get(selectedIndex);
 
         // Final check before saving.
         if (managerAlreadyManagesDepartment(
@@ -275,11 +280,13 @@ public class ManagerMethods {
             return null;
         }
 
-        String selectedManagerId =
-                selectedManager.getUserId();
+        String selectedManagerId
+                = medicalManagers
+                        .get(selectedIndex)
+                        .getUserId();
 
-        String deptId =
-                IDGenerator.next("D", fileName);
+        String deptId
+                = IDGenerator.next("D", fileName);
 
         return String.join(
                 "|",
@@ -291,44 +298,44 @@ public class ManagerMethods {
     }
 
     public String editDepartmentRecord(String record) {
-        String[] parts =
-                ManageRecordsHelper.splitRecord(record);
+        String[] parts
+                = ManageRecordsHelper.splitRecord(record);
 
         if (parts.length < 4) {
             return null;
         }
 
-        String deptId =
-                parts[0].trim();
+        String deptId
+                = parts[0].trim();
 
-        String deptName =
-                parts[1].trim();
+        String deptName
+                = parts[1].trim();
 
-        String description =
-                parts[2].trim();
+        String description
+                = parts[2].trim();
 
-        String existingManagerId =
-                parts[3].trim();
+        String existingManagerId
+                = parts[3].trim();
 
-        JTextField idField =
-                new JTextField(deptId);
+        JTextField idField
+                = new JTextField(deptId);
 
         panel.setUneditable(idField);
 
-        JTextField nameField =
-                new JTextField(deptName);
+        JTextField nameField
+                = new JTextField(deptName);
 
-        JTextField descriptionField =
-                new JTextField(description);
+        JTextField descriptionField
+                = new JTextField(description);
 
-        List<User> managers =
-                UserRepository.loadAll();
+        List<User> managers
+                = UserRepository.loadAll();
 
-        List<User> headManagers =
-                managers.stream()
-                        .filter(user ->
-                                user.getRole()
-                                        == Role.MEDICAL_MANAGER)
+        List<User> headManagers
+                = managers.stream()
+                        .filter(user
+                                -> user.getRole()
+                        == Role.MEDICAL_MANAGER)
                         .toList();
 
         if (headManagers.isEmpty()) {
@@ -343,19 +350,19 @@ public class ManagerMethods {
             return null;
         }
 
-        JComboBox<String> managerCombo =
-                new JComboBox<>();
+        JComboBox<String> managerCombo
+                = new JComboBox<>();
 
-        int selectedManager =
-                -1;
+        int selectedManager
+                = -1;
 
         // Show ALL medical managers.
         for (int index = 0;
                 index < headManagers.size();
                 index++) {
 
-            User manager =
-                    headManagers.get(index);
+            User manager
+                    = headManagers.get(index);
 
             managerCombo.addItem(
                     manager.getFullName()
@@ -374,8 +381,8 @@ public class ManagerMethods {
             );
         }
 
-        JPanel form =
-                new JPanel(
+        JPanel form
+                = new JPanel(
                         new GridLayout(4, 2, 8, 8)
                 );
 
@@ -391,8 +398,8 @@ public class ManagerMethods {
         form.add(new JLabel("DESCRIPTION:"));
         form.add(descriptionField);
 
-        int choice =
-                JOptionPane.showConfirmDialog(
+        int choice
+                = JOptionPane.showConfirmDialog(
                         panel,
                         form,
                         "Edit Department",
@@ -404,11 +411,11 @@ public class ManagerMethods {
             return null;
         }
 
-        String updatedDeptName =
-                nameField.getText().trim();
+        String updatedDeptName
+                = nameField.getText().trim();
 
-        String updatedDescription =
-                descriptionField.getText().trim();
+        String updatedDescription
+                = descriptionField.getText().trim();
 
         if (updatedDeptName.isEmpty()
                 || updatedDescription.isEmpty()) {
@@ -451,8 +458,8 @@ public class ManagerMethods {
             return null;
         }
 
-        int selectedIndex =
-                managerCombo.getSelectedIndex();
+        int selectedIndex
+                = managerCombo.getSelectedIndex();
 
         if (selectedIndex < 0) {
 
@@ -466,8 +473,8 @@ public class ManagerMethods {
             return null;
         }
 
-        String selectedManagerId =
-                headManagers
+        String selectedManagerId
+                = headManagers
                         .get(selectedIndex)
                         .getUserId();
 
@@ -495,15 +502,15 @@ public class ManagerMethods {
                 selectedManagerId
         );
     }
-    
+
     // Roster Methods
     private boolean doctorShiftCheck(
             String doctorName,
             String date,
             String currentRosterId) {
 
-        List<String> rosterRecords =
-                FileManager.readLines("roster.txt");
+        List<String> rosterRecords
+                = FileManager.readLines("roster.txt");
 
         // Skip header
         for (int i = 1; i < rosterRecords.size(); i++) {
@@ -514,8 +521,8 @@ public class ManagerMethods {
                 continue;
             }
 
-            String[] parts =
-                    record.split("\\|", -1);
+            String[] parts
+                    = record.split("\\|", -1);
 
             if (parts.length < 7) {
                 continue;
@@ -542,9 +549,8 @@ public class ManagerMethods {
     }
 
     public String addRosterRecord() {
-        // Get the currently logged-in manager
-        User loggedInManager =
-                Session.getCurrentUser();
+        User loggedInManager
+                = Session.getCurrentUser();
 
         if (loggedInManager == null) {
 
@@ -558,17 +564,16 @@ public class ManagerMethods {
             return null;
         }
 
-        String loggedInManagerId =
-                loggedInManager.getUserId();
+        String loggedInManagerId
+                = loggedInManager.getUserId();
 
-        // Read doctor-manager assignments
-        List<String> assignments =
-                FileManager.readLines(
+        List<String> assignments
+                = FileManager.readLines(
                         "doctor_manager_assignments.txt"
                 );
 
-        List<String> assignedDoctorIds =
-                new ArrayList<>();
+        List<String> assignedDoctorIds
+                = new ArrayList<>();
 
         for (String assignment : assignments) {
 
@@ -577,16 +582,16 @@ public class ManagerMethods {
                 continue;
             }
 
-            String[] parts =
-                    assignment.split("\\|");
+            String[] parts
+                    = assignment.split("\\|");
 
             if (parts.length >= 2) {
 
-                String doctorId =
-                        parts[0].trim();
+                String doctorId
+                        = parts[0].trim();
 
-                String managerId =
-                        parts[1].trim();
+                String managerId
+                        = parts[1].trim();
 
                 if (managerId.equals(
                         loggedInManagerId)) {
@@ -598,23 +603,21 @@ public class ManagerMethods {
             }
         }
 
-        // Load users
-        List<User> users =
-                UserRepository.loadAll();
+        List<User> users
+                = UserRepository.loadAll();
 
-        List<User> doctors =
-                users.stream()
-                        .filter(user ->
-                                user.getRole()
-                                        == Role.DOCTOR)
+        List<User> doctors
+                = users.stream()
+                        .filter(user
+                                -> user.getRole()
+                        == Role.DOCTOR)
                         .toList();
 
-        // Doctor selection
-        JComboBox<String> doctorCombo =
-                new JComboBox<>();
+        JComboBox<String> doctorCombo
+                = new JComboBox<>();
 
-        for (String doctorId :
-                assignedDoctorIds) {
+        for (String doctorId
+                : assignedDoctorIds) {
 
             for (User doctor : doctors) {
 
@@ -642,30 +645,27 @@ public class ManagerMethods {
             return null;
         }
 
-        // Find the department assigned to
-        // the logged-in medical manager.
         String department = null;
 
-        List<String> departments =
-                FileManager.readLines(
+        List<String> departments
+                = FileManager.readLines(
                         "department.txt"
                 );
 
-        // Skip the header
         for (int i = 1;
                 i < departments.size();
                 i++) {
 
-            String departmentRecord =
-                    departments.get(i);
+            String departmentRecord
+                    = departments.get(i);
 
             if (departmentRecord == null
                     || departmentRecord.trim().isEmpty()) {
                 continue;
             }
 
-            String[] departmentParts =
-                    ManageRecordsHelper.splitRecord(
+            String[] departmentParts
+                    = ManageRecordsHelper.splitRecord(
                             departmentRecord
                     );
 
@@ -673,11 +673,11 @@ public class ManagerMethods {
                 continue;
             }
 
-            String departmentName =
-                    departmentParts[1].trim();
+            String departmentName
+                    = departmentParts[1].trim();
 
-            String managerId =
-                    departmentParts[3].trim();
+            String managerId
+                    = departmentParts[3].trim();
 
             if (managerId.equals(
                     loggedInManagerId)) {
@@ -687,8 +687,6 @@ public class ManagerMethods {
             }
         }
 
-        // The logged-in manager must have
-        // an assigned department.
         if (department == null
                 || department.isEmpty()) {
 
@@ -702,40 +700,34 @@ public class ManagerMethods {
             return null;
         }
 
-        // Department display field
-        JTextField departmentField =
-                new JTextField(department);
+        JTextField departmentField
+                = new JTextField(department);
 
         panel.setUneditable(
                 departmentField
         );
 
-        // Date
-        SpinnerDateModel dateModel =
-                new SpinnerDateModel();
+        SpinnerDateModel dateModel
+                = new SpinnerDateModel();
 
-        JSpinner dateSpinner =
-                new JSpinner(dateModel);
+        JSpinner dateSpinner
+                = new JSpinner(dateModel);
 
-        JSpinner.DateEditor dateEditor =
-                new JSpinner.DateEditor(
-                        dateSpinner,
-                        "yyyy-MM-dd"
-                );
+        JSpinner.DateEditor dateEditor
+                = new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
 
         dateSpinner.setEditor(
                 dateEditor
         );
 
-        // Shift start time
-        SpinnerDateModel startTimeModel =
-                new SpinnerDateModel();
+        SpinnerDateModel startTimeModel
+                = new SpinnerDateModel();
 
-        JSpinner startTimeSpinner =
-                new JSpinner(startTimeModel);
+        JSpinner startTimeSpinner
+                = new JSpinner(startTimeModel);
 
-        JSpinner.DateEditor startTimeEditor =
-                new JSpinner.DateEditor(
+        JSpinner.DateEditor startTimeEditor
+                = new JSpinner.DateEditor(
                         startTimeSpinner,
                         "HH:mm"
                 );
@@ -744,15 +736,14 @@ public class ManagerMethods {
                 startTimeEditor
         );
 
-        // Shift end time
-        SpinnerDateModel endTimeModel =
-                new SpinnerDateModel();
+        SpinnerDateModel endTimeModel
+                = new SpinnerDateModel();
 
-        JSpinner endTimeSpinner =
-                new JSpinner(endTimeModel);
+        JSpinner endTimeSpinner
+                = new JSpinner(endTimeModel);
 
-        JSpinner.DateEditor endTimeEditor =
-                new JSpinner.DateEditor(
+        JSpinner.DateEditor endTimeEditor
+                = new JSpinner.DateEditor(
                         endTimeSpinner,
                         "HH:mm"
                 );
@@ -761,16 +752,14 @@ public class ManagerMethods {
                 endTimeEditor
         );
 
-        // Status
-        JComboBox<String> statusCombo =
-                new JComboBox<>();
+        JComboBox<String> statusCombo
+                = new JComboBox<>();
 
         statusCombo.addItem("Active");
         statusCombo.addItem("Inactive");
 
-        // Form
-        JPanel form =
-                new JPanel(
+        JPanel form
+                = new JPanel(
                         new GridLayout(6, 2, 8, 8)
                 );
 
@@ -816,8 +805,8 @@ public class ManagerMethods {
                 statusCombo
         );
 
-        int choice =
-                JOptionPane.showConfirmDialog(
+        int choice
+                = JOptionPane.showConfirmDialog(
                         panel,
                         form,
                         "Add Roster",
@@ -829,14 +818,14 @@ public class ManagerMethods {
             return null;
         }
 
-        // Get selected doctor
-        String selectedDoctorName =
-                (String) doctorCombo.getSelectedItem();
+        String selectedDoctorName
+                = (String) doctorCombo.getSelectedItem();
 
-        // Get selected date
-        java.util.Date selectedDate =
-                (java.util.Date)
-                        dateSpinner.getValue();
+        String selectedDepartment
+                = departmentField.getText().trim();
+
+        java.util.Date selectedDate
+                = (java.util.Date) dateSpinner.getValue();
 
         if (selectedDate == null) {
 
@@ -850,97 +839,35 @@ public class ManagerMethods {
             return null;
         }
 
-        String date =
-                new java.text.SimpleDateFormat(
+        String date
+                = new java.text.SimpleDateFormat(
                         "yyyy-MM-dd"
                 ).format(selectedDate);
 
-        // Get selected shift times
-        java.util.Date selectedStartTime =
-                (java.util.Date)
-                        startTimeSpinner.getValue();
+        java.util.Date selectedStartTime
+                = (java.util.Date) startTimeSpinner.getValue();
 
-        java.util.Date selectedEndTime =
-                (java.util.Date)
-                        endTimeSpinner.getValue();
+        java.util.Date selectedEndTime
+                = (java.util.Date) endTimeSpinner.getValue();
 
-        if (selectedStartTime == null
-                || selectedEndTime == null) {
+        java.text.SimpleDateFormat timeFormat
+                = new java.text.SimpleDateFormat("HH:mm");
 
-            JOptionPane.showMessageDialog(
-                    panel,
-                    "Please select both shift start and end times.",
-                    "Invalid Roster",
-                    JOptionPane.WARNING_MESSAGE
-            );
+        String startTime
+                = timeFormat.format(selectedStartTime);
 
-            return null;
-        }
+        String endTime
+                = timeFormat.format(selectedEndTime);
 
-        /*
-         * Format the times first.
-         *
-         * Do NOT compare the Date objects directly because
-         * SpinnerDateModel contains date information as well
-         * as the displayed time.
-         */
-        java.text.SimpleDateFormat timeFormat =
-                new java.text.SimpleDateFormat(
-                        "HH:mm"
-                );
+        String shift
+                = startTime + " - " + endTime;
 
-        String startTime =
-                timeFormat.format(
-                        selectedStartTime
-                );
+        String status
+                = (String) statusCombo.getSelectedItem();
 
-        String endTime =
-                timeFormat.format(
-                        selectedEndTime
-                );
-
-        // Convert HH:mm into minutes
-        // so only the time of day is compared.
-        int startMinutes =
-                Integer.parseInt(
-                        startTime.substring(0, 2)
-                ) * 60
-                + Integer.parseInt(
-                        startTime.substring(3, 5)
-                );
-
-        int endMinutes =
-                Integer.parseInt(
-                        endTime.substring(0, 2)
-                ) * 60
-                + Integer.parseInt(
-                        endTime.substring(3, 5)
-                );
-
-        // Validate shift time
-        if (endMinutes <= startMinutes) {
-
-            JOptionPane.showMessageDialog(
-                    panel,
-                    "Shift end time must be later than shift start time.",
-                    "Invalid Shift",
-                    JOptionPane.WARNING_MESSAGE
-            );
-
-            return null;
-        }
-
-        String shift =
-                startTime + " - " + endTime;
-
-        // Get status
-        String status =
-                (String) statusCombo.getSelectedItem();
-
-        // Validate required fields
         if (selectedDoctorName == null
                 || selectedDoctorName.isEmpty()
-                || department.isEmpty()
+                || selectedDepartment.isEmpty()
                 || date.isEmpty()
                 || shift.isEmpty()
                 || status == null
@@ -956,7 +883,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Find selected doctor's ID
         String selectedDoctorId = "";
 
         for (User doctor : doctors) {
@@ -966,8 +892,8 @@ public class ManagerMethods {
                     && assignedDoctorIds.contains(
                             doctor.getUserId())) {
 
-                selectedDoctorId =
-                        doctor.getUserId();
+                selectedDoctorId
+                        = doctor.getUserId();
 
                 break;
             }
@@ -985,8 +911,6 @@ public class ManagerMethods {
             return null;
         }
 
-        // Check whether doctor already has
-        // a roster on this date.
         if (doctorShiftCheck(
                 selectedDoctorName,
                 date,
@@ -1004,40 +928,31 @@ public class ManagerMethods {
             return null;
         }
 
-        // Generate roster ID
-        String rosterId =
-                IDGenerator.next(
-                        "R",
-                        fileName
-                );
+        String rosterId
+                = IDGenerator.next("R", fileName);
 
-        // Create the roster record
-        String normalizedRecord =
-                String.join(
-                        "|",
-                        rosterId,
-                        selectedDoctorName,
-                        loggedInManager.getFullName(),
-                        department,
-                        date,
-                        shift,
-                        status
-                );
-
-        // Return the record to ManageRecordsPanel
-        return normalizedRecord;
+        return String.join(
+                "|",
+                rosterId,
+                selectedDoctorName,
+                loggedInManager.getFullName(),
+                selectedDepartment,
+                date,
+                shift,
+                status
+        );
     }
-    
-   public String editRosterRecord(String record) {
-        String[] parts =
-                record.split("\\|", -1);
+
+    public String editRosterRecord(String record) {
+
+        String[] parts = record.split("\\|", -1);
 
         if (parts.length < 7) {
             return null;
         }
 
-        User loggedInManager =
-                Session.getCurrentUser();
+        User loggedInManager
+                = Session.getCurrentUser();
 
         if (loggedInManager == null) {
 
@@ -1051,32 +966,27 @@ public class ManagerMethods {
             return null;
         }
 
-        String loggedInManagerId =
-                loggedInManager.getUserId();
+        String loggedInManagerId
+                = loggedInManager.getUserId();
 
-        String rosterId =
-                parts[0].trim();
+        String rosterId
+                = parts[0].trim();
 
-        String doctorName =
-                parts[1].trim();
+        String doctorName
+                = parts[1].trim();
 
-        String managerName =
-                parts[2].trim();
+        String managerName
+                = parts[2].trim();
 
-        String existingDepartment =
-                parts[3].trim();
+        String date
+                = parts[4].trim();
 
-        String date =
-                parts[4].trim();
+        String shift
+                = parts[5].trim();
 
-        String shift =
-                parts[5].trim();
+        String status
+                = parts[6].trim();
 
-        String status =
-                parts[6].trim();
-
-        // Check that this roster is managed by
-        // the currently logged-in manager.
         if (!managerName.equalsIgnoreCase(
                 loggedInManager.getFullName().trim())) {
 
@@ -1090,30 +1000,27 @@ public class ManagerMethods {
             return null;
         }
 
-        // Find the department assigned to the
-        // currently logged-in medical manager.
         String department = null;
 
-        List<String> departments =
-                FileManager.readLines(
+        List<String> departments
+                = FileManager.readLines(
                         "department.txt"
                 );
 
-        // Skip the header
         for (int i = 1;
                 i < departments.size();
                 i++) {
 
-            String departmentRecord =
-                    departments.get(i);
+            String departmentRecord
+                    = departments.get(i);
 
             if (departmentRecord == null
                     || departmentRecord.trim().isEmpty()) {
                 continue;
             }
 
-            String[] departmentParts =
-                    ManageRecordsHelper.splitRecord(
+            String[] departmentParts
+                    = ManageRecordsHelper.splitRecord(
                             departmentRecord
                     );
 
@@ -1121,11 +1028,11 @@ public class ManagerMethods {
                 continue;
             }
 
-            String departmentName =
-                    departmentParts[1].trim();
+            String departmentName
+                    = departmentParts[1].trim();
 
-            String managerId =
-                    departmentParts[3].trim();
+            String managerId
+                    = departmentParts[3].trim();
 
             if (managerId.equals(
                     loggedInManagerId)) {
@@ -1135,8 +1042,6 @@ public class ManagerMethods {
             }
         }
 
-        // The logged-in manager must have
-        // an assigned department.
         if (department == null
                 || department.isEmpty()) {
 
@@ -1150,27 +1055,38 @@ public class ManagerMethods {
             return null;
         }
 
-        // Department display field
-        JTextField departmentField =
-                new JTextField(department);
+        JTextField departmentField
+                = new JTextField(department);
 
         panel.setUneditable(
                 departmentField
         );
 
-        // Date
-        JTextField dateField =
-                new JTextField(date);
+        UtilDateModel model = new UtilDateModel();
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        try {
+            java.util.Date parsedDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date);
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(parsedDate);
+            model.setDate(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DATE));
+            model.setSelected(true);
+        } catch (Exception e) {
+            model.setSelected(true);
+        }
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
+        JDatePickerImpl effectiveDatePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
 
-        // Shift start time
-        SpinnerDateModel startTimeModel =
-                new SpinnerDateModel();
+        SpinnerDateModel startTimeModel
+                = new SpinnerDateModel();
 
-        JSpinner startTimeSpinner =
-                new JSpinner(startTimeModel);
+        JSpinner startTimeSpinner
+                = new JSpinner(startTimeModel);
 
-        JSpinner.DateEditor startTimeEditor =
-                new JSpinner.DateEditor(
+        JSpinner.DateEditor startTimeEditor
+                = new JSpinner.DateEditor(
                         startTimeSpinner,
                         "HH:mm"
                 );
@@ -1179,15 +1095,14 @@ public class ManagerMethods {
                 startTimeEditor
         );
 
-        // Shift end time
-        SpinnerDateModel endTimeModel =
-                new SpinnerDateModel();
+        SpinnerDateModel endTimeModel
+                = new SpinnerDateModel();
 
-        JSpinner endTimeSpinner =
-                new JSpinner(endTimeModel);
+        JSpinner endTimeSpinner
+                = new JSpinner(endTimeModel);
 
-        JSpinner.DateEditor endTimeEditor =
-                new JSpinner.DateEditor(
+        JSpinner.DateEditor endTimeEditor
+                = new JSpinner.DateEditor(
                         endTimeSpinner,
                         "HH:mm"
                 );
@@ -1196,29 +1111,27 @@ public class ManagerMethods {
                 endTimeEditor
         );
 
-        // Load the existing shift time
         try {
 
             if (shift.contains(" - ")) {
 
-                String[] shiftParts =
-                        shift.split("\\s*-\\s*");
+                String[] shiftParts
+                        = shift.split("\\s*-\\s*");
 
                 if (shiftParts.length == 2) {
 
-                    java.text.SimpleDateFormat
-                            timeFormat =
-                            new java.text.SimpleDateFormat(
+                    java.text.SimpleDateFormat timeFormat
+                            = new java.text.SimpleDateFormat(
                                     "HH:mm"
                             );
 
-                    java.util.Date startTime =
-                            timeFormat.parse(
+                    java.util.Date startTime
+                            = timeFormat.parse(
                                     shiftParts[0].trim()
                             );
 
-                    java.util.Date endTime =
-                            timeFormat.parse(
+                    java.util.Date endTime
+                            = timeFormat.parse(
                                     shiftParts[1].trim()
                             );
 
@@ -1244,9 +1157,8 @@ public class ManagerMethods {
             return null;
         }
 
-        // Status
-        JComboBox<String> statusField =
-                new JComboBox<>(
+        JComboBox<String> statusField
+                = new JComboBox<>(
                         new String[]{
                             "Active",
                             "Inactive"
@@ -1257,8 +1169,8 @@ public class ManagerMethods {
                 status
         );
 
-        JPanel form =
-                new JPanel(
+        JPanel form
+                = new JPanel(
                         new GridLayout(5, 2, 8, 8)
                 );
 
@@ -1269,12 +1181,8 @@ public class ManagerMethods {
                 departmentField
         );
 
-        form.add(
-                new JLabel("DATE:")
-        );
-        form.add(
-                dateField
-        );
+        form.add(new JLabel("DATE (YYYY-MM-DD):"));
+        form.add(effectiveDatePicker);
 
         form.add(
                 new JLabel("SHIFT START:")
@@ -1297,8 +1205,8 @@ public class ManagerMethods {
                 statusField
         );
 
-        int choice =
-                JOptionPane.showConfirmDialog(
+        int choice
+                = JOptionPane.showConfirmDialog(
                         panel,
                         form,
                         "Edit Roster",
@@ -1310,8 +1218,16 @@ public class ManagerMethods {
             return null;
         }
 
-        String updatedDate =
-                dateField.getText().trim();
+        java.util.Date selectedDateUtil = (java.util.Date) effectiveDatePicker.getModel().getValue();
+        String updatedDate = selectedDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDateUtil)
+                : java.time.LocalDate.now().toString();
+
+        java.util.Date selectedStartTime
+                = (java.util.Date) startTimeSpinner.getValue();
+
+        java.util.Date selectedEndTime
+                = (java.util.Date) endTimeSpinner.getValue();
 
         if (updatedDate.isEmpty()) {
 
@@ -1325,17 +1241,7 @@ public class ManagerMethods {
             return null;
         }
 
-        java.util.Date selectedStartTime =
-                (java.util.Date)
-                        startTimeSpinner.getValue();
-
-        java.util.Date selectedEndTime =
-                (java.util.Date)
-                        endTimeSpinner.getValue();
-
-        if (selectedStartTime == null
-                || selectedEndTime == null) {
-
+        if (selectedStartTime == null || selectedEndTime == null) {
             JOptionPane.showMessageDialog(
                     panel,
                     "Please select both shift start and end times.",
@@ -1359,37 +1265,30 @@ public class ManagerMethods {
             return null;
         }
 
-        java.text.SimpleDateFormat timeFormat =
-                new java.text.SimpleDateFormat(
+        java.text.SimpleDateFormat timeFormat
+                = new java.text.SimpleDateFormat(
                         "HH:mm"
                 );
 
-        String startTime =
-                timeFormat.format(
-                        selectedStartTime
-                );
+        String startTime
+                = timeFormat.format(selectedStartTime);
 
-        String endTime =
-                timeFormat.format(
-                        selectedEndTime
-                );
+        String endTime
+                = timeFormat.format(selectedEndTime);
 
-        String updatedShift =
-                startTime + " - " + endTime;
+        String updatedShift
+                = startTime + " - " + endTime;
 
-        String updatedStatus =
-                statusField
+        String updatedStatus
+                = statusField
                         .getSelectedItem()
                         .toString()
                         .trim();
 
-        // Check for scheduling conflict using
-        // the NEW date.
         if (doctorShiftCheck(
                 doctorName,
                 updatedDate,
                 rosterId)) {
-
             JOptionPane.showMessageDialog(
                     panel,
                     "This doctor already has a shift on "

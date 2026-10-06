@@ -6,9 +6,9 @@ import java.awt.GridLayout;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JComboBox;
@@ -17,12 +17,16 @@ import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import javax.swing.table.DefaultTableModel;
+
+import org.jdatepicker.impl.JDatePanelImpl;
+import org.jdatepicker.impl.JDatePickerImpl;
+import org.jdatepicker.impl.UtilDateModel;
 
 import hms.role.Role;
 import hms.role.User;
 
 public final class RecordsHelperAppointment {
+
     private RecordsHelperAppointment() {
     }
 
@@ -44,7 +48,25 @@ public final class RecordsHelperAppointment {
 
         JTextField patientIdField = new JTextField(patientId);
         JTextField doctorIdField = new JTextField(doctorId);
-        JTextField dateField = new JTextField(date);
+
+        UtilDateModel model = new UtilDateModel();
+        try {
+            java.util.Date parsedDate = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(date);
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.setTime(parsedDate);
+            model.setDate(cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DATE));
+            model.setSelected(true);
+        } catch (Exception e) {
+            model.setSelected(true); // Fallback if parsing fails
+        }
+
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
+        JDatePickerImpl datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
+
         JTextField timeField = new JTextField(time);
 
         JComboBox<String> statusField = new JComboBox<>(
@@ -53,32 +75,7 @@ public final class RecordsHelperAppointment {
 
         statusField.setSelectedItem(status);
 
-        // Load existing departments
-        List<String> departmentRecords = FileManager.readLines("department.txt");
-        List<String> departments = new ArrayList<>();
-
-        for (int i = 1; i < departmentRecords.size(); i++) {
-            String departmentRecord = departmentRecords.get(i);
-
-            if (departmentRecord == null || departmentRecord.trim().isEmpty()) {
-                continue;
-            }
-
-            String[] departmentParts =
-                    ManageRecordsHelper.splitRecord(departmentRecord);
-
-            if (departmentParts.length < 2) {
-                continue;
-            }
-
-            String departmentName = departmentParts[1].trim();
-
-            if (!departmentName.isEmpty()) {
-                departments.add(departmentName);
-            }
-        }
-
-        JPanel form = new JPanel(new GridLayout(7, 2, 8, 8));
+        JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
 
         form.add(new JLabel("APPOINTMENT_ID:"));
         form.add(appointmentIdField);
@@ -89,8 +86,8 @@ public final class RecordsHelperAppointment {
         form.add(new JLabel("DOCTOR_ID:"));
         form.add(doctorIdField);
 
-        form.add(new JLabel("DATE:"));
-        form.add(dateField);
+        form.add(new JLabel("DATE (YYYY-MM-DD):"));
+        form.add(datePicker);
 
         form.add(new JLabel("TIME:"));
         form.add(timeField);
@@ -110,21 +107,27 @@ public final class RecordsHelperAppointment {
             return null;
         }
 
+        java.util.Date selectedDateUtil = (java.util.Date) datePicker.getModel().getValue();
+        String dateStr = selectedDateUtil != null
+                ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDateUtil)
+                : LocalDate.now().toString();
+
         return String.join("|",
                 appointmentIdField.getText().trim(),
                 patientIdField.getText().trim(),
                 doctorIdField.getText().trim(),
-                dateField.getText().trim(),
+                dateStr,
                 timeField.getText().trim(),
                 statusField.getSelectedItem().toString().trim()
         );
     }
 
-
     public static void addAppointmentRecord(Component comp, String fileName,
             List<String> records, Runnable refreshAction) {
 
         List<User> users = UserRepository.loadAll();
+        User currentUser = Session.getCurrentUser();
+        boolean isPatient = (currentUser != null && currentUser.getRole() == Role.PATIENT);
 
         List<User> patients = users.stream()
                 .filter(user -> user.getRole() == Role.PATIENT)
@@ -145,39 +148,58 @@ public final class RecordsHelperAppointment {
         }
 
         JComboBox<String> patientCombo = new JComboBox<>();
-
-        for (User patient : patients) {
-            patientCombo.addItem(patient.getFullName());
+        if (isPatient) {
+            patientCombo.addItem(currentUser.getFullName());
+            patientCombo.setEnabled(false);
+            patientCombo.setBackground(Color.LIGHT_GRAY);
+        } else {
+            for (User patient : patients) {
+                patientCombo.addItem(patient.getFullName());
+            }
         }
 
         JComboBox<String> doctorCombo = new JComboBox<>();
-
         for (User doctor : doctors) {
             doctorCombo.addItem(doctor.getFullName());
         }
 
-        JTextField dateField = new JTextField(java.time.LocalDate.now().toString());
+        // --- JDatePicker Setup ---
+        UtilDateModel model = new UtilDateModel();
+        model.setSelected(true);
+        Properties p = new Properties();
+        p.put("text.today", "Today");
+        p.put("text.month", "Month");
+        p.put("text.year", "Year");
+        JDatePanelImpl datePanel = new JDatePanelImpl(model, p);
+        JDatePickerImpl datePicker = new JDatePickerImpl(datePanel, new DateLabelFormatter());
+
         JComboBox<String> timeCombo = new JComboBox<>();
         Runnable updateTimeSlots = () -> {
             timeCombo.removeAllItems();
             String selectedDoctorName = (String) doctorCombo.getSelectedItem();
-            String selectedDate = dateField.getText().trim();
 
-            if (selectedDoctorName == null || selectedDate.isEmpty()) return;
+            java.util.Date selectedDateUtil = (java.util.Date) datePicker.getModel().getValue();
+            String selectedDate = selectedDateUtil != null ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDateUtil) : "";
 
+            if (selectedDoctorName == null) {
+                return;
+            }
+
+            // --- IGNORING ROSTER DATE: Find the doctor's shift time slots regardless of date ---
             String shiftRange = null;
             List<String> rosterLines = FileManager.readLines("roster.txt");
             for (int i = 1; i < rosterLines.size(); i++) {
                 String line = rosterLines.get(i);
-                if (line == null || line.trim().isEmpty()) continue;
+                if (line == null || line.trim().isEmpty()) {
+                    continue;
+                }
                 String[] parts = ManageRecordsHelper.splitRecord(line);
                 if (parts.length >= 6) {
                     String docName = parts[1].trim();
-                    String rosterDate = parts[4].trim();
-                    String shift = parts[5].trim(); // e.g., "09:30 - 17:00"
+                    String shift = parts[5].trim();
 
-                    if ((docName.equalsIgnoreCase(selectedDoctorName) || ManageRecordsHelper.findName(docName).equalsIgnoreCase(selectedDoctorName))
-                            && rosterDate.equals(selectedDate)) {
+                    // Matches doctor name and grabs the shift time range completely ignoring roster date
+                    if (docName.equalsIgnoreCase(selectedDoctorName) || ManageRecordsHelper.findName(docName).equalsIgnoreCase(selectedDoctorName)) {
                         shiftRange = shift;
                         break;
                     }
@@ -189,22 +211,21 @@ public final class RecordsHelperAppointment {
                 return;
             }
 
-            // Parse shift hours
             try {
                 String[] times = shiftRange.split("-");
                 LocalTime startTime = LocalTime.parse(times[0].trim(), DateTimeFormatter.ofPattern("HH:mm"));
                 LocalTime endTime = LocalTime.parse(times[1].trim(), DateTimeFormatter.ofPattern("HH:mm"));
 
-                // Find already booked times from records (bookings.txt)
                 List<String> bookedTimes = new ArrayList<>();
                 for (String rec : records) {
-                    String[] p = ManageRecordsHelper.splitRecord(rec);
-                    if (p.length >= 6) {
-                        String bDoc = p[2].trim();
-                        String bDate = p[3].trim();
-                        String bTime = p[4].trim();
-                        String bStatus = p[5].trim();
+                    String[] pr = ManageRecordsHelper.splitRecord(rec);
+                    if (pr.length >= 6) {
+                        String bDoc = pr[2].trim();
+                        String bDate = pr[3].trim();
+                        String bTime = pr[4].trim();
+                        String bStatus = pr[5].trim();
 
+                        // Check booked slots for this specific date and doctor
                         if ((bDoc.equalsIgnoreCase(selectedDoctorName) || ManageRecordsHelper.findName(bDoc).equalsIgnoreCase(selectedDoctorName))
                                 && bDate.equals(selectedDate)
                                 && !bStatus.equalsIgnoreCase("CANCELLED")) {
@@ -213,7 +234,6 @@ public final class RecordsHelperAppointment {
                     }
                 }
 
-                // Generate 30-minute slots
                 LocalTime current = startTime;
                 while (current.plusMinutes(30).compareTo(endTime) <= 0) {
                     String slotStr = current.format(DateTimeFormatter.ofPattern("HH:mm"));
@@ -230,7 +250,6 @@ public final class RecordsHelperAppointment {
             }
         };
 
-        // Custom Renderer to Grey out Booked slots
         timeCombo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -252,14 +271,23 @@ public final class RecordsHelperAppointment {
             }
         });
 
-        // Trigger updates when doctor or date changes
         doctorCombo.addActionListener(e -> updateTimeSlots.run());
-        dateField.addActionListener(e -> updateTimeSlots.run());
-        updateTimeSlots.run(); // Initial population
+        model.addPropertyChangeListener(e -> {
+            if ("value".equals(e.getPropertyName())) {
+                updateTimeSlots.run();
+            }
+        });
+        updateTimeSlots.run();
 
         JComboBox<String> statusCombo = new JComboBox<>(
                 new String[]{"SCHEDULED", "COMPLETED", "CANCELLED"}
         );
+
+        if (isPatient) {
+            statusCombo.setSelectedItem("SCHEDULED");
+            statusCombo.setEnabled(false);
+            statusCombo.setBackground(Color.LIGHT_GRAY);
+        }
 
         JPanel form = new JPanel(new GridLayout(6, 2, 8, 8));
 
@@ -270,7 +298,7 @@ public final class RecordsHelperAppointment {
         form.add(doctorCombo);
 
         form.add(new JLabel("DATE (YYYY-MM-DD):"));
-        form.add(dateField);
+        form.add(datePicker);
 
         form.add(new JLabel("TIME (30-min slot):"));
         form.add(timeCombo);
@@ -291,9 +319,10 @@ public final class RecordsHelperAppointment {
         }
 
         String appointmentId = IDGenerator.next("B", fileName);
-        String date = dateField.getText().trim();
-        
-        // Clean up time string if it contains " (Booked)" label
+
+        java.util.Date selectedDateUtil = (java.util.Date) datePicker.getModel().getValue();
+        String date = selectedDateUtil != null ? new java.text.SimpleDateFormat("yyyy-MM-dd").format(selectedDateUtil) : LocalDate.now().toString();
+
         String rawTimeSelection = (String) timeCombo.getSelectedItem();
         if (rawTimeSelection == null || rawTimeSelection.contains("Booked") || rawTimeSelection.contains("Shift")) {
             JOptionPane.showMessageDialog(comp, "Please select a valid available time slot.", "Invalid Time", JOptionPane.WARNING_MESSAGE);
@@ -317,29 +346,23 @@ public final class RecordsHelperAppointment {
             return;
         }
 
-        try {
-            LocalDate.parse(date);
-        } catch (DateTimeParseException exception) {
-            JOptionPane.showMessageDialog(
-                    comp,
-                    "Date must be in YYYY-MM-DD format.",
-                    "Invalid Appointment",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return;
+        String patientId;
+        if (isPatient) {
+            patientId = currentUser.getUserId();
+        } else {
+            int patientIndex = patientCombo.getSelectedIndex();
+            if (patientIndex < 0) {
+                return;
+            }
+            patientId = patients.get(patientIndex).getUserId();
         }
 
-        int patientIndex = patientCombo.getSelectedIndex();
         int doctorIndex = doctorCombo.getSelectedIndex();
-
-        if (patientIndex < 0 || doctorIndex < 0) {
+        if (doctorIndex < 0) {
             return;
         }
-
-        String patientId = patients.get(patientIndex).getUserId();
         String doctorId = doctors.get(doctorIndex).getUserId();
 
-        // Prevent double-booking the same doctor at the same date/time
         for (String record : records) {
             String[] parts = ManageRecordsHelper.splitRecord(record);
             if (parts.length >= 6
@@ -373,40 +396,23 @@ public final class RecordsHelperAppointment {
         refreshAction.run();
     }
 
-    public void addAppointmentRow(DefaultTableModel tableModel, String line, JComboBox<String> doctorSearchBox) {
-        String[] parts = ManageRecordsHelper.splitRecord(line);
-        if (parts.length < 6) {
-            return;
-        }
-        
-        String doctorName = ManageRecordsHelper.findName(parts[2].trim());
-        String selectedDoctor = (String) doctorSearchBox.getSelectedItem();
-        if (selectedDoctor != null && !selectedDoctor.equals("All Doctors") && !selectedDoctor.equals("Doctor Name")) {
-            if (!doctorName.equals(selectedDoctor)) {
-                return;
-            }
-        }
-
-        tableModel.addRow(new Object[]{
-                parts[0].trim(),
-                ManageRecordsHelper.findName(parts[1].trim()),
-                doctorName,
-                parts[3].trim(),
-                parts[4].trim(),
-                parts[5].trim()
-        });
-    }
-    
-    public static List<String> updateAppointmentStatus(Component comp, List<String> records,
-            String appointmentId, String newStatus) {
+    public static List<String> updateAppointmentStatus(Component comp, List<String> records, String appointmentId, String newStatus) {
         List<String> updatedLines = new java.util.ArrayList<>();
         boolean found = false;
         for (String record : records) {
             String[] parts = ManageRecordsHelper.splitRecord(record);
             if (parts.length >= 6 && parts[0].trim().equals(appointmentId)) {
                 found = true;
+                String oldStatus = parts[5].trim();
                 parts[5] = newStatus;
                 updatedLines.add(String.join("|", parts));
+
+                if ("COMPLETED".equalsIgnoreCase(newStatus) && !"COMPLETED".equalsIgnoreCase(oldStatus)) {
+                    String patientId = parts[1].trim();
+                    String doctorId = parts[2].trim();
+                    String appointmentDate = parts[3].trim();
+                    BillingManager.generateBillForAppointment(parts[0].trim());
+                }
             } else {
                 updatedLines.add(record);
             }

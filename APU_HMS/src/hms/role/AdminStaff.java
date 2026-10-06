@@ -3,7 +3,7 @@ package hms.role;
 public class AdminStaff extends User {
 
     public AdminStaff(String userId, String username, String password,
-                       String fullName, String email, String phone) {
+            String fullName, String email, String phone) {
         super(userId, username, password, fullName, email, phone);
     }
 
@@ -14,12 +14,13 @@ public class AdminStaff extends User {
 
     @Override
     public String[] getMenuOptions() {
-        return new String[] {
+        return new String[]{
             "Profile",
             "Appointments",
-            "Users",
+            "Bills",
             "Wards/Clinics",
-            "Consultation Rates",            
+            "Users",
+            "Consultation Rates",
             "Insurances"
         };
     }

@@ -1,50 +1,101 @@
 package hms.gui.panels;
 
-import hms.role.Role;
-import hms.role.User;
-import hms.util.FileManager;
-import hms.util.UserRepository;
-import hms.util.Validator;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dialog;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableModel;
+
+import hms.role.Role;
+import hms.role.User;
+import hms.util.FileManager;
+import hms.util.UserRepository;
+import hms.util.Validator;
 
 public class ManageUserPanel extends JPanel {
 
-    private final DefaultTableModel tableModel =
-            new DefaultTableModel(new String[]{"ID", "Name", "Username", "Role", "Email", "Phone", "Medical Manager"}, 0) {
-                @Override
-                public boolean isCellEditable(int row, int column) {
-                    return false; // read-only, editing happens through the Edit Selected dialog
-                }
-            };
-
-    private final JTable userTable = new JTable(tableModel);
+    private final DefaultTableModel tableModel;
+    private final JTable userTable;
+    private final String filterMode; // Stores "PATIENTS", "STAFF", or "ALL_USERS"
     private final JComboBox<String> roleFilterBox = new JComboBox<>();
     private List<User> filteredUsers = new ArrayList<>();
     private String headerLine;
     private boolean headerPresent;
     private boolean initialized;
 
-    public ManageUserPanel(String title) {
+    public ManageUserPanel(String title, String filterMode) {
+this.filterMode = filterMode;
+
+        // Columns based on button 
+        String[] columns;
+        if ("PATIENTS".equals(filterMode)) {
+            columns = new String[]{"ID", "Name", "Username", "Role", "Email", "Phone", "Insurance"};
+        } else if ("STAFF".equals(filterMode)) {
+            columns = new String[]{"ID", "Name", "Username", "Role", "Email", "Phone", "Medical Manager"};
+        } else {
+            // All users
+            columns = new String[]{"ID", "Name", "Username", "Role", "Email", "Phone"};
+        }
+
+        tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; 
+            }
+        };
+
+        userTable = new JTable(tableModel);
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         userTable.setAutoCreateRowSorter(true);
         userTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+        if ("STAFF".equals(filterMode)) {
+            populateStaffRoleFilterOptions();
+        }
+
         add(buildTopBar(title), BorderLayout.NORTH);
         add(new JScrollPane(userTable), BorderLayout.CENTER);
 
-        populateRoleFilterOptions();
         refreshTable();
+    }
+
+    private void populateStaffRoleFilterOptions() {
+        roleFilterBox.addItem("All Staff Roles");
+        for (Role role : Role.values()) {
+            if (role != Role.PATIENT) {
+                roleFilterBox.addItem(role.getDisplayName());
+            }
+        }
+        roleFilterBox.addActionListener(e -> refreshTable());
     }
 
     private JComponent buildTopBar(String title) {
@@ -54,16 +105,22 @@ public class ManageUserPanel extends JPanel {
         heading.setFont(heading.getFont().deriveFont(Font.BOLD, 16f));
 
         JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        controls.add(new JLabel("Filter by Role:"));
-        controls.add(roleFilterBox);
+
+        if ("STAFF".equals(filterMode)) {
+            controls.add(new JLabel("Filter Role:"));
+            controls.add(roleFilterBox);
+        }
 
         JButton editButton = new JButton("Edit Selected");
-        editButton.addActionListener(e -> openEditDialog());
+        editButton.addActionListener(e -> EditUser());
         controls.add(editButton);
 
-        JButton assignButton = new JButton("Assign Medical Manager");
-        assignButton.addActionListener(e -> openAssignmentDialog());
-        controls.add(assignButton);
+        // Only show Assign Medical Manager for Staff/All Users views where doctors/managers are relevant
+        if (!"PATIENTS".equals(filterMode)) {
+            JButton assignButton = new JButton("Assign Medical Manager");
+            assignButton.addActionListener(e -> openAssignmentDialog());
+            controls.add(assignButton);
+        }
 
         JButton registerButton = new JButton("+ Register New User");
         registerButton.addActionListener(e -> openRegisterFrame());
@@ -72,6 +129,37 @@ public class ManageUserPanel extends JPanel {
         topBar.add(heading, BorderLayout.WEST);
         topBar.add(controls, BorderLayout.EAST);
         return topBar;
+    }
+
+    public void addBackButton(Runnable onBack) {
+        JButton backButton = new JButton("Back");
+        backButton.setBackground(Color.BLACK);
+        backButton.setForeground(Color.WHITE);
+        backButton.setFocusPainted(false);
+        backButton.setOpaque(true);
+        backButton.setBorderPainted(false);
+        backButton.addActionListener(e -> onBack.run());
+        
+        BorderLayout layout = (BorderLayout) getLayout();
+        JPanel topBar = (JPanel) layout.getLayoutComponent(BorderLayout.NORTH);
+        
+        if (topBar != null) {
+            Component actions = ((BorderLayout) topBar.getLayout()).getLayoutComponent(BorderLayout.EAST);
+            if (actions != null) {
+                topBar.remove(actions);
+                
+                JPanel newActionsPanel = new JPanel(new BorderLayout(15, 0));
+                newActionsPanel.add(actions, BorderLayout.CENTER);
+                
+                JPanel backBtnPanel = new JPanel(new BorderLayout());
+                backBtnPanel.add(backButton, BorderLayout.NORTH);
+                newActionsPanel.add(backBtnPanel, BorderLayout.EAST);
+                
+                topBar.add(newActionsPanel, BorderLayout.EAST);
+                topBar.revalidate();
+                topBar.repaint();
+            }
+        }
     }
 
     private void openAssignmentDialog() {
@@ -146,14 +234,6 @@ public class ManageUserPanel extends JPanel {
         comboBox.setSelectedIndex(0);
     }
 
-    private void populateRoleFilterOptions() {
-        roleFilterBox.addItem("All Roles");
-        for (Role role : Role.values()) {
-            roleFilterBox.addItem(role.getDisplayName());
-        }
-        roleFilterBox.addActionListener(e -> refreshTable());
-    }
-
     private void openRegisterFrame() {
         hms.gui.RegisterFrame registerFrame = new hms.gui.RegisterFrame();
 
@@ -167,8 +247,8 @@ public class ManageUserPanel extends JPanel {
         registerFrame.setVisible(true);
     }
 
-    private void openEditDialog() {
-        int viewRow = userTable.getSelectedRow();
+    private void EditUser() {
+int viewRow = userTable.getSelectedRow();
         if (viewRow == -1) {
             JOptionPane.showMessageDialog(this,
                     "Please select a user in the table first.",
@@ -187,6 +267,37 @@ public class ManageUserPanel extends JPanel {
         JTextField phoneField = new JTextField(selectedUser.getPhone(), 20);
         JPasswordField passwordField = new JPasswordField(20);
 
+        // Load Insurance options if user = Patient
+        JComboBox<String> insuranceCombo = null;
+        if (selectedUser.getRole() == Role.PATIENT) {
+            List<String> insuranceLines = FileManager.readLines("insurance_networks.txt");
+            List<String> insuranceOptions = new ArrayList<>();
+            insuranceOptions.add("None"); // Option for no insurance
+
+            for (int i = 1; i < insuranceLines.size(); i++) {
+                String line = insuranceLines.get(i);
+                if (line == null || line.trim().isEmpty()) continue;
+                String[] parts = line.split("\\|", -1);
+                if (parts.length >= 2) {
+                    insuranceOptions.add(parts[1].trim()); 
+                }
+            }
+
+            insuranceCombo = new JComboBox<>(insuranceOptions.toArray(new String[0]));
+
+
+            String currentInsurance = "None";
+            for (int i = 1; i < insuranceLines.size(); i++) {
+                String line = insuranceLines.get(i);
+                String[] parts = line.split("\\|", -1);
+                if (parts.length >= 6 && parts[5].trim().contains(selectedUser.getUserId())) {
+                    currentInsurance = parts[1].trim();
+                    break;
+                }
+            }
+            insuranceCombo.setSelectedItem(currentInsurance);
+        }
+
         JPanel form = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6, 6, 6, 6);
@@ -199,6 +310,11 @@ public class ManageUserPanel extends JPanel {
         addEditableRow(form, gbc, row++, "Full Name:", fullNameField);
         addEditableRow(form, gbc, row++, "Email:", emailField);
         addEditableRow(form, gbc, row++, "Phone:", phoneField);
+        
+        if (selectedUser.getRole() == Role.PATIENT && insuranceCombo != null) {
+            addEditableRow(form, gbc, row++, "Insurance Provider:", insuranceCombo);
+        }
+
         addEditableRow(form, gbc, row++, "New Password (leave blank to keep current):", passwordField);
 
         JPanel root = new JPanel(new BorderLayout(10, 10));
@@ -206,6 +322,7 @@ public class ManageUserPanel extends JPanel {
         root.add(buildheading("Edit User"), BorderLayout.NORTH);
         root.add(form, BorderLayout.CENTER);
 
+        final JComboBox<String> finalInsuranceCombo = insuranceCombo;
         JButton saveButton = new JButton("Save Changes");
         JButton cancelButton = new JButton("Cancel");
         cancelButton.addActionListener(e -> dialog.dispose());
@@ -236,8 +353,47 @@ public class ManageUserPanel extends JPanel {
             }
 
             UserRepository.update(selectedUser);
+
+            if (selectedUser.getRole() == Role.PATIENT && finalInsuranceCombo != null) {
+                String selectedInsurance = (String) finalInsuranceCombo.getSelectedItem();
+                List<String> insuranceLines = FileManager.readLines("insurance_networks.txt");
+                List<String> updatedInsuranceLines = new ArrayList<>();
+
+                if (!insuranceLines.isEmpty()) {
+                    updatedInsuranceLines.add(insuranceLines.get(0));
+                }
+
+                for (int i = 1; i < insuranceLines.size(); i++) {
+                    String line = insuranceLines.get(i);
+                    String[] parts = line.split("\\|", -1);
+                    if (parts.length >= 6) {
+                        String providerName = parts[1].trim();
+                        String contactInfo = parts[5].trim();
+
+                        List<String> associatedUsers = new ArrayList<>(java.util.Arrays.asList(contactInfo.split(",")));
+                        associatedUsers.removeIf(id -> id.trim().equalsIgnoreCase(selectedUser.getUserId()));
+
+                        if (providerName.equalsIgnoreCase(selectedInsurance)) {
+                            if (!selectedInsurance.equalsIgnoreCase("None")) {
+                                if (!contactInfo.isEmpty()) {
+                                    associatedUsers.add(selectedUser.getUserId());
+                                } else {
+                                    associatedUsers = new ArrayList<>();
+                                    associatedUsers.add(selectedUser.getUserId());
+                                }
+                            }
+                        }
+
+                        parts[5] = String.join(",", associatedUsers).replaceAll("^,+|,+$", "");
+                        updatedInsuranceLines.add(String.join("|", parts));
+                    } else {
+                        updatedInsuranceLines.add(line);
+                    }
+                }
+                FileManager.writeAllLines("insurance_networks.txt", updatedInsuranceLines);
+            }
+
             passwordField.setText("");
-            JOptionPane.showMessageDialog(dialog, "User updated successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
             refreshTable();
             dialog.dispose();
         });
@@ -259,7 +415,6 @@ public class ManageUserPanel extends JPanel {
         heading.setFont(heading.getFont().deriveFont(Font.BOLD, 16f));
         return heading;
     }
-
 
     private static void addReadOnlyRow(JPanel panel, GridBagConstraints gbc, int row, String label, String value) {
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
@@ -287,14 +442,25 @@ public class ManageUserPanel extends JPanel {
             headerLine = rawLines.remove(0);
         }
 
-        String selectedFilter = (String) roleFilterBox.getSelectedItem();
+        String selectedRoleFilter = "STAFF".equals(filterMode) ? (String) roleFilterBox.getSelectedItem() : null;
 
         filteredUsers = new ArrayList<>();
         for (User u : UserRepository.loadAll()) {
-            boolean matchesFilter = selectedFilter == null
-                    || selectedFilter.equals("All Roles")
-                    || selectedFilter.equals(u.getRole().getDisplayName());
-            if (matchesFilter) {
+            boolean matches = false;
+            if ("ALL_USERS".equals(filterMode)) {
+                matches = true;
+            } else if ("PATIENTS".equals(filterMode)) {
+                matches = (u.getRole() == Role.PATIENT);
+            } else if ("STAFF".equals(filterMode)) {
+                boolean isStaff = (u.getRole() != Role.PATIENT);
+                if (isStaff) {
+                    if (selectedRoleFilter == null || selectedRoleFilter.equals("All Staff Roles") || selectedRoleFilter.equals(u.getRole().getDisplayName())) {
+                        matches = true;
+                    }
+                }
+            }
+
+            if (matches) {
                 filteredUsers.add(u);
             }
         }
@@ -305,16 +471,43 @@ public class ManageUserPanel extends JPanel {
         for (User user : UserRepository.loadAll()) {
             usersById.put(user.getUserId(), user);
         }
+
+        List<String> insuranceLines = FileManager.readLines("insurance_networks.txt");
+
         for (User u : filteredUsers) {
-            User manager = usersById.get(assignments.get(u.getUserId()));
-            String managerName = u.getRole() == Role.DOCTOR && manager != null
-                ? manager.getFullName()
-                : "-";
-            tableModel.addRow(new Object[]{
-                    u.getUserId(), u.getFullName(), u.getUsername(),
-                    u.getRole().getDisplayName(), u.getEmail(), u.getPhone(),
-                managerName
-            });
+            if ("PATIENTS".equals(filterMode)) {
+                String insuranceInfo = "None";
+                for (int i = 1; i < insuranceLines.size(); i++) {
+                    String line = insuranceLines.get(i);
+                    String[] parts = line.split("\\|", -1);
+                    if (parts.length >= 6 && parts[5].trim().contains(u.getUserId())) {
+                        insuranceInfo = parts[1].trim();
+                        break;
+                    }
+                }
+
+                tableModel.addRow(new Object[]{
+                        u.getUserId(), u.getFullName(), u.getUsername(),
+                        u.getRole().getDisplayName(), u.getEmail(), u.getPhone(),
+                        insuranceInfo
+                });
+            } else if ("STAFF".equals(filterMode)) {
+                User manager = usersById.get(assignments.get(u.getUserId()));
+                String managerName = u.getRole() == Role.DOCTOR && manager != null
+                    ? manager.getFullName()
+                    : "-";
+                tableModel.addRow(new Object[]{
+                        u.getUserId(), u.getFullName(), u.getUsername(),
+                        u.getRole().getDisplayName(), u.getEmail(), u.getPhone(),
+                        managerName
+                });
+            } else {
+                // "ALL_USERS" -> 6 columns without Medical Manager or Insurance
+                tableModel.addRow(new Object[]{
+                        u.getUserId(), u.getFullName(), u.getUsername(),
+                        u.getRole().getDisplayName(), u.getEmail(), u.getPhone()
+                });
+            }
         }
     }
 

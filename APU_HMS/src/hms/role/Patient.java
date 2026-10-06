@@ -6,29 +6,30 @@ public class Patient extends User {
     private String gender;
 
     public Patient(String userId, String username, String password,
-                    String fullName, String email, String phone,
-                    String dateOfBirth, String gender) {
+            String fullName, String email, String phone,
+            String dateOfBirth, String gender) {
         super(userId, username, password, fullName, email, phone);
         this.dateOfBirth = dateOfBirth;
         this.gender = gender;
     }
 
     //getter
-    public String getDateOfBirth() { 
-        return dateOfBirth; 
-    }
-    public String getGender() { 
-        return gender; 
-    }
-    
-    //setter
-    public void setDateOfBirth(String dateOfBirth) { 
-        this.dateOfBirth = dateOfBirth; 
-    }
-    public void setGender(String gender) { 
-        this.gender = gender; 
+    public String getDateOfBirth() {
+        return dateOfBirth;
     }
 
+    public String getGender() {
+        return gender;
+    }
+
+    //setter
+    public void setDateOfBirth(String dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
     @Override
     public Role getRole() {
@@ -37,7 +38,7 @@ public class Patient extends User {
 
     @Override
     public String[] getMenuOptions() {
-        return new String[] {
+        return new String[]{
             "Profile",
             "Book / View Appointments",
             "View My Assessment Results",

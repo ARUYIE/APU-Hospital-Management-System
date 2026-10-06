@@ -85,7 +85,7 @@ public class ViewAssessmentResultsPanel extends JPanel {
         // Sort by Date
         if (recordsTable.getRowSorter() != null) {
             recordsTable.getRowSorter().setSortKeys(
-                java.util.List.of(new javax.swing.RowSorter.SortKey(1, javax.swing.SortOrder.DESCENDING))
+                    java.util.List.of(new javax.swing.RowSorter.SortKey(1, javax.swing.SortOrder.DESCENDING))
             );
         }
 
@@ -95,7 +95,7 @@ public class ViewAssessmentResultsPanel extends JPanel {
         refreshTable();
     }
 
-public void refreshTable() {
+    public void refreshTable() {
         tableModel.setRowCount(0);
         User currentUser = Session.getCurrentUser();
         if (currentUser == null) {
@@ -111,7 +111,9 @@ public void refreshTable() {
 
         for (int i = 1; i < appointments.size(); i++) {
             String aptLine = appointments.get(i);
-            if (aptLine == null || aptLine.trim().isEmpty()) continue;
+            if (aptLine == null || aptLine.trim().isEmpty()) {
+                continue;
+            }
 
             String[] aptParts = aptLine.split("\\|", -1);
             if (aptParts.length >= 6) {
@@ -120,33 +122,36 @@ public void refreshTable() {
                 String doctorId = aptParts[2].trim();
                 String date = aptParts[3].trim();
                 String time = aptParts[4].trim();
-                String status = aptParts[5].trim().toUpperCase(); // Grab the appointment status
+                String status = aptParts[5].trim().toUpperCase();
 
-                // Only include COMPLETED or SCHEDULED appointments
                 if (!status.equals("COMPLETED") && !status.equals("SCHEDULED")) {
                     continue;
                 }
-                // Filter strictly for the logged-in patient
+
                 if (aptPatientId.equalsIgnoreCase(patientId) || aptPatientId.equalsIgnoreCase(patientUsername)) {
-                    
+
+                    // Match Vital Signs by Appointment ID 
                     String vitalsSummary = "No Vitals Recorded";
                     for (int v = 1; v < vitalsList.size(); v++) {
                         String vLine = vitalsList.get(v);
                         String[] vParts = vLine.split("\\|", -1);
                         if (vParts.length >= 9) {
-                            if (vParts[1].trim().equalsIgnoreCase(patientId) && vParts[7].trim().equals(date)) {
+                            String linkedAptId = vParts[3].trim();
+                            if (linkedAptId.equalsIgnoreCase(aptId)) {
                                 vitalsSummary = "BP: " + vParts[4] + " | Temp: " + vParts[6] + "°C [View Vitals]";
                                 break;
                             }
                         }
                     }
 
+                    // Match Prescriptions by Appointment ID
                     String rxSummary = "No Prescription Issued";
                     for (int r = 1; r < prescriptionsList.size(); r++) {
                         String rLine = prescriptionsList.get(r);
                         String[] rParts = rLine.split("\\|", -1);
                         if (rParts.length >= 8) {
-                            if (rParts[1].trim().equalsIgnoreCase(patientId) && rParts[6].trim().equals(date)) {
+                            String linkedAptId = rParts[6].trim();
+                            if (linkedAptId.equalsIgnoreCase(aptId)) {
                                 rxSummary = rParts[3] + " (" + rParts[4] + ") [View Rx]";
                                 break;
                             }
@@ -178,21 +183,19 @@ public void refreshTable() {
         showCombinedDetailsForRow(modelRow);
     }
 
-    // --- Popup showing ONLY Vitals & Consultation Notes ---
+    // Popup showing ONLY Vitals & Consultation Notes
     private void showVitalsDetailsForRow(int modelRow) {
-        String appointmentDate = tableModel.getValueAt(modelRow, 1).toString().trim();
-        User currentUser = Session.getCurrentUser();
-        String patientId = currentUser.getUserId();
+        String aptId = tableModel.getValueAt(modelRow, 0).toString().trim();
 
         String vitalSignId = "N/A";
         String bp = "N/A";
         String hr = "N/A";
         String temp = "N/A";
-        String notes = "No detailed consultation notes or vitals found for this date.";
+        String notes = "No detailed consultation notes or vitals found for this appointment.";
 
         for (String line : FileManager.readLines("vital_signs.txt")) {
             String[] p = line.split("\\|", -1);
-            if (p.length >= 9 && p[1].trim().equalsIgnoreCase(patientId) && p[7].trim().equals(appointmentDate)) {
+            if (p.length >= 9 && p[3].trim().equalsIgnoreCase(aptId)) {
                 vitalSignId = p[0];
                 bp = p[4];
                 hr = p[5] + " bpm";
@@ -204,15 +207,14 @@ public void refreshTable() {
 
         String[] labels = {"VITAL_SIGN_ID", "BLOOD_PRESSURE", "HEART_RATE", "TEMPERATURE", "CONSULTATION_NOTES"};
         String[] values = {vitalSignId, bp, hr, temp, notes};
-        
+
         RecordDetailDialog.showDetails(this, "Consultation Notes & Vitals", labels, values);
     }
 
-    // --- Popup showing ONLY Prescription Details ---
+    // Popup showing ONLY Prescription Details
     private void showPrescriptionDetailsForRow(int modelRow) {
+        String aptId = tableModel.getValueAt(modelRow, 0).toString().trim();
         String appointmentDate = tableModel.getValueAt(modelRow, 1).toString().trim();
-        User currentUser = Session.getCurrentUser();
-        String patientId = currentUser.getUserId();
 
         String rxId = "N/A";
         String medication = "N/A";
@@ -223,12 +225,12 @@ public void refreshTable() {
 
         for (String line : FileManager.readLines("prescriptions.txt")) {
             String[] p = line.split("\\|", -1);
-            if (p.length >= 8 && p[1].trim().equalsIgnoreCase(patientId) && p[6].trim().equals(appointmentDate)) {
+            if (p.length >= 8 && p[6].trim().equalsIgnoreCase(aptId)) {
                 rxId = p[0];
                 medication = p[3];
                 dosage = p[4];
                 duration = p[5];
-                dateIssued = p[6];
+                dateIssued = appointmentDate;
                 status = p[7];
                 break;
             }
@@ -236,51 +238,51 @@ public void refreshTable() {
 
         String[] labels = {"PRESCRIPTION_ID", "MEDICATION", "DOSAGE", "DURATION", "DATE_ISSUED", "STATUS"};
         String[] values = {rxId, medication, dosage, duration, dateIssued, status};
-        
+
         RecordDetailDialog.showDetails(this, "Prescription Details", labels, values);
     }
 
-    // --- Fallback button "View Full Details" can show both combined ---
+    // Popup showing both combined 
     private void showCombinedDetailsForRow(int modelRow) {
+        String aptId = tableModel.getValueAt(modelRow, 0).toString().trim();
         String appointmentDate = tableModel.getValueAt(modelRow, 1).toString().trim();
-        User currentUser = Session.getCurrentUser();
-        String patientId = currentUser.getUserId();
 
-        String fullVitalsDetails = "No detailed consultation notes or vitals found for this date.";
+        String fullVitalsDetails = "No detailed consultation notes or vitals found for this appointment.";
         for (String line : FileManager.readLines("vital_signs.txt")) {
             String[] p = line.split("\\|", -1);
-            if (p.length >= 9 && p[1].trim().equalsIgnoreCase(patientId) && p[7].trim().equals(appointmentDate)) {
-                fullVitalsDetails = "Vital Sign ID: " + p[0] + 
-                                    "\nBlood Pressure: " + p[4] + 
-                                    "\nHeart Rate: " + p[5] + " bpm" + 
-                                    "\nTemperature: " + p[6] + " °C" + 
-                                    "\n\nConsultation Notes:\n" + p[8];
+            if (p.length >= 9 && p[3].trim().equalsIgnoreCase(aptId)) {
+                fullVitalsDetails = "Vital Sign ID: " + p[0]
+                        + "\nBlood Pressure: " + p[4]
+                        + "\nHeart Rate: " + p[5] + " bpm"
+                        + "\nTemperature: " + p[6] + " °C"
+                        + "\n\nConsultation Notes:\n" + p[8];
                 break;
             }
         }
 
-        String fullPrescriptionDetails = "No prescription records found for this date.";
+        String fullPrescriptionDetails = "No prescription records found for this appointment.";
         for (String line : FileManager.readLines("prescriptions.txt")) {
             String[] p = line.split("\\|", -1);
-            if (p.length >= 8 && p[1].trim().equalsIgnoreCase(patientId) && p[6].trim().equals(appointmentDate)) {
-                fullPrescriptionDetails = "Prescription ID: " + p[0] + 
-                                          "\nMedication: " + p[3] + 
-                                          "\nDosage: " + p[4] + 
-                                          "\nDuration: " + p[5] + 
-                                          "\nDate Issued: " + p[6] + 
-                                          "\nStatus: " + p[7];
+            if (p.length >= 8 && p[6].trim().equalsIgnoreCase(aptId)) {
+                fullPrescriptionDetails = "Prescription ID: " + p[0]
+                        + "\nMedication: " + p[3]
+                        + "\nDosage: " + p[4]
+                        + "\nDuration: " + p[5]
+                        + "\nDate Issued: " + appointmentDate
+                        + "\nStatus: " + p[7];
                 break;
             }
         }
 
         String[] labels = {"SESSION DATE", "CONSULTATION NOTES & VITALS", "PRESCRIPTION DETAILS"};
         String[] values = {appointmentDate, fullVitalsDetails, fullPrescriptionDetails};
-        
+
         RecordDetailDialog.showDetails(this, "Session Assessment Details", labels, values);
     }
 
-    // --- Custom Renderer ---
+    // Custom Renderer 
     private static class ButtonCellRenderer extends JButton implements TableCellRenderer {
+
         public ButtonCellRenderer() {
             setOpaque(true);
         }
@@ -293,8 +295,8 @@ public void refreshTable() {
         }
     }
 
-    // --- Custom Editor targeting separate actions for Vitals vs Prescriptions ---
     private class ButtonCellEditor extends AbstractCellEditor implements TableCellEditor {
+
         private final JButton button = new JButton();
         private String label;
         private int currentRow;
